@@ -180,7 +180,18 @@ function handleCollisions(ts) {
     if (boss) {
         for (let i = bullets.length - 1; i >= 0; i--) {
             if (Math.hypot(bullets[i].x - boss.x, bullets[i].y - boss.y) < 65) {
-                boss.hp -= (bullets[i].damage || 1); bullets.splice(i, 1); hpFill.style.width = Math.max(0, (boss.hp / boss.maxHP * 100)) + "%";
+                let wasPhase1 = boss.hp > boss.maxHP / 2;
+                boss.hp -= (bullets[i].damage || 1); 
+                bullets.splice(i, 1); 
+                hpFill.style.width = Math.max(0, (boss.hp / boss.maxHP * 100)) + "%";
+                
+                if (audio && Math.random() < 0.3) audio.playEnemyHit();
+                
+                let isPhase2 = boss.hp <= boss.maxHP / 2;
+                if (wasPhase1 && isPhase2 && boss.hp > 0) {
+                    if (audio) audio.playBossPhaseChange();
+                }
+
                 if (boss.hp <= 0) { 
                     score += 5000; difficultyWave++; waveClearTimer = 150; bossMode = false; 
                     if (audio) audio.playExplosion();
@@ -237,7 +248,7 @@ function updateEnemies(ts) {
             else { let a_b = Math.atan2(player.y-e.y, player.x-e.x); for(let j=-2; j<=2; j++) { let a = a_b + (j * 0.25); enemyBullets.push({x:e.x, y:e.y, vx:Math.cos(a)*6*eSpd, vy:Math.sin(a)*6*eSpd, grazed:false}); } }
             e.lastShot = Date.now();
         }
-        for(let bi=bullets.length-1; bi>=0; bi--) if(Math.hypot(bullets[bi].x-e.x, bullets[bi].y-e.y)<40){ enemies.splice(i,1); bullets.splice(bi,1); score+=100; scoreEl.innerText=score; if(Math.random() < 0.6) medals.push({ x: e.x, y: e.y }); }
+        for(let bi=bullets.length-1; bi>=0; bi--) if(Math.hypot(bullets[bi].x-e.x, bullets[bi].y-e.y)<40){ enemies.splice(i,1); bullets.splice(bi,1); score+=100; scoreEl.innerText=score; if(audio) audio.playEnemyHit(); if(Math.random() < 0.6) medals.push({ x: e.x, y: e.y }); }
         if (e.y > 900) enemies.splice(i, 1);
     });
     if (Math.random() < 0.015) powerups.push({ x: Math.random()*560+20, y: -20 });
