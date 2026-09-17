@@ -8,12 +8,6 @@ canvas.width = 600; canvas.height = 800;
 const assets = { player: { img: new Image(), src: 'fosozu.png', loaded: false }, pink: { img: new Image(), src: 'pink_girl.png', loaded: false }, blue: { img: new Image(), src: 'blue_girl.png', loaded: false }, green: { img: new Image(), src: 'green_girl.png', loaded: false } };
 Object.values(assets).forEach(a => { a.img.onload = () => a.loaded = true; a.img.src = a.src; });
 
-const bossLore = {
-    pink: { intro: ["Ping-ko: B-Baka! Why are you clogging my bandwidth?!", "Ping-ko: It's not like I wanted you to connect anyway!", "Ping-ko: Prepare to be throttled!"], defeat: "Ping-ko: Ugh... fine! Synced!" },
-    blue: { intro: ["Spiral-ko: Scanning... Scanning...", "Spiral-ko: Your data packets are so... unoptimized. Embarrassing!", "Spiral-ko: Let me encrypt you into a thousand pieces!"], defeat: "Spiral-ko: Critical error! My spirals... unraveled!" },
-    green: { intro: ["Shotgun-ko: MOVE! You're creating a bottleneck!", "Shotgun-ko: If you can't handle 10Gbps, you don't belong here!", "Shotgun-ko: EAT MY UPLOAD SPEED!"], defeat: "Shotgun-ko: FINAL COMMAND: SERVER RESET INITIATED!" }
-};
-
 let sessionHiScore = parseInt(localStorage.getItem('fosozu_hiScore')) || 0;
 hiScoreEl.innerText = sessionHiScore;
 
@@ -29,7 +23,6 @@ window.addEventListener('keydown', e => {
     keys[e.code] = true; keys[e.key.toLowerCase()] = true; 
     if (!gameStarted) {
         if (e.code === 'KeyZ' || e.code === 'Space') gameStarted = true;
-        // fpsCap [T] key is removed since we use fixed 60Hz loop
         // STAFF MODE:
         if (e.key === 'd') { linkIteration++; ngValEl.innerText = linkIteration; }
         if (e.key === 'b') { bombs = 9; bombsEl.innerText = bombs; }
@@ -41,8 +34,8 @@ window.addEventListener('keydown', e => {
 window.addEventListener('keyup', e => { keys[e.code] = false; keys[e.key.toLowerCase()] = false; });
 
 function updateHighScore() { if (score > sessionHiScore) { sessionHiScore = score; localStorage.setItem('fosozu_hiScore', sessionHiScore); hiScoreEl.innerText = sessionHiScore; } }
-function startBossDialogue() { isPaused = true; dialogueIndex = 0; document.getElementById('dialogue-text').innerText = bossLore[boss.type].intro[0]; dialogueBox.style.display = 'block'; }
-function progressDialogue() { dialogueIndex++; if (dialogueIndex < bossLore[boss.type].intro.length) { document.getElementById('dialogue-text').innerText = bossLore[boss.type].intro[dialogueIndex]; } else { dialogueBox.style.display = 'none'; isPaused = false; } }
+function startBossDialogue() { isPaused = true; dialogueIndex = 0; document.getElementById('dialogue-text').innerText = boss.intro[0]; dialogueBox.style.display = 'block'; }
+function progressDialogue() { dialogueIndex++; if (dialogueIndex < boss.intro.length) { document.getElementById('dialogue-text').innerText = boss.intro[dialogueIndex]; } else { dialogueBox.style.display = 'none'; isPaused = false; } }
 function useBomb() { if (bombs > 0 && bombEffectTimer === 0) { bombs--; bombsEl.innerText = bombs; bombEffectTimer = 60; shakeTimer = 35; bossBullets.length = 0; enemyBullets.length = 0; if (boss) boss.hp -= 40; } }
 function closeSummary() { summaryBox.style.display = 'none'; isPaused = false; waveGraze = 0; scoreAtLastBoss = score; shieldBrokenInWave = false; updateHighScore(); }
 function processContinue() { updateHighScore(); continueCountdown = 0; continueUsed = true; continueUI.style.display = 'none'; lives = 3; livesEl.innerText = lives; score = 0; scoreEl.innerText = score; scoreAtLastBoss = 0; invulnTimer = 180; bossBullets.length = 0; enemyBullets.length = 0; enemies.length = 0; hasShield = false; grazeStreak = 0; shieldBrokenInWave = false; document.getElementById('shieldStat').style.display = 'none'; document.getElementById('shieldStreak').innerText = 0; linkIteration = 1; ngValEl.innerText = 1; accumulator = 0; }
@@ -51,20 +44,6 @@ function shoot() {
     if (hasShield) { bullets.push({ x: player.x, y: player.y - 30, vx: 0, vy: -18, w: 10, h: 40, damage: 2 }); bullets.push({ x: player.x - 15, y: player.y - 20, vx: -1.5, vy: -18, w: 10, h: 40, damage: 2 }); bullets.push({ x: player.x + 15, y: player.y - 20, vx: 1.5, vy: -18, w: 10, h: 40, damage: 2 }); } 
     else if (grazeStreak >= 5) { bullets.push({ x: player.x, y: player.y - 30, vx: 0, vy: -20, w: 4, h: 15, damage: 1.2 }); bullets.push({ x: player.x - 12, y: player.y - 20, vx: -3, vy: -18, w: 6, h: 15, damage: 1.2 }); bullets.push({ x: player.x + 12, y: player.y - 20, vx: 3, vy: -18, w: 6, h: 15, damage: 1.2 }); } 
     else { bullets.push({ x: player.x, y: player.y - 30, vx: 0, vy: -15, w: 4, h: 10, damage: 1 }); bullets.push({ x: player.x - 10, y: player.y - 20, vx: -2.5, vy: -14, w: 4, h: 10, damage: 1 }); bullets.push({ x: player.x + 10, y: player.y - 20, vx: 2.5, vy: -14, w: 4, h: 10, damage: 1 }); }
-}
-
-function bossShoot() {
-    if (!boss) return;
-    boss.attackTimer++;
-    const p2 = boss.hp < boss.maxHP / 2;
-    const spd = Math.min(3.5, (p2 ? 1.5 : 1.0) * (1 + (linkIteration - 1) * 0.1));
-    if (boss.type === 'pink') { 
-        const cycle = Math.floor(boss.attackTimer / 180) % 2;
-        if (cycle === 0) { if (boss.attackTimer % 4 === 0) { let a = (boss.attackTimer * 0.15); bossBullets.push({x:boss.x, y:boss.y, vx:Math.cos(a)*6*spd, vy:Math.sin(a)*6*spd, color:'#ff006e'}); bossBullets.push({x:boss.x, y:boss.y, vx:Math.cos(a + Math.PI)*6*spd, vy:Math.sin(a + Math.PI)*6*spd, color:'#ff006e'}); } } 
-        else { if (boss.attackTimer % 12 === 0) { let a = Math.atan2(player.y - boss.y, player.x - boss.x); for(let i=-1; i<=1; i++) { bossBullets.push({x:boss.x, y:boss.y, vx:Math.cos(a + i*0.1)*8*spd, vy:Math.sin(a + i*0.1)*8*spd, color:'#ff006e'}); } } }
-    } 
-    else if (boss.type === 'blue') { if (boss.attackTimer % 20 === 0) { for(let i=0; i<16; i++) { let a = i * (Math.PI*2/16) + (boss.attackTimer*0.05); bossBullets.push({x:boss.x, y:boss.y, vx:Math.cos(a)*4*spd, vy:Math.sin(a)*4*spd, color:'#00f2ff'}); } } }
-    else if (boss.type === 'green') { if (boss.attackTimer % 45 === 0) { let a_b = Math.atan2(player.y-boss.y, player.x-boss.x); for(let j=-3; j<=3; j++) { let a = a_b + (j * 0.15); bossBullets.push({x:boss.x, y:boss.y, vx:Math.cos(a)*9*spd, vy:Math.sin(a)*9*spd, color:'#0f0'}); } } }
 }
 
 function updatePlayer(ts) {
@@ -105,11 +84,24 @@ function handleCollisions(ts) {
             if (Math.hypot(bullets[i].x - boss.x, bullets[i].y - boss.y) < 65) {
                 boss.hp -= (bullets[i].damage || 1); bullets.splice(i, 1); hpFill.style.width = Math.max(0, (boss.hp / boss.maxHP * 100)) + "%";
                 if (boss.hp <= 0) { 
-                    score += 5000; difficultyWave++; waveClearTimer = 150; bossMode = false; let b_type = boss.type; boss = null; document.getElementById('boss-ui').style.display = 'none'; 
-                    if (b_type === 'green') { linkIteration++; ngValEl.innerText = linkIteration; iterText.innerText = "OVERCLOCKING TO ITERATION " + linkIteration + "..."; resetAnimTimer = 120; shakeTimer = 120; flashTimer = 50; } 
+                    score += 5000; difficultyWave++; waveClearTimer = 150; bossMode = false; 
+                    
+                    let b_name = boss.name;
+                    let b_defeat = boss.defeat;
+                    let isLastBoss = (boss.constructor === BossRoster[BossRoster.length - 1]);
+                    
+                    boss = null; 
+                    document.getElementById('boss-ui').style.display = 'none'; 
+                    
+                    if (isLastBoss) { 
+                        linkIteration++; ngValEl.innerText = linkIteration; 
+                        iterText.innerText = "OVERCLOCKING TO ITERATION " + linkIteration + "..."; 
+                        resetAnimTimer = 120; shakeTimer = 120; flashTimer = 50; 
+                    } 
                     else { isPaused = true; summaryBox.style.display = 'block'; }
+                    
                     let bonusAmt = (waveGraze * 100);
-                    let bonusMsg = `<p style="color:#ff006e; font-style:italic;">"${bossLore[b_type].defeat}"</p><hr>WAVE ${difficultyWave-1} COMPLETE<br>GRAZE BONUS: +${bonusAmt}`;
+                    let bonusMsg = `<p style="color:#ff006e; font-style:italic;">"${b_defeat}"</p><hr>WAVE ${difficultyWave-1} COMPLETE<br>GRAZE BONUS: +${bonusAmt}`;
                     if (!shieldBrokenInWave) { bonusMsg += `<br>FLAWLESS UPLINK: +25,000!`; score += 25000; }
                     if (difficultyWave > 3 && !continueUsed) { bonusMsg += `<br>FULL BUFFER BONUS: +50,000!`; score += 50000; }
                     document.getElementById('summary-content').innerHTML = bonusMsg; score += bonusAmt; scoreEl.innerText = score; return;
@@ -121,10 +113,20 @@ function handleCollisions(ts) {
 
 function updateBoss(ts) {
     if (boss) {
-        if (boss.y < boss.targetY) boss.y += 2.5 * ts; else { boss.timer += 0.025 * ts; boss.x = 300 + Math.sin(boss.timer)*180; bossShoot(); }
+        boss.update(ts, player, bossBullets);
         hpFill.style.background = (boss.hp < boss.maxHP/2) ? "#ffca3a" : "#ff006e";
     }
-    if (!bossMode && waveClearTimer <= 0 && (score - scoreAtLastBoss) >= 5000) { bossMode = true; document.getElementById('boss-ui').style.display = 'block'; let tIdx = (difficultyWave - 1) % 3, typs = ['pink', 'blue', 'green'], nms = ['PING-KO', 'SPIRAL-KO', 'SHOTGUN-KO']; boss = { x: 300, y: -100, targetY: 150, hp: (120+(difficultyWave*80))*Math.min(5, 1+(linkIteration-1)*0.05), maxHP: (120+(difficultyWave*80))*Math.min(5, 1+(linkIteration-1)*0.05), type: typs[tIdx], attackTimer: 0, timer: 0 }; bossNameEl.innerText = nms[tIdx]; startBossDialogue(); }
+    if (!bossMode && waveClearTimer <= 0 && (score - scoreAtLastBoss) >= 5000) { 
+        bossMode = true; 
+        document.getElementById('boss-ui').style.display = 'block'; 
+        
+        let tIdx = (difficultyWave - 1) % BossRoster.length; 
+        let BossClass = BossRoster[tIdx]; 
+        boss = new BossClass(difficultyWave, linkIteration); 
+        
+        bossNameEl.innerText = boss.name; 
+        startBossDialogue(); 
+    }
 }
 
 function updateEnemies(ts) {
@@ -170,7 +172,14 @@ function draw() {
     if (!gameStarted) { ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '20px Courier'; ctx.fillText("READY - PRESS Z", 300, 380); ctx.font='14px Courier'; ctx.fillText("HI-SCORE: " + sessionHiScore, 300, 410); ctx.fillText("LINK ITERATION: " + linkIteration, 300, 440); ctx.restore(); return; }
     stars.forEach(s => { ctx.fillStyle = '#fff'; ctx.fillRect(s.x, s.y, s.size, s.size); });
     if (invulnTimer % 10 < 5) { if (assets.player.loaded) ctx.drawImage(assets.player.img, player.x-50, player.y-50, 100, 100); else { ctx.fillStyle='purple'; ctx.beginPath(); ctx.arc(player.x, player.y, 25, 0, 7); ctx.fill(); } }
-    if (boss && assets[boss.type].loaded) { if (boss.hp < boss.maxHP/2 && Date.now() % 200 < 100) ctx.globalAlpha = 0.5; ctx.drawImage(assets[boss.type].img, boss.x-75, boss.y-75, 150, 150); ctx.globalAlpha = 1.0; }
+    
+    // Draw Boss
+    if (boss && assets[boss.type] && assets[boss.type].loaded) { 
+        if (boss.hp < boss.maxHP/2 && Date.now() % 200 < 100) ctx.globalAlpha = 0.5; 
+        ctx.drawImage(assets[boss.type].img, boss.x-75, boss.y-75, 150, 150); 
+        ctx.globalAlpha = 1.0; 
+    }
+    
     enemies.forEach(e => { ctx.fillStyle='#444'; ctx.fillRect(e.x-15, e.y-15, 30, 30); ctx.strokeStyle=(e.type==='blue'?'#00f2ff':'#0f0'); ctx.strokeRect(e.x-15, e.y-15, 30, 30); });
     powerups.forEach(p => { ctx.fillStyle='#f0f'; ctx.beginPath(); ctx.arc(p.x, p.y, 15, 0, 7); ctx.fill(); ctx.fillStyle='#fff'; ctx.fillText("B", p.x-4, p.y+4); });
     medals.forEach(m => { ctx.fillStyle='#ffca3a'; ctx.beginPath(); ctx.arc(m.x, m.y, 10, 0, 7); ctx.fill(); ctx.fillStyle='#000'; ctx.fillText("M", m.x-3, m.y+4); });
