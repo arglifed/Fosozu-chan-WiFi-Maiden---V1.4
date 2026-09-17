@@ -378,8 +378,8 @@ function updateEnemies(ts) {
         e.y += e.speed * ts;
         if (Date.now() - e.lastShot > 1000) { 
             let eSpd = Math.min(3.5, 1 + (linkIteration-1)*0.1);
-            if (e.type === 'blue') { let r = (Date.now() / 400); for(let j=0; j<4; j++) { let a = r + (j * Math.PI / 2); enemyBullets.push({x:e.x, y:e.y, vx:Math.cos(a)*5*eSpd, vy:Math.sin(a)*5*eSpd, grazed:false}); } }
-            else { let a_b = Math.atan2(player.y-e.y, player.x-e.x); for(let j=-2; j<=2; j++) { let a = a_b + (j * 0.25); enemyBullets.push({x:e.x, y:e.y, vx:Math.cos(a)*6*eSpd, vy:Math.sin(a)*6*eSpd, grazed:false}); } }
+            if (e.type === 'blue') { let r = (Date.now() / 400); for(let j=0; j<4; j++) { let a = r + (j * Math.PI / 2); enemyBullets.push({x:e.x, y:e.y, vx:Math.cos(a)*3*eSpd, vy:Math.sin(a)*3*eSpd, grazed:false}); } }
+            else { let a_b = Math.atan2(player.y-e.y, player.x-e.x); for(let j=-2; j<=2; j++) { let a = a_b + (j * 0.25); enemyBullets.push({x:e.x, y:e.y, vx:Math.cos(a)*3.5*eSpd, vy:Math.sin(a)*3.5*eSpd, grazed:false}); } }
             e.lastShot = Date.now();
         }
         for(let bi=bullets.length-1; bi>=0; bi--) {
