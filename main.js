@@ -270,7 +270,7 @@ function playerTakeDamage() {
     for (let i = 0; i < powerLost; i++) {
         let angle = Math.random() * Math.PI * 2;
         let spd = Math.random() * 6 + 3;
-        powerItems.push({ x: player.x, y: player.y, vx: Math.cos(angle)*spd, vy: Math.sin(angle)*spd - 5 });
+        powerItems.push({ x: player.x, y: player.y, vx: Math.cos(angle)*spd, vy: Math.sin(angle)*spd - 5, spawnTime: Date.now() });
     }
 
     if (hasShield) { 
@@ -283,7 +283,7 @@ function playerTakeDamage() {
         for (let i = 0; i < bombsLost; i++) {
             let angle = Math.random() * Math.PI * 2;
             let spd = Math.random() * 5 + 4;
-            bombItems.push({ x: player.x, y: player.y, vx: Math.cos(angle)*spd, vy: Math.sin(angle)*spd - 6 });
+            bombItems.push({ x: player.x, y: player.y, vx: Math.cos(angle)*spd, vy: Math.sin(angle)*spd - 6, spawnTime: Date.now() });
         }
 
         lives--; livesEl.innerText = lives; 
@@ -426,7 +426,7 @@ function updateEnemies(ts) {
             if (p.vy !== undefined) { p.y += p.vy * ts; p.vy += 0.2 * ts; if (p.vy > 3) p.vy = 3; }
             else { p.y += 3 * ts; }
         }
-        if (Math.hypot(player.x-p.x, player.y-p.y)<30){ bombs++; bombsEl.innerText=bombs; bombItems.splice(i,1); } 
+        if ((!p.spawnTime || Date.now() - p.spawnTime > 500) && Math.hypot(player.x-p.x, player.y-p.y)<30){ bombs++; bombsEl.innerText=bombs; bombItems.splice(i,1); } 
         else if(p.y > 850 || p.x < -100 || p.x > 700) bombItems.splice(i,1); 
     });
     
@@ -440,7 +440,7 @@ function updateEnemies(ts) {
             if (p.vy !== undefined) { p.y += p.vy * ts; p.vy += 0.2 * ts; if (p.vy > 3.5) p.vy = 3.5; }
             else { p.y += 3.5 * ts; }
         }
-        if (Math.hypot(player.x-p.x, player.y-p.y)<30){ power = Math.min(64, power + 1); powerEl.innerText = power; powerItems.splice(i,1); } 
+        if ((!p.spawnTime || Date.now() - p.spawnTime > 500) && Math.hypot(player.x-p.x, player.y-p.y)<30){ power = Math.min(64, power + 1); powerEl.innerText = power; powerItems.splice(i,1); } 
         else if(p.y > 850 || p.x < -100 || p.x > 700) powerItems.splice(i,1); 
     });
 
@@ -536,7 +536,7 @@ function draw() {
         
         ctx.save();
         ctx.translate(s.x, s.y);
-        ctx.rotate(Date.now() * 0.005);
+        ctx.rotate((Date.now() % 10000) * 0.02);
         
         // 4. Left hemisphere (Cyan)
         ctx.fillStyle = '#00f2ff';
