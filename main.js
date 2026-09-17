@@ -35,20 +35,93 @@ const player = { x: 300, y: 700, speed: 6, focusSpeed: 2.5, hitboxSize: 4, graze
 
 let audio = null;
 
+let gamepadState = { up: false, down: false, left: false, right: false, shoot: false, bomb: false, start: false, select: false };
+let prevGamepadState = Object.assign({}, gamepadState);
+
+function pollGamepad() {
+    prevGamepadState = Object.assign({}, gamepadState);
+    const gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads() : []);
+    let gp = null;
+    for (let i = 0; i < gamepads.length; i++) {
+        if (gamepads[i]) { gp = gamepads[i]; break; }
+    }
+    
+    if (gp) {
+        const deadzone = 0.2;
+        gamepadState.left = gp.axes[0] < -deadzone || (gp.buttons[14] && gp.buttons[14].pressed);
+        gamepadState.right = gp.axes[0] > deadzone || (gp.buttons[15] && gp.buttons[15].pressed);
+        gamepadState.up = gp.axes[1] < -deadzone || (gp.buttons[12] && gp.buttons[12].pressed);
+        gamepadState.down = gp.axes[1] > deadzone || (gp.buttons[13] && gp.buttons[13].pressed);
+        
+        gamepadState.shoot = gp.buttons[0] && gp.buttons[0].pressed;
+        gamepadState.bomb = gp.buttons[1] && gp.buttons[1].pressed;
+        gamepadState.start = gp.buttons[9] && gp.buttons[9].pressed;
+        gamepadState.select = gp.buttons[8] && gp.buttons[8].pressed;
+    } else {
+        gamepadState = { up: false, down: false, left: false, right: false, shoot: false, bomb: false, start: false, select: false };
+    }
+}
+
+function handleGamepadButtons() {
+    if (gamepadState.start && !prevGamepadState.start) {
+        if (!gameStarted) {
+            if (assetsLoaded === totalAssets) {
+                if (!audio) { audio = new AudioManager(); audio.resume(); }
+                gameStarted = true;
+            }
+        } else if (continueCountdown > 0) {
+            processContinue();
+        } else if (!gameOver && dialogueBox.style.display !== 'block' && summaryBox.style.display !== 'block' && resetAnimTimer <= 0) {
+            isPaused = !isPaused;
+        }
+    }
+
+    if (gameStarted && !gameOver && !isPaused && gamepadState.bomb && !prevGamepadState.bomb) {
+        useBomb();
+    }
+    
+    if (isPaused && gamepadState.shoot && !prevGamepadState.shoot) {
+        if (summaryBox.style.display === 'block') closeSummary();
+        else if (dialogueBox.style.display === 'block') progressDialogue();
+    }
+    
+    if (gamepadState.select && !prevGamepadState.select) {
+        toggleFullscreen();
+    }
+}
+
+function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+        document.body.requestFullscreen().catch(err => { console.log(`Error attempting to enable fullscreen: ${err.message}`); });
+    } else {
+        document.exitFullscreen();
+    }
+}
+
 window.addEventListener('keydown', e => { 
     keys[e.code] = true; keys[e.key.toLowerCase()] = true; 
+    
+    if (e.code === 'KeyF' || e.key === 'f') toggleFullscreen();
+    
     if (!gameStarted) {
         if (assetsLoaded < totalAssets) return;
-        if (e.code === 'KeyZ' || e.code === 'Space') { 
+        if (e.code === 'KeyZ' || e.code === 'Space' || e.code === 'Enter') { 
             if (!audio) { audio = new AudioManager(); audio.resume(); }
             gameStarted = true; 
         }
         // STAFF MODE:
         if (e.key === 'd') { linkIteration++; ngValEl.innerText = linkIteration; }
         if (e.key === 'b') { bombs = 9; bombsEl.innerText = bombs; }
+    } else {
+        if (e.code === 'Enter' || e.code === 'Escape') {
+            if (!gameOver && dialogueBox.style.display !== 'block' && summaryBox.style.display !== 'block' && continueCountdown <= 0 && resetAnimTimer <= 0) {
+                isPaused = !isPaused;
+            }
+        }
     }
+    
     if (isPaused) { if (summaryBox.style.display === 'block' && (e.code === 'KeyZ' || e.key === 'z')) closeSummary(); else if (dialogueBox.style.display === 'block' && (e.code === 'KeyZ' || e.key === 'z')) progressDialogue(); }
-    if (continueCountdown > 0 && (e.code === 'KeyC' || e.key === 'c')) processContinue();
+    if (continueCountdown > 0 && (e.code === 'KeyC' || e.key === 'c' || e.code === 'Enter')) processContinue();
     if (gameStarted && !gameOver && !isPaused && (e.code === 'KeyX' || e.key === 'x')) useBomb();
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; keys[e.key.toLowerCase()] = false; });
@@ -69,10 +142,12 @@ function shoot() {
 
 function updatePlayer(ts) {
     let s_cur = (keys['shift']) ? player.focusSpeed : player.speed;
-    if (keys['arrowup'] || keys['w']) player.y -= s_cur; if (keys['arrowdown'] || keys['s']) player.y += s_cur;
-    if (keys['arrowleft'] || keys['a']) player.x -= s_cur; if (keys['arrowright'] || keys['d']) player.x += s_cur;
+    if (keys['arrowup'] || keys['w'] || gamepadState.up) player.y -= s_cur; 
+    if (keys['arrowdown'] || keys['s'] || gamepadState.down) player.y += s_cur;
+    if (keys['arrowleft'] || keys['a'] || gamepadState.left) player.x -= s_cur; 
+    if (keys['arrowright'] || keys['d'] || gamepadState.right) player.x += s_cur;
     
-    if (keys['z'] || keys[' ']) { if (Date.now() % 60 < 10) shoot(); }
+    if (keys['z'] || keys[' '] || gamepadState.shoot) { if (Date.now() % 60 < 10) shoot(); }
 
     const isOff = (player.x < 0 || player.x > 600 || player.y < 0 || player.y > 800);
     if (isOff) { stallingTimer++; warningBorder.style.display = 'block'; if (stallingTimer > 90) { shakeTimer = 40; player.x = 300; player.y = 600; stallingTimer = 0; score = Math.max(0, score - 500); scoreEl.innerText = score; } } else { stallingTimer = 0; document.getElementById('warning-border').style.display = 'none'; }
@@ -197,7 +272,7 @@ function draw() {
         if (assetsLoaded < totalAssets) {
             ctx.fillText(`LOADING ASSETS... (${assetsLoaded}/${totalAssets})`, 300, 380);
         } else {
-            ctx.fillText("READY - PRESS Z", 300, 380); 
+            ctx.fillText("READY - PRESS Z OR START", 300, 380); 
             ctx.font='14px Courier'; 
             ctx.fillText("HI-SCORE: " + sessionHiScore, 300, 410); 
             ctx.fillText("LINK ITERATION: " + linkIteration, 300, 440); 
@@ -234,6 +309,13 @@ function draw() {
     bossBullets.forEach(b => { ctx.fillStyle = b.color; ctx.beginPath(); ctx.arc(b.x, b.y, 6, 0, 7); ctx.fill(); });
     ctx.fillStyle = '#0f0'; enemyBullets.forEach(b => { ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, 7); ctx.fill(); });
     if (keys['shift']) { ctx.fillStyle='red'; ctx.beginPath(); ctx.arc(player.x,player.y,player.hitboxSize,0,7); ctx.fill(); }
+    
+    if (isPaused && dialogueBox.style.display !== 'block' && summaryBox.style.display !== 'block' && resetAnimTimer <= 0) {
+        ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0,0,600,800);
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '30px Courier';
+        ctx.fillText("PAUSED", 300, 400);
+    }
+    
     if (gameOver) { ctx.fillStyle='rgba(0,0,0,0.8)'; ctx.fillRect(0,0,600,800); ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.fillText("SIGNAL LOST", 300, 400); }
     ctx.restore();
 }
@@ -246,6 +328,9 @@ let frameCount = 0;
 let lastFPSCheck = performance.now();
 
 function loop(timestamp) {
+    pollGamepad();
+    handleGamepadButtons();
+
     let dt = timestamp - lastTime;
     if (dt > 250) dt = 250;
     lastTime = timestamp;
