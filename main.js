@@ -186,6 +186,19 @@ function updateProjectiles(ts) {
     effects.forEach((eff, i) => { eff.r += 6; eff.opacity -= 0.05; if (eff.opacity <= 0) effects.splice(i, 1); });
 }
 
+function playerTakeDamage() {
+    if (invulnTimer > 0 || bombEffectTimer > 0) return;
+    if (hasShield) { 
+        hasShield = false; shieldBrokenInWave = true; invulnTimer = 60; shakeTimer = 20; 
+        document.getElementById('shieldStat').style.display = 'none'; grazeStreak = 0; document.getElementById('shieldStreak').innerText = 0; 
+        effects.push({ x: player.x, y: player.y, r: 40, opacity: 1 }); if(audio) audio.playShieldBreak(); 
+    } else { 
+        lives--; livesEl.innerText = lives; 
+        if(lives <= 0) { updateHighScore(); continueCountdown=10; continueUI.style.display='flex'; document.getElementById('continue-timer').innerText = 10; } 
+        else { invulnTimer=120; shakeTimer=25; if(audio) audio.playExplosion(); } 
+    }
+}
+
 function handleCollisions(ts) {
     const isFocused = keys['shift'] || gamepadState.focus;
     [bossBullets, enemyBullets].forEach(arr => {
@@ -198,14 +211,26 @@ function handleCollisions(ts) {
                 if (!hasShield) { grazeStreak++; streakTimer = 90; document.getElementById('shieldStreak').innerText = grazeStreak; if (grazeStreak >= 10) { hasShield = true; document.getElementById('shieldStat').style.display = 'inline'; } }
             }
             if (d < player.hitboxSize + 4 && invulnTimer === 0 && bombEffectTimer === 0) { 
-                if (hasShield) { hasShield = false; shieldBrokenInWave = true; invulnTimer = 60; shakeTimer = 20; document.getElementById('shieldStat').style.display = 'none'; grazeStreak = 0; document.getElementById('shieldStreak').innerText = 0; effects.push({ x: player.x, y: player.y, r: 40, opacity: 1 }); if(audio) audio.playShieldBreak(); } 
-                else { lives--; livesEl.innerText = lives; if(lives <= 0) { updateHighScore(); continueCountdown=10; continueUI.style.display='flex'; document.getElementById('continue-timer').innerText = 10; } else { invulnTimer=120; shakeTimer=25; if(audio) audio.playExplosion(); } }
+                playerTakeDamage();
             }
             if (b.y > 850 || b.y < -50 || b.x < -50 || b.x > 650) arr.splice(i, 1);
         }
     });
 
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        let e = enemies[i];
+        let d = Math.hypot(player.x - e.x, player.y - e.y);
+        if (d < player.hitboxSize + 15 && invulnTimer === 0 && bombEffectTimer === 0) {
+            playerTakeDamage();
+            enemies.splice(i, 1);
+        }
+    }
+
     if (boss) {
+        if (Math.hypot(player.x - boss.x, player.y - boss.y) < player.hitboxSize + 50 && invulnTimer === 0 && bombEffectTimer === 0) {
+            playerTakeDamage();
+        }
+
         for (let i = bullets.length - 1; i >= 0; i--) {
             if (Math.hypot(bullets[i].x - boss.x, bullets[i].y - boss.y) < 65) {
                 let wasPhase1 = boss.hp > boss.maxHP / 2;
