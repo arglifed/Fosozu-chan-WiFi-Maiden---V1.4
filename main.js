@@ -19,6 +19,7 @@ const totalAssets = Object.keys(assets).length;
 
 Object.values(assets).forEach(a => { 
     a.img.onload = () => { a.loaded = true; assetsLoaded++; }; 
+    a.img.onerror = () => { a.loaded = false; assetsLoaded++; };
     a.img.src = a.src; 
 });
 
