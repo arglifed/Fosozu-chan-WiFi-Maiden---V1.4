@@ -137,7 +137,26 @@ window.addEventListener('keyup', e => { keys[e.code] = false; keys[e.key.toLower
 function updateHighScore() { if (score > sessionHiScore) { sessionHiScore = score; localStorage.setItem('fosozu_hiScore', sessionHiScore); hiScoreEl.innerText = sessionHiScore; } }
 function startBossDialogue() { isPaused = true; dialogueIndex = 0; document.getElementById('dialogue-text').innerText = boss.intro[0]; dialogueBox.style.display = 'block'; }
 function progressDialogue() { dialogueIndex++; if (dialogueIndex < boss.intro.length) { document.getElementById('dialogue-text').innerText = boss.intro[dialogueIndex]; } else { dialogueBox.style.display = 'none'; isPaused = false; } }
-function useBomb() { if (bombs > 0 && bombEffectTimer === 0) { bombs--; bombsEl.innerText = bombs; bombEffectTimer = 60; shakeTimer = 35; bossBullets.length = 0; enemyBullets.length = 0; if (boss) boss.hp -= 40; if (audio) audio.playExplosion(); } }
+function useBomb() { 
+    if (bombs > 0 && bombEffectTimer === 0) { 
+        bombs--; bombsEl.innerText = bombs; bombEffectTimer = 60; shakeTimer = 35; 
+        bossBullets.length = 0; enemyBullets.length = 0; 
+        
+        enemies.forEach(e => {
+            score += 100;
+            medals.push({ x: e.x, y: e.y });
+            if (bombsSpawnedInWave < 1 && Math.random() < 0.05) {
+                powerups.push({ x: e.x, y: e.y });
+                bombsSpawnedInWave++;
+            }
+        });
+        enemies.length = 0;
+        scoreEl.innerText = score;
+
+        if (boss) boss.hp -= 40; 
+        if (audio) audio.playExplosion(); 
+    } 
+}
 function closeSummary() { summaryBox.style.display = 'none'; isPaused = false; waveGraze = 0; scoreAtLastBoss = score; shieldBrokenInWave = false; updateHighScore(); }
 function processContinue() { updateHighScore(); continueCountdown = 0; continueUsed = true; continueUI.style.display = 'none'; lives = 3; livesEl.innerText = lives; score = 0; scoreEl.innerText = score; scoreAtLastBoss = 0; invulnTimer = 180; bossBullets.length = 0; enemyBullets.length = 0; enemies.length = 0; hasShield = false; grazeStreak = 0; shieldBrokenInWave = false; document.getElementById('shieldStat').style.display = 'none'; document.getElementById('shieldStreak').innerText = 0; linkIteration = 1; ngValEl.innerText = 1; accumulator = 0; stageTimer = 0; bombsSpawnedInWave = 0; }
 
