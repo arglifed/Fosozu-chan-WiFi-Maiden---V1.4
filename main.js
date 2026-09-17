@@ -5,7 +5,15 @@ const fpsCounterEl = document.getElementById('fpsCounter'), hpFill = document.ge
 
 canvas.width = 600; canvas.height = 800;
 
-const assets = { player: { img: new Image(), src: 'fosozu.png', loaded: false }, pink: { img: new Image(), src: 'pink_girl.png', loaded: false }, blue: { img: new Image(), src: 'blue_girl.png', loaded: false }, green: { img: new Image(), src: 'green_girl.png', loaded: false } };
+const assets = { 
+    player: { img: new Image(), src: 'fosozu.png', loaded: false }, 
+    pink: { img: new Image(), src: 'pink_girl.png', loaded: false }, 
+    blue: { img: new Image(), src: 'blue_girl.png', loaded: false }, 
+    green: { img: new Image(), src: 'green_girl.png', loaded: false },
+    purple: { img: new Image(), src: 'crow.png', loaded: false },
+    amber: { img: new Image(), src: 'lief.png', loaded: false },
+    crimson: { img: new Image(), src: 'satsuki.png', loaded: false }
+};
 Object.values(assets).forEach(a => { a.img.onload = () => a.loaded = true; a.img.src = a.src; });
 
 let sessionHiScore = parseInt(localStorage.getItem('fosozu_hiScore')) || 0;
@@ -174,10 +182,21 @@ function draw() {
     if (invulnTimer % 10 < 5) { if (assets.player.loaded) ctx.drawImage(assets.player.img, player.x-50, player.y-50, 100, 100); else { ctx.fillStyle='purple'; ctx.beginPath(); ctx.arc(player.x, player.y, 25, 0, 7); ctx.fill(); } }
     
     // Draw Boss
-    if (boss && assets[boss.type] && assets[boss.type].loaded) { 
-        if (boss.hp < boss.maxHP/2 && Date.now() % 200 < 100) ctx.globalAlpha = 0.5; 
-        ctx.drawImage(assets[boss.type].img, boss.x-75, boss.y-75, 150, 150); 
-        ctx.globalAlpha = 1.0; 
+    if (boss) {
+        if (assets[boss.type] && assets[boss.type].loaded) { 
+            if (boss.hp < boss.maxHP/2 && Date.now() % 200 < 100) ctx.globalAlpha = 0.5; 
+            ctx.drawImage(assets[boss.type].img, boss.x-75, boss.y-75, 150, 150); 
+            ctx.globalAlpha = 1.0; 
+        } else {
+            // Fallback colored placeholder if sprite is missing
+            const colorMap = { pink: '#ff006e', blue: '#00f2ff', green: '#0f0', purple: '#b5179e', amber: '#f77f00', crimson: '#d90429' };
+            ctx.fillStyle = colorMap[boss.type] || '#fff';
+            if (boss.hp < boss.maxHP/2 && Date.now() % 200 < 100) ctx.globalAlpha = 0.5; 
+            ctx.beginPath();
+            ctx.arc(boss.x, boss.y, 75, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.globalAlpha = 1.0; 
+        }
     }
     
     enemies.forEach(e => { ctx.fillStyle='#444'; ctx.fillRect(e.x-15, e.y-15, 30, 30); ctx.strokeStyle=(e.type==='blue'?'#00f2ff':'#0f0'); ctx.strokeRect(e.x-15, e.y-15, 30, 30); });
