@@ -14,7 +14,13 @@ const assets = {
     amber: { img: new Image(), src: 'lief.png', loaded: false },
     crimson: { img: new Image(), src: 'satsuki.png', loaded: false }
 };
-Object.values(assets).forEach(a => { a.img.onload = () => a.loaded = true; a.img.src = a.src; });
+let assetsLoaded = 0;
+const totalAssets = Object.keys(assets).length;
+
+Object.values(assets).forEach(a => { 
+    a.img.onload = () => { a.loaded = true; assetsLoaded++; }; 
+    a.img.src = a.src; 
+});
 
 let sessionHiScore = parseInt(localStorage.getItem('fosozu_hiScore')) || 0;
 hiScoreEl.innerText = sessionHiScore;
@@ -27,10 +33,16 @@ const keys = {}, bullets = [], bossBullets = [], enemyBullets = [], enemies = []
 const stars = Array.from({ length: 80 }, () => ({ x: Math.random()*600, y: Math.random()*800, size: Math.random()*2, speed: Math.random()*2+1 }));
 const player = { x: 300, y: 700, speed: 6, focusSpeed: 2.5, hitboxSize: 4, grazeSize: 25 };
 
+let audio = null;
+
 window.addEventListener('keydown', e => { 
     keys[e.code] = true; keys[e.key.toLowerCase()] = true; 
     if (!gameStarted) {
-        if (e.code === 'KeyZ' || e.code === 'Space') gameStarted = true;
+        if (assetsLoaded < totalAssets) return;
+        if (e.code === 'KeyZ' || e.code === 'Space') { 
+            if (!audio) { audio = new AudioManager(); audio.resume(); }
+            gameStarted = true; 
+        }
         // STAFF MODE:
         if (e.key === 'd') { linkIteration++; ngValEl.innerText = linkIteration; }
         if (e.key === 'b') { bombs = 9; bombsEl.innerText = bombs; }
@@ -44,11 +56,12 @@ window.addEventListener('keyup', e => { keys[e.code] = false; keys[e.key.toLower
 function updateHighScore() { if (score > sessionHiScore) { sessionHiScore = score; localStorage.setItem('fosozu_hiScore', sessionHiScore); hiScoreEl.innerText = sessionHiScore; } }
 function startBossDialogue() { isPaused = true; dialogueIndex = 0; document.getElementById('dialogue-text').innerText = boss.intro[0]; dialogueBox.style.display = 'block'; }
 function progressDialogue() { dialogueIndex++; if (dialogueIndex < boss.intro.length) { document.getElementById('dialogue-text').innerText = boss.intro[dialogueIndex]; } else { dialogueBox.style.display = 'none'; isPaused = false; } }
-function useBomb() { if (bombs > 0 && bombEffectTimer === 0) { bombs--; bombsEl.innerText = bombs; bombEffectTimer = 60; shakeTimer = 35; bossBullets.length = 0; enemyBullets.length = 0; if (boss) boss.hp -= 40; } }
+function useBomb() { if (bombs > 0 && bombEffectTimer === 0) { bombs--; bombsEl.innerText = bombs; bombEffectTimer = 60; shakeTimer = 35; bossBullets.length = 0; enemyBullets.length = 0; if (boss) boss.hp -= 40; if (audio) audio.playExplosion(); } }
 function closeSummary() { summaryBox.style.display = 'none'; isPaused = false; waveGraze = 0; scoreAtLastBoss = score; shieldBrokenInWave = false; updateHighScore(); }
 function processContinue() { updateHighScore(); continueCountdown = 0; continueUsed = true; continueUI.style.display = 'none'; lives = 3; livesEl.innerText = lives; score = 0; scoreEl.innerText = score; scoreAtLastBoss = 0; invulnTimer = 180; bossBullets.length = 0; enemyBullets.length = 0; enemies.length = 0; hasShield = false; grazeStreak = 0; shieldBrokenInWave = false; document.getElementById('shieldStat').style.display = 'none'; document.getElementById('shieldStreak').innerText = 0; linkIteration = 1; ngValEl.innerText = 1; accumulator = 0; }
 
 function shoot() { 
+    if (audio) audio.playShoot();
     if (hasShield) { bullets.push({ x: player.x, y: player.y - 30, vx: 0, vy: -18, w: 10, h: 40, damage: 2 }); bullets.push({ x: player.x - 15, y: player.y - 20, vx: -1.5, vy: -18, w: 10, h: 40, damage: 2 }); bullets.push({ x: player.x + 15, y: player.y - 20, vx: 1.5, vy: -18, w: 10, h: 40, damage: 2 }); } 
     else if (grazeStreak >= 5) { bullets.push({ x: player.x, y: player.y - 30, vx: 0, vy: -20, w: 4, h: 15, damage: 1.2 }); bullets.push({ x: player.x - 12, y: player.y - 20, vx: -3, vy: -18, w: 6, h: 15, damage: 1.2 }); bullets.push({ x: player.x + 12, y: player.y - 20, vx: 3, vy: -18, w: 6, h: 15, damage: 1.2 }); } 
     else { bullets.push({ x: player.x, y: player.y - 30, vx: 0, vy: -15, w: 4, h: 10, damage: 1 }); bullets.push({ x: player.x - 10, y: player.y - 20, vx: -2.5, vy: -14, w: 4, h: 10, damage: 1 }); bullets.push({ x: player.x + 10, y: player.y - 20, vx: 2.5, vy: -14, w: 4, h: 10, damage: 1 }); }
@@ -77,11 +90,12 @@ function handleCollisions(ts) {
             let d = Math.hypot(player.x - b.x, player.y - b.y);
             if (!b.grazed && d < player.grazeSize && d > player.hitboxSize + 4) {
                 b.grazed = true; graze++; waveGraze++; score += 50; scoreEl.innerText = score; document.getElementById('grazeVal').innerText = graze; slowMoTimer = 15;
+                if (audio) audio.playGraze();
                 if (!hasShield) { grazeStreak++; streakTimer = 90; document.getElementById('shieldStreak').innerText = grazeStreak; if (grazeStreak >= 10) { hasShield = true; document.getElementById('shieldStat').style.display = 'inline'; } }
             }
             if (d < player.hitboxSize + 4 && invulnTimer === 0 && bombEffectTimer === 0) { 
-                if (hasShield) { hasShield = false; shieldBrokenInWave = true; invulnTimer = 60; shakeTimer = 20; document.getElementById('shieldStat').style.display = 'none'; grazeStreak = 0; document.getElementById('shieldStreak').innerText = 0; effects.push({ x: player.x, y: player.y, r: 40, opacity: 1 }); } 
-                else { lives--; livesEl.innerText = lives; if(lives <= 0) { updateHighScore(); continueCountdown=10; continueUI.style.display='flex'; document.getElementById('continue-timer').innerText = 10; } else { invulnTimer=120; shakeTimer=25; } }
+                if (hasShield) { hasShield = false; shieldBrokenInWave = true; invulnTimer = 60; shakeTimer = 20; document.getElementById('shieldStat').style.display = 'none'; grazeStreak = 0; document.getElementById('shieldStreak').innerText = 0; effects.push({ x: player.x, y: player.y, r: 40, opacity: 1 }); if(audio) audio.playShieldBreak(); } 
+                else { lives--; livesEl.innerText = lives; if(lives <= 0) { updateHighScore(); continueCountdown=10; continueUI.style.display='flex'; document.getElementById('continue-timer').innerText = 10; } else { invulnTimer=120; shakeTimer=25; if(audio) audio.playExplosion(); } }
             }
             if (b.y > 850 || b.y < -50 || b.x < -50 || b.x > 650) arr.splice(i, 1);
         }
@@ -93,7 +107,7 @@ function handleCollisions(ts) {
                 boss.hp -= (bullets[i].damage || 1); bullets.splice(i, 1); hpFill.style.width = Math.max(0, (boss.hp / boss.maxHP * 100)) + "%";
                 if (boss.hp <= 0) { 
                     score += 5000; difficultyWave++; waveClearTimer = 150; bossMode = false; 
-                    
+                    if (audio) audio.playExplosion();
                     let b_name = boss.name;
                     let b_defeat = boss.defeat;
                     let isLastBoss = (boss.constructor === BossRoster[BossRoster.length - 1]);
@@ -177,7 +191,20 @@ function update() {
 function draw() {
     ctx.save(); if (shakeTimer > 0) { const m = shakeTimer / 4; ctx.translate((Math.random()-0.5)*m, (Math.random()-0.5)*m); }
     ctx.fillStyle = '#050505'; ctx.fillRect(0, 0, 600, 800);
-    if (!gameStarted) { ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '20px Courier'; ctx.fillText("READY - PRESS Z", 300, 380); ctx.font='14px Courier'; ctx.fillText("HI-SCORE: " + sessionHiScore, 300, 410); ctx.fillText("LINK ITERATION: " + linkIteration, 300, 440); ctx.restore(); return; }
+    
+    if (!gameStarted) { 
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '20px Courier'; 
+        if (assetsLoaded < totalAssets) {
+            ctx.fillText(`LOADING ASSETS... (${assetsLoaded}/${totalAssets})`, 300, 380);
+        } else {
+            ctx.fillText("READY - PRESS Z", 300, 380); 
+            ctx.font='14px Courier'; 
+            ctx.fillText("HI-SCORE: " + sessionHiScore, 300, 410); 
+            ctx.fillText("LINK ITERATION: " + linkIteration, 300, 440); 
+        }
+        ctx.restore(); return; 
+    }
+    
     stars.forEach(s => { ctx.fillStyle = '#fff'; ctx.fillRect(s.x, s.y, s.size, s.size); });
     if (invulnTimer % 10 < 5) { if (assets.player.loaded) ctx.drawImage(assets.player.img, player.x-50, player.y-50, 100, 100); else { ctx.fillStyle='purple'; ctx.beginPath(); ctx.arc(player.x, player.y, 25, 0, 7); ctx.fill(); } }
     
