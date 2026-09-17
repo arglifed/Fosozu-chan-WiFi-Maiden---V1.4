@@ -512,10 +512,40 @@ function draw() {
     let activeCount = power >= 48 ? 4 : (power >= 32 ? 3 : (power >= 16 ? 2 : (power >= 8 ? 1 : 0)));
     for(let i=0; i<activeCount; i++) {
         let s = player.satellites[i];
+        
+        ctx.save();
+        ctx.translate(s.x, s.y);
+        ctx.rotate(Date.now() * 0.005);
+        
+        // 4. Left hemisphere (Cyan)
         ctx.fillStyle = '#00f2ff';
-        ctx.beginPath(); ctx.arc(s.x, s.y, 8, 0, Math.PI*2); ctx.fill();
-        ctx.fillStyle = '#fff';
-        ctx.beginPath(); ctx.arc(s.x, s.y, 4, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath();
+        ctx.arc(0, 0, 15, Math.PI / 2, Math.PI * 1.5);
+        ctx.fill();
+        
+        // 5. Right hemisphere (Magenta)
+        ctx.fillStyle = '#b5179e';
+        ctx.beginPath();
+        ctx.arc(0, 0, 15, Math.PI * 1.5, Math.PI * 2.5);
+        ctx.fill();
+        
+        // 6. Top teardrop (Magenta)
+        ctx.fillStyle = '#b5179e';
+        ctx.beginPath(); ctx.arc(0, -7.5, 7.5, 0, Math.PI * 2); ctx.fill();
+        
+        // 7. Bottom teardrop (Cyan)
+        ctx.fillStyle = '#00f2ff';
+        ctx.beginPath(); ctx.arc(0, 7.5, 7.5, 0, Math.PI * 2); ctx.fill();
+        
+        // 8. Top eye (Cyan)
+        ctx.fillStyle = '#00f2ff';
+        ctx.beginPath(); ctx.arc(0, -7.5, 2, 0, Math.PI * 2); ctx.fill();
+        
+        // 9. Bottom eye (Magenta)
+        ctx.fillStyle = '#b5179e';
+        ctx.beginPath(); ctx.arc(0, 7.5, 2, 0, Math.PI * 2); ctx.fill();
+        
+        ctx.restore();
     }
     
     bullets.forEach(b => { ctx.fillStyle = b.color || (hasShield ? '#00f2ff' : (grazeStreak >= 5 ? '#ffca3a' : '#00f2ff')); ctx.fillRect(b.x - (b.w||4)/2, b.y - (b.h||10), (b.w||4), (b.h||10)); });
