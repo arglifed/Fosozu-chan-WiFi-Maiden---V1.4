@@ -414,7 +414,7 @@ function updateEnemies(ts) {
         if (e.y > 900) enemies.splice(i, 1);
     });
 
-    const isPoCActive = player.y < 150 && (keys['shift'] || keys['z'] || keys[' '] || gamepadState.shoot || gamepadState.focus);
+    const isPoCActive = player.y < 150 && (keys['shift'] || gamepadState.focus);
 
     bombItems.forEach((p, i) => { 
         if (isPoCActive) {
