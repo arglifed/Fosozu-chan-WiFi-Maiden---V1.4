@@ -263,12 +263,29 @@ function updateProjectiles(ts) {
 
 function playerTakeDamage() {
     if (invulnTimer > 0 || bombEffectTimer > 0) return;
-    power = Math.max(0, power - 16); powerEl.innerText = power; // Lose power on hit
+    
+    let powerLost = Math.min(power, 16);
+    power = Math.max(0, power - 16); powerEl.innerText = power; 
+    
+    for (let i = 0; i < powerLost; i++) {
+        let angle = Math.random() * Math.PI * 2;
+        let spd = Math.random() * 6 + 3;
+        powerItems.push({ x: player.x, y: player.y, vx: Math.cos(angle)*spd, vy: Math.sin(angle)*spd - 5 });
+    }
+
     if (hasShield) { 
         hasShield = false; shieldBrokenInWave = true; invulnTimer = 60; shakeTimer = 20; 
         document.getElementById('shieldStat').style.display = 'none'; grazeStreak = 0; document.getElementById('shieldStreak').innerText = 0; 
         effects.push({ x: player.x, y: player.y, r: 40, opacity: 1 }); if(audio) audio.playShieldBreak(); 
     } else { 
+        let bombsLost = bombs;
+        bombs = 3; bombsEl.innerText = bombs; 
+        for (let i = 0; i < bombsLost; i++) {
+            let angle = Math.random() * Math.PI * 2;
+            let spd = Math.random() * 5 + 4;
+            bombItems.push({ x: player.x, y: player.y, vx: Math.cos(angle)*spd, vy: Math.sin(angle)*spd - 6 });
+        }
+
         lives--; livesEl.innerText = lives; 
         if(lives <= 0) { updateHighScore(); continueCountdown=10; continueUI.style.display='flex'; document.getElementById('continue-timer').innerText = 10; } 
         else { invulnTimer=120; shakeTimer=25; if(audio) audio.playExplosion(); } 
@@ -405,10 +422,12 @@ function updateEnemies(ts) {
             p.x += Math.cos(angle) * 15 * ts;
             p.y += Math.sin(angle) * 15 * ts;
         } else {
-            p.y += 3 * ts; 
+            if (p.vx !== undefined) { p.x += p.vx * ts; p.vx *= 0.95; }
+            if (p.vy !== undefined) { p.y += p.vy * ts; p.vy += 0.2 * ts; if (p.vy > 3) p.vy = 3; }
+            else { p.y += 3 * ts; }
         }
         if (Math.hypot(player.x-p.x, player.y-p.y)<30){ bombs++; bombsEl.innerText=bombs; bombItems.splice(i,1); } 
-        else if(p.y > 850) bombItems.splice(i,1); 
+        else if(p.y > 850 || p.x < -100 || p.x > 700) bombItems.splice(i,1); 
     });
     
     powerItems.forEach((p, i) => { 
@@ -417,10 +436,12 @@ function updateEnemies(ts) {
             p.x += Math.cos(angle) * 15 * ts;
             p.y += Math.sin(angle) * 15 * ts;
         } else {
-            p.y += 3.5 * ts; 
+            if (p.vx !== undefined) { p.x += p.vx * ts; p.vx *= 0.95; }
+            if (p.vy !== undefined) { p.y += p.vy * ts; p.vy += 0.2 * ts; if (p.vy > 3.5) p.vy = 3.5; }
+            else { p.y += 3.5 * ts; }
         }
         if (Math.hypot(player.x-p.x, player.y-p.y)<30){ power = Math.min(64, power + 1); powerEl.innerText = power; powerItems.splice(i,1); } 
-        else if(p.y > 850) powerItems.splice(i,1); 
+        else if(p.y > 850 || p.x < -100 || p.x > 700) powerItems.splice(i,1); 
     });
 
     medals.forEach((m, i) => { 
