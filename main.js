@@ -30,6 +30,12 @@ let score = 0, graze = 0, lives = 3, bombs = 2, gameOver = false, gameStarted = 
 let bossMode = false, boss = null, difficultyWave = 1, scoreAtLastBoss = 0, continueUsed = false;
 let waveClearTimer = 0, bombEffectTimer = 0, invulnTimer = 0, shakeTimer = 0, stallingTimer = 0, continueCountdown = 0;
 let slowMoTimer = 0, flashTimer = 0, grazeStreak = 0, streakTimer = 0, hasShield = false, waveGraze = 0, dialogueIndex = 0, resetAnimTimer = 0, linkIteration = 1, shieldBrokenInWave = false;
+
+// WAVE-BASED MECHANICS
+let stageTimer = 0;
+const WAVE_DURATION = 1800;
+let bombsSpawnedInWave = 0;
+
 const keys = {}, bullets = [], bossBullets = [], enemyBullets = [], enemies = [], powerups = [], medals = [], effects = [];
 const stars = Array.from({ length: 80 }, () => ({ x: Math.random()*600, y: Math.random()*800, size: Math.random()*2, speed: Math.random()*2+1 }));
 const player = { x: 300, y: 700, speed: 6, focusSpeed: 2.5, hitboxSize: 4, grazeSize: 25 };
@@ -132,7 +138,7 @@ function startBossDialogue() { isPaused = true; dialogueIndex = 0; document.getE
 function progressDialogue() { dialogueIndex++; if (dialogueIndex < boss.intro.length) { document.getElementById('dialogue-text').innerText = boss.intro[dialogueIndex]; } else { dialogueBox.style.display = 'none'; isPaused = false; } }
 function useBomb() { if (bombs > 0 && bombEffectTimer === 0) { bombs--; bombsEl.innerText = bombs; bombEffectTimer = 60; shakeTimer = 35; bossBullets.length = 0; enemyBullets.length = 0; if (boss) boss.hp -= 40; if (audio) audio.playExplosion(); } }
 function closeSummary() { summaryBox.style.display = 'none'; isPaused = false; waveGraze = 0; scoreAtLastBoss = score; shieldBrokenInWave = false; updateHighScore(); }
-function processContinue() { updateHighScore(); continueCountdown = 0; continueUsed = true; continueUI.style.display = 'none'; lives = 3; livesEl.innerText = lives; score = 0; scoreEl.innerText = score; scoreAtLastBoss = 0; invulnTimer = 180; bossBullets.length = 0; enemyBullets.length = 0; enemies.length = 0; hasShield = false; grazeStreak = 0; shieldBrokenInWave = false; document.getElementById('shieldStat').style.display = 'none'; document.getElementById('shieldStreak').innerText = 0; linkIteration = 1; ngValEl.innerText = 1; accumulator = 0; }
+function processContinue() { updateHighScore(); continueCountdown = 0; continueUsed = true; continueUI.style.display = 'none'; lives = 3; livesEl.innerText = lives; score = 0; scoreEl.innerText = score; scoreAtLastBoss = 0; invulnTimer = 180; bossBullets.length = 0; enemyBullets.length = 0; enemies.length = 0; hasShield = false; grazeStreak = 0; shieldBrokenInWave = false; document.getElementById('shieldStat').style.display = 'none'; document.getElementById('shieldStreak').innerText = 0; linkIteration = 1; ngValEl.innerText = 1; accumulator = 0; stageTimer = 0; bombsSpawnedInWave = 0; }
 
 function shoot() { 
     if (audio) audio.playShoot();
@@ -189,11 +195,12 @@ function handleCollisions(ts) {
                 
                 let isPhase2 = boss.hp <= boss.maxHP / 2;
                 if (wasPhase1 && isPhase2 && boss.hp > 0) {
+                    boss.enterPhase2();
                     if (audio) audio.playBossPhaseChange();
                 }
 
                 if (boss.hp <= 0) { 
-                    score += 5000; difficultyWave++; waveClearTimer = 150; bossMode = false; 
+                    score += 5000; difficultyWave++; waveClearTimer = 150; bossMode = false; stageTimer = 0; bombsSpawnedInWave = 0;
                     if (audio) audio.playExplosion();
                     let b_name = boss.name;
                     let b_defeat = boss.defeat;
@@ -225,7 +232,8 @@ function updateBoss(ts) {
         boss.update(ts, player, bossBullets);
         hpFill.style.background = (boss.hp < boss.maxHP/2) ? "#ffca3a" : "#ff006e";
     }
-    if (!bossMode && waveClearTimer <= 0 && (score - scoreAtLastBoss) >= 5000) { 
+    // Spawn Boss when wave timer concludes
+    if (!bossMode && waveClearTimer <= 0 && stageTimer >= WAVE_DURATION && enemies.length === 0) { 
         bossMode = true; 
         document.getElementById('boss-ui').style.display = 'block'; 
         
@@ -239,7 +247,11 @@ function updateBoss(ts) {
 }
 
 function updateEnemies(ts) {
-    if (!bossMode && waveClearTimer <= 0 && Math.random() < 0.12) enemies.push({ x: Math.random()*540+30, y:-50, speed: (3.5+(difficultyWave*0.4)) * Math.min(3.5, 1 + (linkIteration-1)*0.05), type: Math.random()>0.5?'blue':'green', lastShot: Date.now() });
+    // Normal enemy spawning limited to wave duration
+    if (!bossMode && waveClearTimer <= 0 && stageTimer < WAVE_DURATION && Math.random() < 0.12) {
+        enemies.push({ x: Math.random()*540+30, y:-50, speed: (3.5+(difficultyWave*0.4)) * Math.min(3.5, 1 + (linkIteration-1)*0.05), type: Math.random()>0.5?'blue':'green', lastShot: Date.now() });
+    }
+    
     enemies.forEach((e, i) => {
         e.y += e.speed * ts;
         if (Date.now() - e.lastShot > 1000) { 
@@ -248,12 +260,48 @@ function updateEnemies(ts) {
             else { let a_b = Math.atan2(player.y-e.y, player.x-e.x); for(let j=-2; j<=2; j++) { let a = a_b + (j * 0.25); enemyBullets.push({x:e.x, y:e.y, vx:Math.cos(a)*6*eSpd, vy:Math.sin(a)*6*eSpd, grazed:false}); } }
             e.lastShot = Date.now();
         }
-        for(let bi=bullets.length-1; bi>=0; bi--) if(Math.hypot(bullets[bi].x-e.x, bullets[bi].y-e.y)<40){ enemies.splice(i,1); bullets.splice(bi,1); score+=100; scoreEl.innerText=score; if(audio) audio.playEnemyHit(); if(Math.random() < 0.6) medals.push({ x: e.x, y: e.y }); }
+        for(let bi=bullets.length-1; bi>=0; bi--) {
+            if(Math.hypot(bullets[bi].x-e.x, bullets[bi].y-e.y)<40) { 
+                enemies.splice(i,1); bullets.splice(bi,1); score+=100; scoreEl.innerText=score; 
+                if (audio) audio.playEnemyHit(); 
+                // Exact 1 medal per enemy
+                medals.push({ x: e.x, y: e.y }); 
+                // Scarcity bomb logic (max 1 per wave)
+                if (bombsSpawnedInWave < 1 && Math.random() < 0.05) {
+                    powerups.push({ x: e.x, y: e.y });
+                    bombsSpawnedInWave++;
+                }
+            }
+        }
         if (e.y > 900) enemies.splice(i, 1);
     });
-    if (Math.random() < 0.015) powerups.push({ x: Math.random()*560+20, y: -20 });
-    powerups.forEach((p, i) => { p.y += 3 * ts; if (Math.hypot(player.x-p.x, player.y-p.y)<30){ bombs++; bombsEl.innerText=bombs; powerups.splice(i,1); } if(p.y > 850) powerups.splice(i,1); });
-    medals.forEach((m, i) => { m.y += 4 * ts; if (Math.hypot(player.x-m.x, player.y-m.y)<30){ score += 500; scoreEl.innerText=score; medals.splice(i,1); } if(m.y > 850) medals.splice(i,1); });
+
+    // Point of Collection (PoC) Logic
+    const isPoCActive = player.y < 150 && (keys['shift'] || keys['z'] || keys[' '] || gamepadState.shoot);
+
+    powerups.forEach((p, i) => { 
+        if (isPoCActive) {
+            let angle = Math.atan2(player.y - p.y, player.x - p.x);
+            p.x += Math.cos(angle) * 15 * ts;
+            p.y += Math.sin(angle) * 15 * ts;
+        } else {
+            p.y += 3 * ts; 
+        }
+        if (Math.hypot(player.x-p.x, player.y-p.y)<30){ bombs++; bombsEl.innerText=bombs; powerups.splice(i,1); } 
+        else if(p.y > 850) powerups.splice(i,1); 
+    });
+    
+    medals.forEach((m, i) => { 
+        if (isPoCActive) {
+            let angle = Math.atan2(player.y - m.y, player.x - m.x);
+            m.x += Math.cos(angle) * 15 * ts;
+            m.y += Math.sin(angle) * 15 * ts;
+        } else {
+            m.y += 4 * ts; 
+        }
+        if (Math.hypot(player.x-m.x, player.y-m.y)<30){ score += 500; scoreEl.innerText=score; medals.splice(i,1); } 
+        else if(m.y > 850) medals.splice(i,1); 
+    });
 }
 
 function update() {
@@ -261,6 +309,11 @@ function update() {
     if (!gameStarted || gameOver || isPaused) return;
     
     const ts = (slowMoTimer > 0) ? 0.4 : 1.0;
+    
+    // Wave timer increments while enemies are spawning
+    if (!bossMode && waveClearTimer <= 0) {
+        stageTimer += ts;
+    }
     
     if (slowMoTimer > 0) slowMoTimer--; if (flashTimer > 0) flashTimer--; if (invulnTimer > 0) invulnTimer--;
     if (waveClearTimer > 0) waveClearTimer--; if (bombEffectTimer > 0) bombEffectTimer--; if (shakeTimer > 0) shakeTimer--;
@@ -302,7 +355,6 @@ function draw() {
             ctx.drawImage(assets[boss.type].img, boss.x-75, boss.y-75, 150, 150); 
             ctx.globalAlpha = 1.0; 
         } else {
-            // Fallback colored placeholder if sprite is missing
             const colorMap = { pink: '#ff006e', blue: '#00f2ff', green: '#0f0', purple: '#b5179e', amber: '#f77f00', crimson: '#d90429' };
             ctx.fillStyle = colorMap[boss.type] || '#fff';
             if (boss.hp < boss.maxHP/2 && Date.now() % 200 < 100) ctx.globalAlpha = 0.5; 
@@ -310,6 +362,14 @@ function draw() {
             ctx.arc(boss.x, boss.y, 75, 0, Math.PI * 2);
             ctx.fill();
             ctx.globalAlpha = 1.0; 
+        }
+        
+        // Spell Card Phase Flash Effect
+        if (boss.flashTimer > 0 && Math.floor(boss.flashTimer) % 6 < 3) {
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath(); ctx.arc(boss.x, boss.y, 75, 0, Math.PI * 2); ctx.fill();
+            ctx.globalCompositeOperation = 'source-over';
         }
     }
     
@@ -347,7 +407,6 @@ function loop(timestamp) {
     if (dt > 250) dt = 250;
     lastTime = timestamp;
     
-    // Continue Timer based on real time independently of physics tick
     if (continueCountdown > 0) {
         if (timestamp - lastContinueTime > 1000) {
             continueCountdown--;
@@ -356,7 +415,7 @@ function loop(timestamp) {
             if (continueCountdown <= 0) gameOver = true;
         }
     } else {
-        lastContinueTime = timestamp; // Keep it fresh for when we need it
+        lastContinueTime = timestamp; 
         accumulator += dt;
         while (accumulator >= TICK_RATE) {
             update();
