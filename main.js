@@ -42,7 +42,7 @@ const player = { x: 300, y: 700, speed: 6, focusSpeed: 2.5, hitboxSize: 4, graze
 
 let audio = null;
 
-let gamepadState = { up: false, down: false, left: false, right: false, shoot: false, bomb: false, start: false, select: false };
+let gamepadState = { up: false, down: false, left: false, right: false, shoot: false, bomb: false, focus: false, start: false, select: false };
 let prevGamepadState = Object.assign({}, gamepadState);
 
 function pollGamepad() {
@@ -62,10 +62,11 @@ function pollGamepad() {
         
         gamepadState.shoot = gp.buttons[0] && gp.buttons[0].pressed;
         gamepadState.bomb = gp.buttons[1] && gp.buttons[1].pressed;
+        gamepadState.focus = (gp.buttons[2] && gp.buttons[2].pressed) || (gp.buttons[4] && gp.buttons[4].pressed) || (gp.buttons[5] && gp.buttons[5].pressed) || (gp.buttons[6] && gp.buttons[6].pressed) || (gp.buttons[7] && gp.buttons[7].pressed);
         gamepadState.start = gp.buttons[9] && gp.buttons[9].pressed;
         gamepadState.select = gp.buttons[8] && gp.buttons[8].pressed;
     } else {
-        gamepadState = { up: false, down: false, left: false, right: false, shoot: false, bomb: false, start: false, select: false };
+        gamepadState = { up: false, down: false, left: false, right: false, shoot: false, bomb: false, focus: false, start: false, select: false };
     }
 }
 
@@ -148,7 +149,8 @@ function shoot() {
 }
 
 function updatePlayer(ts) {
-    let s_cur = (keys['shift']) ? player.focusSpeed : player.speed;
+    const isFocused = keys['shift'] || gamepadState.focus;
+    let s_cur = isFocused ? player.focusSpeed : player.speed;
     if (keys['arrowup'] || keys['w'] || gamepadState.up) player.y -= s_cur; 
     if (keys['arrowdown'] || keys['s'] || gamepadState.down) player.y += s_cur;
     if (keys['arrowleft'] || keys['a'] || gamepadState.left) player.x -= s_cur; 
@@ -166,11 +168,12 @@ function updateProjectiles(ts) {
 }
 
 function handleCollisions(ts) {
+    const isFocused = keys['shift'] || gamepadState.focus;
     [bossBullets, enemyBullets].forEach(arr => {
         for (let i = arr.length - 1; i >= 0; i--) {
             let b = arr[i]; b.x += b.vx * ts; b.y += b.vy * ts;
             let d = Math.hypot(player.x - b.x, player.y - b.y);
-            if (!b.grazed && d < player.grazeSize && d > player.hitboxSize + 4) {
+            if (isFocused && !b.grazed && d < player.grazeSize && d > player.hitboxSize + 4 && invulnTimer === 0 && bombEffectTimer === 0) {
                 b.grazed = true; graze++; waveGraze++; score += 50; scoreEl.innerText = score; document.getElementById('grazeVal').innerText = graze; slowMoTimer = 15;
                 if (audio) audio.playGraze();
                 if (!hasShield) { grazeStreak++; streakTimer = 90; document.getElementById('shieldStreak').innerText = grazeStreak; if (grazeStreak >= 10) { hasShield = true; document.getElementById('shieldStat').style.display = 'inline'; } }
@@ -277,7 +280,7 @@ function updateEnemies(ts) {
     });
 
     // Point of Collection (PoC) Logic
-    const isPoCActive = player.y < 150 && (keys['shift'] || keys['z'] || keys[' '] || gamepadState.shoot);
+    const isPoCActive = player.y < 150 && (keys['shift'] || keys['z'] || keys[' '] || gamepadState.shoot || gamepadState.focus);
 
     powerups.forEach((p, i) => { 
         if (isPoCActive) {
@@ -380,7 +383,8 @@ function draw() {
     effects.forEach(eff => { ctx.strokeStyle = `rgba(0, 242, 255, ${eff.opacity})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(eff.x, eff.y, eff.r, 0, Math.PI * 2); ctx.stroke(); }); 
     bossBullets.forEach(b => { ctx.fillStyle = b.color; ctx.beginPath(); ctx.arc(b.x, b.y, 6, 0, 7); ctx.fill(); });
     ctx.fillStyle = '#0f0'; enemyBullets.forEach(b => { ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, 7); ctx.fill(); });
-    if (keys['shift']) { ctx.fillStyle='red'; ctx.beginPath(); ctx.arc(player.x,player.y,player.hitboxSize,0,7); ctx.fill(); }
+    const isFocused = keys['shift'] || gamepadState.focus;
+    if (isFocused) { ctx.fillStyle='red'; ctx.beginPath(); ctx.arc(player.x,player.y,player.hitboxSize,0,7); ctx.fill(); }
     
     if (isPaused && dialogueBox.style.display !== 'block' && summaryBox.style.display !== 'block' && resetAnimTimer <= 0) {
         ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0,0,600,800);
