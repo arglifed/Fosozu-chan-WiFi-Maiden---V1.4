@@ -154,7 +154,6 @@ function toggleFullscreen() {
 // UI Menu Logic
 document.getElementById('btn-start-game').addEventListener('click', () => {
     document.getElementById('main-menu-ui').style.display = 'none';
-    gameStarted = true;
 });
 
 document.getElementById('btn-settings').addEventListener('click', () => {
@@ -216,7 +215,7 @@ window.addEventListener('keydown', e => {
         
         if (e.code === 'KeyZ' || k === 'space' || e.code === 'Enter') {
             if (!audio) { audio = new AudioManager(); audio.resume(); }
-            document.getElementById('main-menu-ui').style.display = 'flex';
+            gameStarted = true;
         }
     } else {
         if (e.code === 'Enter' || e.code === 'Escape') {
