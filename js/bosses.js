@@ -5,7 +5,7 @@ class Boss {
         this.targetY = 150;
         
         let hpScale = Math.min(5.0, 1 + (linkIteration - 1) * 0.05);
-        this.maxHP = (120 + (difficultyWave * 80)) * hpScale;
+        this.maxHP = (300 + (difficultyWave * 300)) * hpScale;
         this.hp = this.maxHP;
         
         this.attackTimer = 0;
