@@ -28,7 +28,21 @@
         <div style="width:120px; height:8px; background:#222; border:1px solid #00f2ff; margin-top:5px;"><div id="bomb-meter-fill" style="width:0%; height:100%; background:#00f2ff;"></div></div>
         <span id="shieldStat" style="color:#00f2ff; display:none;">SHIELD ACTIVE!</span>
     </div>
-    <div id="high-score-ui">HI-SCORE: <span id="hiScoreVal">0</span></div>
+    <div id="leaderboard-ui">
+        <div style="font-weight:bold; color:#00f2ff; margin-bottom:10px;">TOP 10 UPLINKS</div>
+        <ol id="leaderboard-list">
+            <li>LOADING...</li>
+        </ol>
+    </div>
+    
+    <div id="submit-score-ui">
+        <h2 style="color:#ffca3a; margin-top:0;">NEW HIGH SCORE</h2>
+        <p>Enter your initials to save your uplink:</p>
+        <input type="text" id="playerName" maxlength="3" style="text-transform:uppercase;" placeholder="AAA" />
+        <br><br>
+        <button id="submitScoreBtn">SUBMIT</button>
+    </div>
+    
     <div id="fps-ui">FPS: <span id="fpsCounter">0</span></div>
     <div id="boss-ui"><span id="bossName">BOSS</span><div id="hp-bar-bg"><div id="hp-bar-fill"></div></div></div>
     <canvas id="gameCanvas"></canvas>

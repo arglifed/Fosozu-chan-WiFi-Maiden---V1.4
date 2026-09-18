@@ -1,8 +1,49 @@
 const canvas = document.getElementById('gameCanvas'), ctx = canvas.getContext('2d');
-const scoreEl = document.getElementById('scoreVal'), hiScoreEl = document.getElementById('hiScoreVal'), livesEl = document.getElementById('livesVal'), bombsEl = document.getElementById('bombsVal');
+const scoreEl = document.getElementById('scoreVal'), livesEl = document.getElementById('livesVal'), bombsEl = document.getElementById('bombsVal');
 const powerEl = document.getElementById('powerVal');
 const summaryBox = document.getElementById('summary-box'), continueUI = document.getElementById('continue-ui'), dialogueBox = document.getElementById('dialogue-box'), warningBorder = document.getElementById('warning-border');
 const fpsCounterEl = document.getElementById('fpsCounter'), hpFill = document.getElementById('hp-bar-fill'), bossNameEl = document.getElementById('bossName'), resetOverlay = document.getElementById('reset-overlay'), resetText = document.getElementById('reset-text'), iterText = document.getElementById('iter-text'), ngValEl = document.getElementById('ngVal');
+
+const SUPABASE_URL = 'YOUR_URL_HERE';
+const SUPABASE_KEY = 'YOUR_KEY_HERE';
+let isDevMode = false;
+
+async function fetchLeaderboard() {
+    try {
+        let res = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard?select=*&order=score.desc&limit=10`, {
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+        });
+        if (!res.ok) throw new Error("Failed to fetch");
+        let data = await res.json();
+        let listEl = document.getElementById('leaderboard-list');
+        listEl.innerHTML = '';
+        data.forEach(entry => {
+            let li = document.createElement('li');
+            li.innerText = `${entry.name} - ${entry.score.toLocaleString()} (W${entry.wave})`;
+            listEl.appendChild(li);
+        });
+    } catch (e) {
+        console.warn("Leaderboard fetch failed", e);
+        document.getElementById('leaderboard-list').innerHTML = '<li>OFFLINE</li>';
+    }
+}
+
+async function submitScore(name, score, wave) {
+    if (isDevMode) { console.log("Dev mode active: Score blocked."); return; }
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/leaderboard`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY },
+            body: JSON.stringify({ name: name.toUpperCase(), score: score, wave: wave })
+        });
+        fetchLeaderboard();
+    } catch (e) {
+        console.warn("Leaderboard submit failed", e);
+    }
+}
+
+// Call on startup
+fetchLeaderboard();
 
 canvas.width = 600; canvas.height = 800;
 
@@ -25,7 +66,6 @@ Object.values(assets).forEach(a => {
 });
 
 let sessionHiScore = parseInt(localStorage.getItem('fosozu_hiScore')) || 0;
-hiScoreEl.innerText = sessionHiScore;
 
 let score = 0, graze = 0, lives = 3, bombs = 3, power = 0, gameOver = false, gameStarted = false, isPaused = false;
 let bossMode = false, boss = null, difficultyWave = 1, scoreAtLastBoss = 0, continueUsed = false;
@@ -135,7 +175,19 @@ window.addEventListener('keydown', e => {
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; keys[e.key.toLowerCase()] = false; });
 
-function updateHighScore() { if (score > sessionHiScore) { sessionHiScore = score; localStorage.setItem('fosozu_hiScore', sessionHiScore); hiScoreEl.innerText = sessionHiScore; } }
+document.getElementById('submitScoreBtn').addEventListener('click', () => {
+    let name = document.getElementById('playerName').value.trim();
+    if (!name || name.length > 3) name = 'AAA';
+    submitScore(name, score, difficultyWave);
+    document.getElementById('submit-score-ui').style.display = 'none';
+    
+    // Normal game over state
+    continueCountdown = 10;
+    continueUI.style.display = 'flex';
+    document.getElementById('continue-timer').innerText = 10;
+});
+
+function updateHighScore() { if (score > sessionHiScore) { sessionHiScore = score; localStorage.setItem('fosozu_hiScore', sessionHiScore); } }
 function startBossDialogue() { isPaused = true; dialogueIndex = 0; document.getElementById('dialogue-text').innerText = boss.intro[0]; dialogueBox.style.display = 'block'; }
 function progressDialogue() { dialogueIndex++; if (dialogueIndex < boss.intro.length) { document.getElementById('dialogue-text').innerText = boss.intro[dialogueIndex]; } else { dialogueBox.style.display = 'none'; isPaused = false; } }
 
@@ -287,7 +339,13 @@ function playerTakeDamage() {
         }
 
         lives--; livesEl.innerText = lives; 
-        if(lives <= 0) { updateHighScore(); continueCountdown=10; continueUI.style.display='flex'; document.getElementById('continue-timer').innerText = 10; } 
+        if(lives <= 0) { 
+            updateHighScore(); 
+            // Pause the game state and show submit modal
+            document.getElementById('submit-score-ui').style.display = 'block';
+            document.getElementById('playerName').value = '';
+            document.getElementById('playerName').focus();
+        } 
         else { invulnTimer=120; shakeTimer=25; if(audio) audio.playExplosion(); } 
     }
 }
@@ -491,8 +549,7 @@ function draw() {
         } else {
             ctx.fillText("READY - PRESS Z OR START", 300, 380); 
             ctx.font='14px Courier'; 
-            ctx.fillText("HI-SCORE: " + sessionHiScore, 300, 410); 
-            ctx.fillText("LINK ITERATION: " + linkIteration, 300, 440); 
+            ctx.fillText("LINK ITERATION: " + linkIteration, 300, 420); 
         }
         ctx.restore(); return; 
     }
@@ -602,6 +659,13 @@ function loop(timestamp) {
     if (dt > 250) dt = 250;
     lastTime = timestamp;
     
+    
+    if (document.getElementById('submit-score-ui').style.display === 'block') {
+        // Halt loop while submitting score
+        requestAnimationFrame(loop);
+        return;
+    }
+
     if (continueCountdown > 0) {
         if (timestamp - lastContinueTime > 1000) {
             continueCountdown--;
