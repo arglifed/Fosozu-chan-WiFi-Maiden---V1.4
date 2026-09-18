@@ -205,16 +205,18 @@ window.addEventListener('keydown', e => {
 
     if (!gameStarted) {
         if (assetsLoaded < totalAssets) return;
+        
+        // STAFF MODE:
+        if (isDevMode) {
+            if (k === 'd') { linkIteration++; ngValEl.innerText = linkIteration; }
+            if (k === 'b') { bombs = 9; bombsEl.innerText = bombs; power = 64; powerEl.innerText = power; }
+        }
+
         if (document.getElementById('main-menu-ui').style.display === 'flex' || document.getElementById('settings-ui').style.display === 'block') return;
         
         if (e.code === 'KeyZ' || k === 'space' || e.code === 'Enter') {
             if (!audio) { audio = new AudioManager(); audio.resume(); }
             document.getElementById('main-menu-ui').style.display = 'flex';
-        }
-        // STAFF MODE:
-        if (isDevMode) {
-            if (k === 'd') { linkIteration++; ngValEl.innerText = linkIteration; }
-            if (k === 'b') { bombs = 9; bombsEl.innerText = bombs; power = 64; powerEl.innerText = power; }
         }
     } else {
         if (e.code === 'Enter' || e.code === 'Escape') {
@@ -400,10 +402,17 @@ function playerTakeDamage() {
         lives--; livesEl.innerText = lives;
         if (lives <= 0) {
             updateHighScore();
-            // Pause the game state and show submit modal
-            document.getElementById('submit-score-ui').style.display = 'block';
-            document.getElementById('playerName').value = '';
-            document.getElementById('playerName').focus();
+            if (isDevMode) {
+                // Skip the prompt entirely in dev mode
+                continueCountdown = 10;
+                continueUI.style.display = 'flex';
+                document.getElementById('continue-timer').innerText = 10;
+            } else {
+                // Pause the game state and show submit modal
+                document.getElementById('submit-score-ui').style.display = 'block';
+                document.getElementById('playerName').value = '';
+                document.getElementById('playerName').focus();
+            }
         }
         else { invulnTimer = 120; shakeTimer = 25; if (audio) audio.playExplosion(); }
     }
