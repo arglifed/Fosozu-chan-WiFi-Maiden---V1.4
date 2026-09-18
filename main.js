@@ -6,7 +6,11 @@ const fpsCounterEl = document.getElementById('fpsCounter'), hpFill = document.ge
 
 const SUPABASE_URL = 'https://hzmkoqtciabaqcfkwmeg.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_OE_63zUsDgyisFTY0zQHDA_9H3-ToId';
-let isDevMode = false;
+let isDevMode = localStorage.getItem('fosozu_devMode') === 'true';
+
+let defaultKeyMap = { up: 'arrowup', down: 'arrowdown', left: 'arrowleft', right: 'arrowright', shoot: 'z', bomb: 'x', focus: 'shift' };
+let keyMap = JSON.parse(localStorage.getItem('fosozu_keymap')) || defaultKeyMap;
+let rebindingAction = null;
 
 async function fetchLeaderboard() {
     try {
@@ -147,20 +151,71 @@ function toggleFullscreen() {
     }
 }
 
-window.addEventListener('keydown', e => {
-    keys[e.code] = true; keys[e.key.toLowerCase()] = true;
+// UI Menu Logic
+document.getElementById('btn-start-game').addEventListener('click', () => {
+    document.getElementById('main-menu-ui').style.display = 'none';
+    gameStarted = true;
+});
 
-    if (e.code === 'KeyF' || e.key === 'f') toggleFullscreen();
+document.getElementById('btn-settings').addEventListener('click', () => {
+    document.getElementById('settings-ui').style.display = 'block';
+});
+
+document.getElementById('btn-close-settings').addEventListener('click', () => {
+    document.getElementById('settings-ui').style.display = 'none';
+});
+
+const devToggle = document.getElementById('dev-mode-toggle');
+devToggle.checked = isDevMode;
+devToggle.addEventListener('change', (e) => {
+    isDevMode = e.target.checked;
+    localStorage.setItem('fosozu_devMode', isDevMode);
+});
+
+document.querySelectorAll('.rebind-btn').forEach(btn => {
+    const action = btn.getAttribute('data-action');
+    btn.innerText = keyMap[action].toUpperCase();
+    btn.addEventListener('click', (e) => {
+        if (rebindingAction) return;
+        rebindingAction = action;
+        e.target.innerText = "PRESS KEY...";
+        e.target.classList.add('listening');
+    });
+});
+
+window.addEventListener('keydown', e => {
+    if (rebindingAction) {
+        let key = e.key.toLowerCase();
+        if (key === ' ') key = 'space'; // Normalize spacebar
+        keyMap[rebindingAction] = key;
+        localStorage.setItem('fosozu_keymap', JSON.stringify(keyMap));
+        let btn = document.querySelector(`.rebind-btn[data-action="${rebindingAction}"]`);
+        btn.innerText = key.toUpperCase();
+        btn.classList.remove('listening');
+        rebindingAction = null;
+        e.preventDefault();
+        return;
+    }
+
+    let k = e.key.toLowerCase();
+    if (k === ' ') k = 'space';
+    keys[e.code] = true; keys[k] = true;
+
+    if (e.code === 'KeyF' || k === 'f') toggleFullscreen();
 
     if (!gameStarted) {
         if (assetsLoaded < totalAssets) return;
-        if (e.code === 'KeyZ' || e.code === 'Space' || e.code === 'Enter') {
+        if (document.getElementById('main-menu-ui').style.display === 'flex' || document.getElementById('settings-ui').style.display === 'block') return;
+        
+        if (e.code === 'KeyZ' || k === 'space' || e.code === 'Enter') {
             if (!audio) { audio = new AudioManager(); audio.resume(); }
-            gameStarted = true;
+            document.getElementById('main-menu-ui').style.display = 'flex';
         }
         // STAFF MODE:
-        if (e.key === 'd') { linkIteration++; ngValEl.innerText = linkIteration; }
-        if (e.key === 'b') { bombs = 9; bombsEl.innerText = bombs; power = 64; powerEl.innerText = power; }
+        if (isDevMode) {
+            if (k === 'd') { linkIteration++; ngValEl.innerText = linkIteration; }
+            if (k === 'b') { bombs = 9; bombsEl.innerText = bombs; power = 64; powerEl.innerText = power; }
+        }
     } else {
         if (e.code === 'Enter' || e.code === 'Escape') {
             if (!gameOver && dialogueBox.style.display !== 'block' && summaryBox.style.display !== 'block' && continueCountdown <= 0 && resetAnimTimer <= 0) {
@@ -169,11 +224,15 @@ window.addEventListener('keydown', e => {
         }
     }
 
-    if (isPaused) { if (summaryBox.style.display === 'block' && (e.code === 'KeyZ' || e.key === 'z')) closeSummary(); else if (dialogueBox.style.display === 'block' && (e.code === 'KeyZ' || e.key === 'z')) progressDialogue(); }
-    if (continueCountdown > 0 && (e.code === 'KeyC' || e.key === 'c' || e.code === 'Enter')) processContinue();
-    if (gameStarted && !gameOver && !isPaused && (e.code === 'KeyX' || e.key === 'x')) useBomb();
+    if (isPaused) { if (summaryBox.style.display === 'block' && (e.code === 'KeyZ' || k === 'z')) closeSummary(); else if (dialogueBox.style.display === 'block' && (e.code === 'KeyZ' || k === 'z')) progressDialogue(); }
+    if (continueCountdown > 0 && (e.code === 'KeyC' || k === 'c' || e.code === 'Enter')) processContinue();
+    if (gameStarted && !gameOver && !isPaused && (k === keyMap.bomb || e.code === keyMap.bomb)) useBomb();
 });
-window.addEventListener('keyup', e => { keys[e.code] = false; keys[e.key.toLowerCase()] = false; });
+window.addEventListener('keyup', e => { 
+    let k = e.key.toLowerCase();
+    if (k === ' ') k = 'space';
+    keys[e.code] = false; keys[k] = false; 
+});
 
 document.getElementById('submitScoreBtn').addEventListener('click', () => {
     let name = document.getElementById('playerName').value.trim();
@@ -241,12 +300,12 @@ function shoot() {
 }
 
 function updatePlayer(ts) {
-    const isFocused = keys['shift'] || gamepadState.focus;
+    const isFocused = keys[keyMap.focus] || gamepadState.focus;
     let s_cur = isFocused ? player.focusSpeed : player.speed;
-    if (keys['arrowup'] || keys['w'] || gamepadState.up) player.y -= s_cur;
-    if (keys['arrowdown'] || keys['s'] || gamepadState.down) player.y += s_cur;
-    if (keys['arrowleft'] || keys['a'] || gamepadState.left) player.x -= s_cur;
-    if (keys['arrowright'] || keys['d'] || gamepadState.right) player.x += s_cur;
+    if (keys[keyMap.up] || gamepadState.up) player.y -= s_cur;
+    if (keys[keyMap.down] || gamepadState.down) player.y += s_cur;
+    if (keys[keyMap.left] || gamepadState.left) player.x -= s_cur;
+    if (keys[keyMap.right] || gamepadState.right) player.x += s_cur;
 
     // Satellites lerping
     let activeCount = power >= 48 ? 4 : (power >= 32 ? 3 : (power >= 16 ? 2 : (power >= 8 ? 1 : 0)));
@@ -270,7 +329,7 @@ function updatePlayer(ts) {
         player.satellites[i].y += (targetY - player.satellites[i].y) * 0.3 * ts;
     }
 
-    if (keys['z'] || keys[' '] || gamepadState.shoot) { if (Date.now() % 60 < 10) shoot(); }
+    if (keys[keyMap.shoot] || gamepadState.shoot) { if (Date.now() % 60 < 10) shoot(); }
 
     const isOff = (player.x < 0 || player.x > 600 || player.y < 0 || player.y > 800);
     if (isOff) { stallingTimer++; warningBorder.style.display = 'block'; if (stallingTimer > 90) { shakeTimer = 40; player.x = 300; player.y = 600; stallingTimer = 0; score = Math.max(0, score - 500); scoreEl.innerText = score; } } else { stallingTimer = 0; document.getElementById('warning-border').style.display = 'none'; }
@@ -351,7 +410,7 @@ function playerTakeDamage() {
 }
 
 function handleCollisions(ts) {
-    const isFocused = keys['shift'] || gamepadState.focus;
+    const isFocused = keys[keyMap.focus] || gamepadState.focus;
     [bossBullets, enemyBullets].forEach(arr => {
         for (let i = arr.length - 1; i >= 0; i--) {
             let b = arr[i]; b.x += b.vx * ts; b.y += b.vy * ts;
@@ -472,7 +531,7 @@ function updateEnemies(ts) {
         if (e.y > 900) enemies.splice(i, 1);
     });
 
-    const isPoCActive = player.y < 150 && (keys['shift'] || gamepadState.focus);
+    const isPoCActive = player.y < 150 && (keys[keyMap.focus] || gamepadState.focus);
 
     bombItems.forEach((p, i) => {
         if (isPoCActive) {
@@ -631,7 +690,7 @@ function draw() {
     bossBullets.forEach(b => { ctx.fillStyle = b.color; ctx.beginPath(); ctx.arc(b.x, b.y, 6, 0, 7); ctx.fill(); });
 
     ctx.fillStyle = '#0f0'; enemyBullets.forEach(b => { ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, 7); ctx.fill(); });
-    const isFocused = keys['shift'] || gamepadState.focus;
+    const isFocused = keys[keyMap.focus] || gamepadState.focus;
     if (isFocused) { ctx.fillStyle = 'red'; ctx.beginPath(); ctx.arc(player.x, player.y, player.hitboxSize, 0, 7); ctx.fill(); }
 
     if (isPaused && dialogueBox.style.display !== 'block' && summaryBox.style.display !== 'block' && resetAnimTimer <= 0) {
