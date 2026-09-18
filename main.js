@@ -4,7 +4,7 @@ const powerEl = document.getElementById('powerVal');
 const summaryBox = document.getElementById('summary-box'), continueUI = document.getElementById('continue-ui'), dialogueBox = document.getElementById('dialogue-box'), warningBorder = document.getElementById('warning-border');
 const fpsCounterEl = document.getElementById('fpsCounter'), hpFill = document.getElementById('hp-bar-fill'), bossNameEl = document.getElementById('bossName'), resetOverlay = document.getElementById('reset-overlay'), resetText = document.getElementById('reset-text'), iterText = document.getElementById('iter-text'), ngValEl = document.getElementById('ngVal');
 
-const SUPABASE_URL = 'https://hzmkoqtciabaqcfkwmeg.supabase.co/rest/v1/';
+const SUPABASE_URL = 'https://hzmkoqtciabaqcfkwmeg.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_OE_63zUsDgyisFTY0zQHDA_9H3-ToId';
 let isDevMode = false;
 
