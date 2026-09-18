@@ -202,14 +202,14 @@ window.addEventListener('keydown', e => {
 
     if (e.code === 'KeyF' || k === 'f') toggleFullscreen();
 
+    // STAFF MODE:
+    if (isDevMode) {
+        if (k === 'd') { linkIteration++; ngValEl.innerText = linkIteration; }
+        if (k === 'b') { bombs = 9; bombsEl.innerText = bombs; power = 64; powerEl.innerText = power; }
+    }
+
     if (!gameStarted) {
         if (assetsLoaded < totalAssets) return;
-        
-        // STAFF MODE:
-        if (isDevMode) {
-            if (k === 'd') { linkIteration++; ngValEl.innerText = linkIteration; }
-            if (k === 'b') { bombs = 9; bombsEl.innerText = bombs; power = 64; powerEl.innerText = power; }
-        }
 
         if (document.getElementById('main-menu-ui').style.display === 'flex' || document.getElementById('settings-ui').style.display === 'block') return;
         
