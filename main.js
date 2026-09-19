@@ -8,12 +8,12 @@ const SUPABASE_URL = 'https://hzmkoqtciabaqcfkwmeg.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_OE_63zUsDgyisFTY0zQHDA_9H3-ToId';
 let isDevMode = localStorage.getItem('fosozu_devMode') === 'true';
 
-let defaultKeyMap = { up: 'arrowup', down: 'arrowdown', left: 'arrowleft', right: 'arrowright', shoot: 'z', bomb: 'x', focus: 'shift' };
+let defaultKeyMap = { up: 'arrowup', down: 'arrowdown', left: 'arrowleft', right: 'arrowright', shoot: 'z', bomb: 'x', focus: 'shift', start: 'enter' };
 let keyMap = JSON.parse(localStorage.getItem('fosozu_keymap')) || defaultKeyMap;
 let rebindingAction = null;
 
 let inputMode = localStorage.getItem('fosozu_inputMode') || 'keyboard';
-let defaultGamepadMap = { up: 'B12', down: 'B13', left: 'B14', right: 'B15', shoot: 'B0', bomb: 'B1', focus: 'B2' };
+let defaultGamepadMap = { up: 'B12', down: 'B13', left: 'B14', right: 'B15', shoot: 'B0', bomb: 'B1', focus: 'B2', start: 'B9' };
 let gamepadMap = JSON.parse(localStorage.getItem('fosozu_gamepadmap')) || defaultGamepadMap;
 // Migration step for old numeric mappings
 for (let key in gamepadMap) {
@@ -36,7 +36,7 @@ function updateUIPrompts() {
     const isGP = inputMode === 'gamepad';
     const shootBtn = isGP ? formatGamepadBinding(gamepadMap.shoot) : keyMap.shoot.toUpperCase();
     const bombBtn = isGP ? formatGamepadBinding(gamepadMap.bomb) : keyMap.bomb.toUpperCase();
-    const continueBtn = isGP ? 'START' : 'C';
+    const continueBtn = isGP ? formatGamepadBinding(gamepadMap.start) : keyMap.start.toUpperCase();
 
     const pCont = document.getElementById('prompt-continue');
     if (pCont) pCont.innerText = `[${continueBtn}]`;
@@ -157,7 +157,7 @@ function pollGamepad() {
         gamepadState.shoot = getGamepadInput(gp, gamepadMap.shoot);
         gamepadState.bomb = getGamepadInput(gp, gamepadMap.bomb);
         gamepadState.focus = getGamepadInput(gp, gamepadMap.focus);
-        gamepadState.start = gp.buttons[9] && gp.buttons[9].pressed;
+        gamepadState.start = getGamepadInput(gp, gamepadMap.start);
         gamepadState.select = gp.buttons[8] && gp.buttons[8].pressed;
     } else {
         gamepadState = { up: false, down: false, left: false, right: false, shoot: false, bomb: false, focus: false, start: false, select: false };
@@ -206,8 +206,12 @@ function handleGamepadButtons() {
     if (gamepadState.start && !prevGamepadState.start) {
         if (!gameStarted) {
             if (assetsLoaded === totalAssets) {
-                if (!audio) { audio = new AudioManager(); audio.resume(); }
-                gameStarted = true;
+                if (document.getElementById('main-menu-ui').style.display === 'flex') {
+                    document.getElementById('btn-start-game').click();
+                } else {
+                    if (!audio) { audio = new AudioManager(); audio.resume(); }
+                    gameStarted = true;
+                }
             }
         } else if (continueCountdown > 0) {
             processContinue();
@@ -240,7 +244,12 @@ function toggleFullscreen() {
 
 // UI Menu Logic
 document.getElementById('btn-start-game').addEventListener('click', () => {
-    document.getElementById('main-menu-ui').style.display = 'none';
+    const menu = document.getElementById('main-menu-ui');
+    menu.classList.add('menu-dismiss');
+    setTimeout(() => {
+        menu.style.display = 'none';
+        menu.classList.remove('menu-dismiss');
+    }, 1500);
 });
 
 document.getElementById('btn-settings').addEventListener('click', () => {
@@ -330,19 +339,28 @@ window.addEventListener('keydown', e => {
     if (isDevMode) {
         if (k === 'd') { linkIteration++; ngValEl.innerText = linkIteration; }
         if (k === 'b') { bombs = 9; bombsEl.innerText = bombs; power = 64; powerEl.innerText = power; }
+        if (k === 's') {
+            if (boss) { boss.hp = 0; }
+            else { stageTimer = WAVE_DURATION; enemies.length = 0; waveClearTimer = 0; }
+        }
     }
 
     if (!gameStarted) {
         if (assetsLoaded < totalAssets) return;
 
-        if (document.getElementById('main-menu-ui').style.display === 'flex' || document.getElementById('settings-ui').style.display === 'block') return;
+        if (document.getElementById('main-menu-ui').style.display === 'flex') {
+            if (k === keyMap.start) document.getElementById('btn-start-game').click();
+            return;
+        }
         
-        if (inputMode === 'keyboard' && (e.code === 'KeyZ' || k === 'space' || e.code === 'Enter' || k === keyMap.shoot)) {
+        if (document.getElementById('settings-ui').style.display === 'block') return;
+        
+        if (inputMode === 'keyboard' && (k === 'space' || k === keyMap.start || k === keyMap.shoot)) {
             if (!audio) { audio = new AudioManager(); audio.resume(); }
             gameStarted = true;
         }
     } else {
-        if (e.code === 'Enter' || e.code === 'Escape') {
+        if (k === keyMap.start || e.code === 'Escape') {
             if (!gameOver && dialogueBox.style.display !== 'block' && summaryBox.style.display !== 'block' && continueCountdown <= 0 && resetAnimTimer <= 0) {
                 isPaused = !isPaused;
             }
@@ -350,9 +368,9 @@ window.addEventListener('keydown', e => {
     }
 
     if (inputMode === 'keyboard') {
-        if (isPaused) { if (summaryBox.style.display === 'block' && (e.code === 'KeyZ' || k === keyMap.shoot)) closeSummary(); else if (dialogueBox.style.display === 'block' && (e.code === 'KeyZ' || k === keyMap.shoot)) progressDialogue(); }
-        if (continueCountdown > 0 && (e.code === 'KeyC' || k === 'c' || e.code === 'Enter')) processContinue();
-        if (gameStarted && !gameOver && !isPaused && (k === keyMap.bomb || e.code === keyMap.bomb)) useBomb();
+        if (isPaused) { if (summaryBox.style.display === 'block' && (k === keyMap.shoot)) closeSummary(); else if (dialogueBox.style.display === 'block' && (k === keyMap.shoot)) progressDialogue(); }
+        if (continueCountdown > 0 && (k === keyMap.start)) processContinue();
+        if (gameStarted && !gameOver && !isPaused && (k === keyMap.bomb)) useBomb();
     }
 });
 window.addEventListener('keyup', e => { 
@@ -589,31 +607,31 @@ function handleCollisions(ts) {
                     boss.enterPhase2();
                     if (audio) audio.playBossPhaseChange();
                 }
-
-                if (boss.hp <= 0) {
-                    score += 5000; difficultyWave++; waveClearTimer = 150; bossMode = false; stageTimer = 0; bombsSpawnedInWave = 0;
-                    if (audio) audio.playExplosion();
-                    let b_name = boss.name;
-                    let b_defeat = boss.defeat;
-                    let isLastBoss = (boss.constructor === BossRoster[BossRoster.length - 1]);
-
-                    boss = null;
-                    document.getElementById('boss-ui').style.display = 'none';
-
-                    if (isLastBoss) {
-                        linkIteration++; ngValEl.innerText = linkIteration;
-                        iterText.innerText = "OVERCLOCKING TO ITERATION " + linkIteration + "...";
-                        resetAnimTimer = 120; shakeTimer = 120; flashTimer = 50;
-                    }
-                    else { isPaused = true; summaryBox.style.display = 'block'; }
-
-                    let bonusAmt = (waveGraze * 100);
-                    let bonusMsg = `<p style="color:#ff006e; font-style:italic;">"${b_defeat}"</p><hr>WAVE ${difficultyWave - 1} COMPLETE<br>GRAZE BONUS: +${bonusAmt}`;
-                    if (!shieldBrokenInWave) { bonusMsg += `<br>FLAWLESS UPLINK: +25,000!`; score += 25000; }
-                    if (difficultyWave > 3 && !continueUsed) { bonusMsg += `<br>FULL BUFFER BONUS: +50,000!`; score += 50000; }
-                    document.getElementById('summary-content').innerHTML = bonusMsg; score += bonusAmt; scoreEl.innerText = score; return;
-                }
             }
+        }
+
+        if (boss.hp <= 0) {
+            score += 5000; difficultyWave++; waveClearTimer = 150; bossMode = false; stageTimer = 0; bombsSpawnedInWave = 0;
+            if (audio) audio.playExplosion();
+            let b_name = boss.name;
+            let b_defeat = boss.defeat;
+            let isLastBoss = (boss.constructor === BossRoster[BossRoster.length - 1]);
+
+            boss = null;
+            document.getElementById('boss-ui').style.display = 'none';
+
+            if (isLastBoss) {
+                linkIteration++; ngValEl.innerText = linkIteration;
+                iterText.innerText = "OVERCLOCKING TO ITERATION " + linkIteration + "...";
+                resetAnimTimer = 120; shakeTimer = 120; flashTimer = 50;
+            }
+            else { isPaused = true; summaryBox.style.display = 'block'; }
+
+            let bonusAmt = (waveGraze * 100);
+            let bonusMsg = `<p style="color:#ff006e; font-style:italic;">"${b_defeat}"</p><hr>WAVE ${difficultyWave - 1} COMPLETE<br>GRAZE BONUS: +${bonusAmt}`;
+            if (!shieldBrokenInWave) { bonusMsg += `<br>FLAWLESS UPLINK: +25,000!`; score += 25000; }
+            if (difficultyWave > 3 && !continueUsed) { bonusMsg += `<br>FULL BUFFER BONUS: +50,000!`; score += 50000; }
+            document.getElementById('summary-content').innerHTML = bonusMsg; score += bonusAmt; scoreEl.innerText = score; return;
         }
     }
 }
@@ -865,7 +883,11 @@ function loop(timestamp) {
             continueCountdown--;
             document.getElementById('continue-timer').innerText = continueCountdown;
             lastContinueTime = timestamp;
-            if (continueCountdown <= 0) gameOver = true;
+            if (continueCountdown <= 0) {
+                gameOver = true;
+                continueUI.style.display = 'none';
+                setTimeout(() => location.reload(), 3000);
+            }
         }
     } else {
         lastContinueTime = timestamp;
