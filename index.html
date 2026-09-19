@@ -10,13 +10,13 @@
     <div id="continue-ui">
         <h1 style="color:#ff006e; font-size: 48px;">CONTINUE?</h1>
         <div id="continue-timer" style="font-size: 80px; margin: 20px 0;">10</div>
-        <p style="font-size: 20px;">PRESS <span style="color:#00f2ff;">[C]</span> TO RECONNECT</p>
+        <p style="font-size: 20px;">PRESS <span id="prompt-continue" style="color:#00f2ff;">[C]</span> TO RECONNECT</p>
     </div>
-    <div id="dialogue-box"><div id="dialogue-text" style="font-size: 20px; margin-bottom: 15px; color: #00f2ff;"></div><div style="font-size:12px; color: #ffca3a;">-- PRESS Z TO CONTINUE --</div></div>
+    <div id="dialogue-box"><div id="dialogue-text" style="font-size: 20px; margin-bottom: 15px; color: #00f2ff;"></div><div id="prompt-dialogue" style="font-size:12px; color: #ffca3a;">-- PRESS Z TO CONTINUE --</div></div>
     <div id="summary-box">
         <h2 id="summary-title" style="color:#00f2ff; margin-top:0;">WAVE ANALYTICS</h2>
         <div id="summary-content" style="text-align:left; font-size:18px; line-height:1.6; margin:20px 0;"></div>
-        <div style="font-size:12px; color: #ffca3a;">-- PRESS Z TO SYNC --</div>
+        <div id="prompt-summary" style="font-size:12px; color: #ffca3a;">-- PRESS Z TO SYNC --</div>
     </div>
     <div id="ui">
         SCORE: <span id="scoreVal">0</span><br>
@@ -64,14 +64,35 @@
             </p>
         </div>
         <hr style="border-color:#9d4edd;">
-        <h3 style="color:#ffca3a; text-align:left; margin-bottom:10px;">KEYBINDINGS</h3>
-        <div class="keybind-row"><span>UP:</span> <button class="rebind-btn" data-action="up">...</button></div>
-        <div class="keybind-row"><span>DOWN:</span> <button class="rebind-btn" data-action="down">...</button></div>
-        <div class="keybind-row"><span>LEFT:</span> <button class="rebind-btn" data-action="left">...</button></div>
-        <div class="keybind-row"><span>RIGHT:</span> <button class="rebind-btn" data-action="right">...</button></div>
-        <div class="keybind-row"><span>SHOOT:</span> <button class="rebind-btn" data-action="shoot">...</button></div>
-        <div class="keybind-row"><span>BOMB:</span> <button class="rebind-btn" data-action="bomb">...</button></div>
-        <div class="keybind-row"><span>FOCUS:</span> <button class="rebind-btn" data-action="focus">...</button></div>
+        <div style="margin-bottom:10px; text-align:left; font-size:18px;">
+            <label style="color:#ffca3a; display:flex; align-items:center; cursor:pointer;">
+                Input Mode: 
+                <select id="input-mode-select" style="margin-left:10px; background:#222; color:#00f2ff; border:1px solid #00f2ff; padding:5px; font-family:Courier;">
+                    <option value="keyboard">Keyboard</option>
+                    <option value="gamepad">Gamepad</option>
+                </select>
+            </label>
+        </div>
+        <div id="keyboard-bindings">
+            <h3 style="color:#ffca3a; text-align:left; margin-bottom:10px; font-size:16px;">KEYBOARD BINDINGS</h3>
+            <div class="keybind-row"><span>UP:</span> <button class="rebind-btn" data-action="up">...</button></div>
+            <div class="keybind-row"><span>DOWN:</span> <button class="rebind-btn" data-action="down">...</button></div>
+            <div class="keybind-row"><span>LEFT:</span> <button class="rebind-btn" data-action="left">...</button></div>
+            <div class="keybind-row"><span>RIGHT:</span> <button class="rebind-btn" data-action="right">...</button></div>
+            <div class="keybind-row"><span>SHOOT:</span> <button class="rebind-btn" data-action="shoot">...</button></div>
+            <div class="keybind-row"><span>BOMB:</span> <button class="rebind-btn" data-action="bomb">...</button></div>
+            <div class="keybind-row"><span>FOCUS:</span> <button class="rebind-btn" data-action="focus">...</button></div>
+        </div>
+        <div id="gamepad-bindings" style="display:none;">
+            <h3 style="color:#ffca3a; text-align:left; margin-bottom:10px; font-size:16px;">GAMEPAD BINDINGS (BUTTONS)</h3>
+            <div class="keybind-row"><span>UP:</span> <button class="rebind-gp-btn" data-action="up">...</button></div>
+            <div class="keybind-row"><span>DOWN:</span> <button class="rebind-gp-btn" data-action="down">...</button></div>
+            <div class="keybind-row"><span>LEFT:</span> <button class="rebind-gp-btn" data-action="left">...</button></div>
+            <div class="keybind-row"><span>RIGHT:</span> <button class="rebind-gp-btn" data-action="right">...</button></div>
+            <div class="keybind-row"><span>SHOOT:</span> <button class="rebind-gp-btn" data-action="shoot">...</button></div>
+            <div class="keybind-row"><span>BOMB:</span> <button class="rebind-gp-btn" data-action="bomb">...</button></div>
+            <div class="keybind-row"><span>FOCUS:</span> <button class="rebind-gp-btn" data-action="focus">...</button></div>
+        </div>
         <br>
         <button id="btn-close-settings" class="menu-btn" style="background:#ff006e;">CLOSE</button>
     </div>

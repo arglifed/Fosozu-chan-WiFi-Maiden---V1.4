@@ -12,6 +12,40 @@ let defaultKeyMap = { up: 'arrowup', down: 'arrowdown', left: 'arrowleft', right
 let keyMap = JSON.parse(localStorage.getItem('fosozu_keymap')) || defaultKeyMap;
 let rebindingAction = null;
 
+let inputMode = localStorage.getItem('fosozu_inputMode') || 'keyboard';
+let defaultGamepadMap = { up: 'B12', down: 'B13', left: 'B14', right: 'B15', shoot: 'B0', bomb: 'B1', focus: 'B2' };
+let gamepadMap = JSON.parse(localStorage.getItem('fosozu_gamepadmap')) || defaultGamepadMap;
+// Migration step for old numeric mappings
+for (let key in gamepadMap) {
+    if (typeof gamepadMap[key] === 'number') gamepadMap[key] = 'B' + gamepadMap[key];
+}
+let rebindingGamepadAction = null;
+
+function formatGamepadBinding(binding) {
+    if (typeof binding === 'number') return 'BTN ' + binding;
+    if (!binding) return 'NONE';
+    if (binding.startsWith('B')) return 'BTN ' + binding.substring(1);
+    if (binding.startsWith('A')) {
+        let parts = binding.substring(1).split('_');
+        return 'AXIS ' + parts[0] + (parts[1] === '-1' ? '-' : '+');
+    }
+    return binding;
+}
+
+function updateUIPrompts() {
+    const isGP = inputMode === 'gamepad';
+    const shootBtn = isGP ? formatGamepadBinding(gamepadMap.shoot) : keyMap.shoot.toUpperCase();
+    const bombBtn = isGP ? formatGamepadBinding(gamepadMap.bomb) : keyMap.bomb.toUpperCase();
+    const continueBtn = isGP ? 'START' : 'C';
+
+    const pCont = document.getElementById('prompt-continue');
+    if (pCont) pCont.innerText = `[${continueBtn}]`;
+    const pDiag = document.getElementById('prompt-dialogue');
+    if (pDiag) pDiag.innerText = `-- PRESS ${shootBtn} TO CONTINUE --`;
+    const pSumm = document.getElementById('prompt-summary');
+    if (pSumm) pSumm.innerText = `-- PRESS ${shootBtn} TO SYNC --`;
+}
+
 async function fetchLeaderboard() {
     try {
         let res = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard?select=*&order=score.desc&limit=10`, {
@@ -90,6 +124,22 @@ let audio = null;
 let gamepadState = { up: false, down: false, left: false, right: false, shoot: false, bomb: false, focus: false, start: false, select: false };
 let prevGamepadState = Object.assign({}, gamepadState);
 
+function getGamepadInput(gp, binding) {
+    if (!binding) return false;
+    if (typeof binding === 'number') return gp.buttons[binding] && gp.buttons[binding].pressed;
+    if (binding.startsWith('B')) {
+        let idx = parseInt(binding.substring(1));
+        return gp.buttons[idx] && gp.buttons[idx].pressed;
+    } else if (binding.startsWith('A')) {
+        let parts = binding.substring(1).split('_');
+        let idx = parseInt(parts[0]);
+        let dir = parseInt(parts[1]);
+        if (dir === -1) return gp.axes[idx] < -0.3;
+        else return gp.axes[idx] > 0.3;
+    }
+    return false;
+}
+
 function pollGamepad() {
     prevGamepadState = Object.assign({}, gamepadState);
     const gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads() : []);
@@ -99,15 +149,14 @@ function pollGamepad() {
     }
 
     if (gp) {
-        const deadzone = 0.2;
-        gamepadState.left = gp.axes[0] < -deadzone || (gp.buttons[14] && gp.buttons[14].pressed);
-        gamepadState.right = gp.axes[0] > deadzone || (gp.buttons[15] && gp.buttons[15].pressed);
-        gamepadState.up = gp.axes[1] < -deadzone || (gp.buttons[12] && gp.buttons[12].pressed);
-        gamepadState.down = gp.axes[1] > deadzone || (gp.buttons[13] && gp.buttons[13].pressed);
+        gamepadState.left = getGamepadInput(gp, gamepadMap.left) || gp.axes[0] < -0.3;
+        gamepadState.right = getGamepadInput(gp, gamepadMap.right) || gp.axes[0] > 0.3;
+        gamepadState.up = getGamepadInput(gp, gamepadMap.up) || gp.axes[1] < -0.3;
+        gamepadState.down = getGamepadInput(gp, gamepadMap.down) || gp.axes[1] > 0.3;
 
-        gamepadState.shoot = gp.buttons[0] && gp.buttons[0].pressed;
-        gamepadState.bomb = gp.buttons[1] && gp.buttons[1].pressed;
-        gamepadState.focus = (gp.buttons[2] && gp.buttons[2].pressed) || (gp.buttons[4] && gp.buttons[4].pressed) || (gp.buttons[5] && gp.buttons[5].pressed) || (gp.buttons[6] && gp.buttons[6].pressed) || (gp.buttons[7] && gp.buttons[7].pressed);
+        gamepadState.shoot = getGamepadInput(gp, gamepadMap.shoot);
+        gamepadState.bomb = getGamepadInput(gp, gamepadMap.bomb);
+        gamepadState.focus = getGamepadInput(gp, gamepadMap.focus);
         gamepadState.start = gp.buttons[9] && gp.buttons[9].pressed;
         gamepadState.select = gp.buttons[8] && gp.buttons[8].pressed;
     } else {
@@ -115,7 +164,45 @@ function pollGamepad() {
     }
 }
 
+function pollGamepadRebind() {
+    if (!rebindingGamepadAction) return;
+    const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+    let gp = null;
+    for (let i = 0; i < gamepads.length; i++) {
+        if (gamepads[i]) { gp = gamepads[i]; break; }
+    }
+    if (gp) {
+        let pressedBinding = null;
+        for (let i = 0; i < gp.buttons.length; i++) {
+            if (gp.buttons[i].pressed) {
+                pressedBinding = 'B' + i;
+                break;
+            }
+        }
+        if (!pressedBinding) {
+            for (let i = 0; i < gp.axes.length; i++) {
+                if (gp.axes[i] < -0.5) { pressedBinding = 'A' + i + '_-1'; break; }
+                if (gp.axes[i] > 0.5) { pressedBinding = 'A' + i + '_1'; break; }
+            }
+        }
+
+        if (pressedBinding) {
+            gamepadMap[rebindingGamepadAction] = pressedBinding;
+            localStorage.setItem('fosozu_gamepadmap', JSON.stringify(gamepadMap));
+            let btn = document.querySelector(`.rebind-gp-btn[data-action="${rebindingGamepadAction}"]`);
+            btn.innerText = formatGamepadBinding(pressedBinding);
+            btn.classList.remove('listening');
+            rebindingGamepadAction = null;
+            updateUIPrompts();
+            return;
+        }
+    }
+    requestAnimationFrame(pollGamepadRebind);
+}
+
 function handleGamepadButtons() {
+    if (inputMode !== 'gamepad') return;
+
     if (gamepadState.start && !prevGamepadState.start) {
         if (!gameStarted) {
             if (assetsLoaded === totalAssets) {
@@ -171,16 +258,52 @@ devToggle.addEventListener('change', (e) => {
     localStorage.setItem('fosozu_devMode', isDevMode);
 });
 
+const inputModeSelect = document.getElementById('input-mode-select');
+if (inputModeSelect) {
+    inputModeSelect.value = inputMode;
+    if (inputMode === 'gamepad') {
+        document.getElementById('keyboard-bindings').style.display = 'none';
+        document.getElementById('gamepad-bindings').style.display = 'block';
+    }
+
+    inputModeSelect.addEventListener('change', (e) => {
+        inputMode = e.target.value;
+        localStorage.setItem('fosozu_inputMode', inputMode);
+        if (inputMode === 'gamepad') {
+            document.getElementById('keyboard-bindings').style.display = 'none';
+            document.getElementById('gamepad-bindings').style.display = 'block';
+        } else {
+            document.getElementById('keyboard-bindings').style.display = 'block';
+            document.getElementById('gamepad-bindings').style.display = 'none';
+        }
+        updateUIPrompts();
+    });
+}
+
 document.querySelectorAll('.rebind-btn').forEach(btn => {
     const action = btn.getAttribute('data-action');
     btn.innerText = keyMap[action].toUpperCase();
     btn.addEventListener('click', (e) => {
-        if (rebindingAction) return;
+        if (rebindingAction || rebindingGamepadAction) return;
         rebindingAction = action;
         e.target.innerText = "PRESS KEY...";
         e.target.classList.add('listening');
     });
 });
+
+document.querySelectorAll('.rebind-gp-btn').forEach(btn => {
+    const action = btn.getAttribute('data-action');
+    btn.innerText = formatGamepadBinding(gamepadMap[action]);
+    btn.addEventListener('click', (e) => {
+        if (rebindingAction || rebindingGamepadAction) return;
+        rebindingGamepadAction = action;
+        e.target.innerText = "PRESS BTN/DIR...";
+        e.target.classList.add('listening');
+        requestAnimationFrame(pollGamepadRebind);
+    });
+});
+
+updateUIPrompts();
 
 window.addEventListener('keydown', e => {
     if (rebindingAction) {
@@ -192,6 +315,7 @@ window.addEventListener('keydown', e => {
         btn.innerText = key.toUpperCase();
         btn.classList.remove('listening');
         rebindingAction = null;
+        updateUIPrompts();
         e.preventDefault();
         return;
     }
@@ -213,7 +337,7 @@ window.addEventListener('keydown', e => {
 
         if (document.getElementById('main-menu-ui').style.display === 'flex' || document.getElementById('settings-ui').style.display === 'block') return;
         
-        if (e.code === 'KeyZ' || k === 'space' || e.code === 'Enter') {
+        if (inputMode === 'keyboard' && (e.code === 'KeyZ' || k === 'space' || e.code === 'Enter' || k === keyMap.shoot)) {
             if (!audio) { audio = new AudioManager(); audio.resume(); }
             gameStarted = true;
         }
@@ -225,9 +349,11 @@ window.addEventListener('keydown', e => {
         }
     }
 
-    if (isPaused) { if (summaryBox.style.display === 'block' && (e.code === 'KeyZ' || k === 'z')) closeSummary(); else if (dialogueBox.style.display === 'block' && (e.code === 'KeyZ' || k === 'z')) progressDialogue(); }
-    if (continueCountdown > 0 && (e.code === 'KeyC' || k === 'c' || e.code === 'Enter')) processContinue();
-    if (gameStarted && !gameOver && !isPaused && (k === keyMap.bomb || e.code === keyMap.bomb)) useBomb();
+    if (inputMode === 'keyboard') {
+        if (isPaused) { if (summaryBox.style.display === 'block' && (e.code === 'KeyZ' || k === keyMap.shoot)) closeSummary(); else if (dialogueBox.style.display === 'block' && (e.code === 'KeyZ' || k === keyMap.shoot)) progressDialogue(); }
+        if (continueCountdown > 0 && (e.code === 'KeyC' || k === 'c' || e.code === 'Enter')) processContinue();
+        if (gameStarted && !gameOver && !isPaused && (k === keyMap.bomb || e.code === keyMap.bomb)) useBomb();
+    }
 });
 window.addEventListener('keyup', e => { 
     let k = e.key.toLowerCase();
@@ -301,12 +427,12 @@ function shoot() {
 }
 
 function updatePlayer(ts) {
-    const isFocused = keys[keyMap.focus] || gamepadState.focus;
+    const isFocused = (inputMode === 'keyboard' && keys[keyMap.focus]) || (inputMode === 'gamepad' && gamepadState.focus);
     let s_cur = isFocused ? player.focusSpeed : player.speed;
-    if (keys[keyMap.up] || gamepadState.up) player.y -= s_cur;
-    if (keys[keyMap.down] || gamepadState.down) player.y += s_cur;
-    if (keys[keyMap.left] || gamepadState.left) player.x -= s_cur;
-    if (keys[keyMap.right] || gamepadState.right) player.x += s_cur;
+    if ((inputMode === 'keyboard' && keys[keyMap.up]) || (inputMode === 'gamepad' && gamepadState.up)) player.y -= s_cur;
+    if ((inputMode === 'keyboard' && keys[keyMap.down]) || (inputMode === 'gamepad' && gamepadState.down)) player.y += s_cur;
+    if ((inputMode === 'keyboard' && keys[keyMap.left]) || (inputMode === 'gamepad' && gamepadState.left)) player.x -= s_cur;
+    if ((inputMode === 'keyboard' && keys[keyMap.right]) || (inputMode === 'gamepad' && gamepadState.right)) player.x += s_cur;
 
     // Satellites lerping
     let activeCount = power >= 48 ? 4 : (power >= 32 ? 3 : (power >= 16 ? 2 : (power >= 8 ? 1 : 0)));
@@ -330,7 +456,7 @@ function updatePlayer(ts) {
         player.satellites[i].y += (targetY - player.satellites[i].y) * 0.3 * ts;
     }
 
-    if (keys[keyMap.shoot] || gamepadState.shoot) { if (Date.now() % 60 < 10) shoot(); }
+    if ((inputMode === 'keyboard' && keys[keyMap.shoot]) || (inputMode === 'gamepad' && gamepadState.shoot)) { if (Date.now() % 60 < 10) shoot(); }
 
     const isOff = (player.x < 0 || player.x > 600 || player.y < 0 || player.y > 800);
     if (isOff) { stallingTimer++; warningBorder.style.display = 'block'; if (stallingTimer > 90) { shakeTimer = 40; player.x = 300; player.y = 600; stallingTimer = 0; score = Math.max(0, score - 500); scoreEl.innerText = score; } } else { stallingTimer = 0; document.getElementById('warning-border').style.display = 'none'; }
@@ -418,7 +544,7 @@ function playerTakeDamage() {
 }
 
 function handleCollisions(ts) {
-    const isFocused = keys[keyMap.focus] || gamepadState.focus;
+    const isFocused = (inputMode === 'keyboard' && keys[keyMap.focus]) || (inputMode === 'gamepad' && gamepadState.focus);
     [bossBullets, enemyBullets].forEach(arr => {
         for (let i = arr.length - 1; i >= 0; i--) {
             let b = arr[i]; b.x += b.vx * ts; b.y += b.vy * ts;
@@ -539,7 +665,7 @@ function updateEnemies(ts) {
         if (e.y > 900) enemies.splice(i, 1);
     });
 
-    const isPoCActive = player.y < 150 && (keys[keyMap.focus] || gamepadState.focus);
+    const isPoCActive = player.y < 150 && ((inputMode === 'keyboard' && keys[keyMap.focus]) || (inputMode === 'gamepad' && gamepadState.focus));
 
     bombItems.forEach((p, i) => {
         if (isPoCActive) {
@@ -614,7 +740,8 @@ function draw() {
         if (assetsLoaded < totalAssets) {
             ctx.fillText(`LOADING ASSETS... (${assetsLoaded}/${totalAssets})`, 300, 380);
         } else {
-            ctx.fillText("READY - PRESS Z OR START", 300, 380);
+            const startPrompt = inputMode === 'gamepad' ? `PRESS START` : `PRESS ${keyMap.shoot.toUpperCase()} OR ENTER`;
+            ctx.fillText("READY - " + startPrompt, 300, 380);
             ctx.font = '14px Courier';
             ctx.fillText("LINK ITERATION: " + linkIteration, 300, 420);
         }
@@ -698,7 +825,7 @@ function draw() {
     bossBullets.forEach(b => { ctx.fillStyle = b.color; ctx.beginPath(); ctx.arc(b.x, b.y, 6, 0, 7); ctx.fill(); });
 
     ctx.fillStyle = '#0f0'; enemyBullets.forEach(b => { ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, 7); ctx.fill(); });
-    const isFocused = keys[keyMap.focus] || gamepadState.focus;
+    const isFocused = (inputMode === 'keyboard' && keys[keyMap.focus]) || (inputMode === 'gamepad' && gamepadState.focus);
     if (isFocused) { ctx.fillStyle = 'red'; ctx.beginPath(); ctx.arc(player.x, player.y, player.hitboxSize, 0, 7); ctx.fill(); }
 
     if (isPaused && dialogueBox.style.display !== 'block' && summaryBox.style.display !== 'block' && resetAnimTimer <= 0) {
