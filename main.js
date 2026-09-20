@@ -420,7 +420,7 @@ function useBomb() {
 }
 
 function closeSummary() { summaryBox.style.display = 'none'; isPaused = false; waveGraze = 0; scoreAtLastBoss = score; shieldBrokenInWave = false; updateHighScore(); }
-function processContinue() { updateHighScore(); continueCountdown = 0; continueUsed = true; continueUI.style.display = 'none'; lives = 3; livesEl.innerText = lives; bombs = 3; bombsEl.innerText = bombs; power = 0; powerEl.innerText = power; score = 0; scoreEl.innerText = score; scoreAtLastBoss = 0; invulnTimer = 180; bossBullets.length = 0; enemyBullets.length = 0; enemies.length = 0; bombItems.length = 0; powerItems.length = 0; hasShield = false; grazeStreak = 0; shieldBrokenInWave = false; document.getElementById('shieldStat').style.display = 'none'; document.getElementById('shieldStreak').innerText = 0; linkIteration = 1; ngValEl.innerText = 1; accumulator = 0; stageTimer = 0; formationTimer = 0; bombsSpawnedInWave = 0; comboChain = 0; comboTimer = 0; document.getElementById("overclock-ui").style.display = "none"; }
+function processContinue() { updateHighScore(); continueCountdown = 0; continueUsed = true; continueUI.style.display = 'none'; lives = 3; livesEl.innerText = lives; bombs = 3; bombsEl.innerText = bombs; power = 0; powerEl.innerText = power; score = 0; scoreEl.innerText = score; scoreAtLastBoss = 0; invulnTimer = 180; bossBullets.length = 0; enemyBullets.length = 0; enemies.length = 0; bombItems.length = 0; powerItems.length = 0; hasShield = false; grazeStreak = 0; shieldBrokenInWave = false; document.getElementById('shieldStat').style.display = 'none'; document.getElementById('shieldStreak').innerText = 0; linkIteration = 1; ngValEl.innerText = 1; accumulator = 0; stageTimer = 0; formationTimer = 0; bombsSpawnedInWave = 0; comboChain = 0; comboTimer = 0;  }
 
 function shoot() {
     if (audio) audio.playShoot();
@@ -831,22 +831,17 @@ function update() {
             }
             
             let ocUI = document.getElementById('overclock-ui');
-            if (comboChain > 0) {
-                ocUI.style.display = 'block';
-                document.getElementById('combo-chain').innerText = 'x' + comboChain;
-                document.getElementById('combo-bar-fill').style.width = Math.max(0, (comboTimer / COMBO_MAX_TIME * 100)) + '%';
-                
-                if (comboChain >= 10) {
-                    document.getElementById('combo-chain').style.color = '#ff006e';
-                    document.getElementById('combo-chain').style.textShadow = '0 0 10px #ff006e';
-                    document.getElementById('combo-bar-fill').style.background = '#ff006e';
-                } else {
-                    document.getElementById('combo-chain').style.color = '#00f2ff';
-                    document.getElementById('combo-chain').style.textShadow = 'none';
-                    document.getElementById('combo-bar-fill').style.background = '#00f2ff';
-                }
+            document.getElementById('combo-chain').innerText = 'x' + comboChain;
+            document.getElementById('combo-bar-fill').style.width = Math.max(0, (comboTimer / COMBO_MAX_TIME * 100)) + '%';
+            
+            if (comboChain >= 10) {
+                document.getElementById('combo-chain').style.color = '#ff006e';
+                document.getElementById('combo-chain').style.textShadow = '0 0 10px #ff006e';
+                document.getElementById('combo-bar-fill').style.background = '#ff006e';
             } else {
-                ocUI.style.display = 'none';
+                document.getElementById('combo-chain').style.color = '#00f2ff';
+                document.getElementById('combo-chain').style.textShadow = 'none';
+                document.getElementById('combo-bar-fill').style.background = '#00f2ff';
             }
         }
 }
