@@ -658,27 +658,47 @@ function updateBoss(ts) {
 
 function spawnFormation(type) {
     let baseSpeed = (3.5 + (difficultyWave * 0.4)) * Math.min(3.5, 1 + (linkIteration - 1) * 0.05);
-    let hp = 1;
-    let shootDelay = 1500; // milliseconds before they start firing
+    
+    let hp, shootDelay, speedMult, repeatsShot;
+    
+    if (type === 'WALL' || type === 'SLOW_CIRCLE') {
+        // Creeper / Artillery Archetype
+        hp = 4;
+        shootDelay = 800;
+        speedMult = 0.4;
+        repeatsShot = true;
+    } else {
+        // Rushdown Archetype (V_SHAPE, SWEEP_LEFT, SWEEP_RIGHT, CIRCLE)
+        hp = 1;
+        shootDelay = 500;
+        speedMult = 1.3;
+        repeatsShot = false;
+    }
+    
+    let speed = baseSpeed * speedMult;
 
     if (type === 'V_SHAPE') {
         const xs = [300, 250, 350, 200, 400];
         const ys = [-50, -100, -100, -150, -150];
         for (let i = 0; i < 5; i++) {
-            enemies.push({ x: xs[i], y: ys[i], vx: 0, vy: baseSpeed, speed: baseSpeed, type: 'blue', lastShot: Date.now() + shootDelay, hp: hp });
+            enemies.push({ x: xs[i], y: ys[i], vx: 0, vy: speed, speed: speed, type: 'blue', nextShot: Date.now() + shootDelay, hp: hp, repeatsShot: repeatsShot });
         }
     } else if (type === 'SWEEP_LEFT') {
         for (let i = 0; i < 4; i++) {
-            enemies.push({ x: 50 + i * 40, y: -50 - i * 40, vx: baseSpeed * 0.7, vy: baseSpeed, speed: baseSpeed, type: 'green', lastShot: Date.now() + shootDelay, hp: hp });
+            enemies.push({ x: 50 + i * 40, y: -50 - i * 40, vx: speed * 0.7, vy: speed, speed: speed, type: 'green', nextShot: Date.now() + shootDelay, hp: hp, repeatsShot: repeatsShot });
         }
     } else if (type === 'SWEEP_RIGHT') {
         for (let i = 0; i < 4; i++) {
-            enemies.push({ x: 550 - i * 40, y: -50 - i * 40, vx: -baseSpeed * 0.7, vy: baseSpeed, speed: baseSpeed, type: 'green', lastShot: Date.now() + shootDelay, hp: hp });
+            enemies.push({ x: 550 - i * 40, y: -50 - i * 40, vx: -speed * 0.7, vy: speed, speed: speed, type: 'green', nextShot: Date.now() + shootDelay, hp: hp, repeatsShot: repeatsShot });
         }
-    } else if (type === 'CIRCLE') {
+    } else if (type === 'CIRCLE' || type === 'SLOW_CIRCLE') {
         for (let i = 0; i < 6; i++) {
             let a = (i * Math.PI * 2) / 6;
-            enemies.push({ x: 300 + Math.cos(a)*50, y: -100 + Math.sin(a)*50, vx: Math.cos(a) * 0.5, vy: baseSpeed + Math.sin(a) * 0.5, speed: baseSpeed, type: 'blue', lastShot: Date.now() + shootDelay, hp: hp });
+            enemies.push({ x: 300 + Math.cos(a)*50, y: -100 + Math.sin(a)*50, vx: Math.cos(a) * 0.5 * (type==='SLOW_CIRCLE'?0.5:1), vy: speed + Math.sin(a) * 0.5 * (type==='SLOW_CIRCLE'?0.5:1), speed: speed, type: 'blue', nextShot: Date.now() + shootDelay, hp: hp, repeatsShot: repeatsShot });
+        }
+    } else if (type === 'WALL') {
+        for (let i = 0; i < 7; i++) {
+            enemies.push({ x: 90 + i * 70, y: -50, vx: 0, vy: speed, speed: speed, type: 'green', nextShot: Date.now() + shootDelay, hp: hp, repeatsShot: repeatsShot });
         }
     }
 }
@@ -687,7 +707,7 @@ function updateEnemies(ts) {
     if (!bossMode && waveClearTimer <= 0 && stageTimer < WAVE_DURATION) {
         formationTimer -= ts;
         if (formationTimer <= 0) {
-            const types = ['V_SHAPE', 'SWEEP_LEFT', 'SWEEP_RIGHT', 'CIRCLE'];
+            const types = ['V_SHAPE', 'SWEEP_LEFT', 'SWEEP_RIGHT', 'CIRCLE', 'WALL', 'SLOW_CIRCLE'];
             spawnFormation(types[Math.floor(Math.random() * types.length)]);
             formationTimer = 200; // Approx 3.3 seconds at 60fps
         }
@@ -697,11 +717,16 @@ function updateEnemies(ts) {
         let e = enemies[i];
         e.x += (e.vx || 0) * ts;
         e.y += (e.vy !== undefined ? e.vy : e.speed) * ts;
-        if (Date.now() - e.lastShot > 1000) {
+        if (Date.now() >= (e.nextShot || e.lastShot + 1000)) {
             let eSpd = Math.min(3.5, 1 + (linkIteration - 1) * 0.1);
             if (e.type === 'blue') { let r = (Date.now() / 400); for (let j = 0; j < 4; j++) { let a = r + (j * Math.PI / 2); enemyBullets.push({ x: e.x, y: e.y, vx: Math.cos(a) * 3 * eSpd, vy: Math.sin(a) * 3 * eSpd, grazed: false }); } }
             else { let a_b = Math.atan2(player.y - e.y, player.x - e.x); for (let j = -2; j <= 2; j++) { let a = a_b + (j * 0.25); enemyBullets.push({ x: e.x, y: e.y, vx: Math.cos(a) * 3.5 * eSpd, vy: Math.sin(a) * 3.5 * eSpd, grazed: false }); } }
-            e.lastShot = Date.now();
+            
+            if (e.repeatsShot) {
+                e.nextShot = Date.now() + 1500;
+            } else {
+                e.nextShot = Date.now() + 9999999;
+            }
         }
         
         let died = false;
