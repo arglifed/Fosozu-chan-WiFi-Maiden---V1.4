@@ -1063,3 +1063,14 @@ function loop(timestamp) {
     requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
+
+function resizeGame() {
+    const wrapper = document.getElementById('game-wrapper');
+    if (!wrapper) return;
+    const targetWidth = 1200;
+    const targetHeight = 800;
+    const scale = Math.min(window.innerWidth / targetWidth, window.innerHeight / targetHeight);
+    wrapper.style.transform = 'scale(' + scale + ')';
+}
+window.addEventListener('resize', resizeGame);
+window.addEventListener('load', resizeGame);
