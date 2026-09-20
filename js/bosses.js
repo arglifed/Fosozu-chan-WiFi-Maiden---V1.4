@@ -541,9 +541,18 @@ class MadameSatsuki extends Boss {
             this.teleportTimer -= ts;
             
             if (this.teleportTimer <= 0) {
-                if (Math.random() < 0.35 && player) {
-                    this.x = Math.max(50, Math.min(550, player.x + (Math.random() < 0.5 ? -150 : 150)));
-                    this.y = Math.max(50, Math.min(400, player.y - 200));
+                if (player) {
+                    if (Math.random() < 0.35) {
+                        // 35% Jumpscare: Teleport BELOW the player
+                        this.x = Math.max(50, Math.min(550, player.x + (Math.random() * 100 - 50)));
+                        this.y = Math.max(100, Math.min(700, player.y + 150 + Math.random() * 100));
+                    } else {
+                        // 65% Normal: Teleport directly above or to the top corners of the player
+                        let offsetX = (Math.random() > 0.5 ? 1 : -1) * (50 + Math.random() * 150);
+                        let offsetY = -(100 + Math.random() * 150);
+                        this.x = Math.max(50, Math.min(550, player.x + offsetX));
+                        this.y = Math.max(50, Math.min(450, player.y + offsetY));
+                    }
                 } else {
                     this.x = 50 + Math.random() * 500;
                     this.y = 50 + Math.random() * 200;
