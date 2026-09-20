@@ -48,6 +48,8 @@ class Boss {
 class PingKo extends Boss {
     constructor(difficultyWave, linkIteration) {
         super(difficultyWave, linkIteration);
+        this.maxHP *= 0.8;
+        this.hp = this.maxHP;
         this.name = "PING-KO";
         this.type = "pink";
         this.intro = [
@@ -282,6 +284,8 @@ class ShotgunKo extends Boss {
 class CosmicCrow extends Boss {
     constructor(difficultyWave, linkIteration) {
         super(difficultyWave, linkIteration);
+        this.maxHP *= 0.8;
+        this.hp = this.maxHP;
         this.name = "COSMIC CROW";
         this.type = "purple";
         this.intro = [
@@ -386,6 +390,8 @@ class CosmicCrow extends Boss {
 class Lief extends Boss {
     constructor(difficultyWave, linkIteration) {
         super(difficultyWave, linkIteration);
+        this.maxHP *= 1.3;
+        this.hp = this.maxHP;
         this.name = "LIEF THE JUGGERNAUT";
         this.type = "amber";
         this.targetY = 250;
@@ -521,6 +527,8 @@ class Lief extends Boss {
 class MadameSatsuki extends Boss {
     constructor(difficultyWave, linkIteration) {
         super(difficultyWave, linkIteration);
+        this.maxHP *= 1.5;
+        this.hp = this.maxHP;
         this.name = "MADAME SATSUKI";
         this.type = "crimson";
         this.intro = [
