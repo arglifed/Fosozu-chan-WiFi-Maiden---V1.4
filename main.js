@@ -114,6 +114,8 @@ let slowMoTimer = 0, flashTimer = 0, grazeStreak = 0, streakTimer = 0, hasShield
 let stageTimer = 0, formationTimer = 0;
 const WAVE_DURATION = 1800;
 let bombsSpawnedInWave = 0;
+let comboChain = 0, comboTimer = 0;
+const COMBO_MAX_TIME = 120;
 
 const keys = {}, bullets = [], bossBullets = [], enemyBullets = [], enemies = [], bombItems = [], powerItems = [], medals = [], effects = [];
 const stars = Array.from({ length: 80 }, () => ({ x: Math.random() * 600, y: Math.random() * 800, size: Math.random() * 2, speed: Math.random() * 2 + 1 }));
@@ -418,7 +420,7 @@ function useBomb() {
 }
 
 function closeSummary() { summaryBox.style.display = 'none'; isPaused = false; waveGraze = 0; scoreAtLastBoss = score; shieldBrokenInWave = false; updateHighScore(); }
-function processContinue() { updateHighScore(); continueCountdown = 0; continueUsed = true; continueUI.style.display = 'none'; lives = 3; livesEl.innerText = lives; bombs = 3; bombsEl.innerText = bombs; power = 0; powerEl.innerText = power; score = 0; scoreEl.innerText = score; scoreAtLastBoss = 0; invulnTimer = 180; bossBullets.length = 0; enemyBullets.length = 0; enemies.length = 0; bombItems.length = 0; powerItems.length = 0; hasShield = false; grazeStreak = 0; shieldBrokenInWave = false; document.getElementById('shieldStat').style.display = 'none'; document.getElementById('shieldStreak').innerText = 0; linkIteration = 1; ngValEl.innerText = 1; accumulator = 0; stageTimer = 0; formationTimer = 0; bombsSpawnedInWave = 0; }
+function processContinue() { updateHighScore(); continueCountdown = 0; continueUsed = true; continueUI.style.display = 'none'; lives = 3; livesEl.innerText = lives; bombs = 3; bombsEl.innerText = bombs; power = 0; powerEl.innerText = power; score = 0; scoreEl.innerText = score; scoreAtLastBoss = 0; invulnTimer = 180; bossBullets.length = 0; enemyBullets.length = 0; enemies.length = 0; bombItems.length = 0; powerItems.length = 0; hasShield = false; grazeStreak = 0; shieldBrokenInWave = false; document.getElementById('shieldStat').style.display = 'none'; document.getElementById('shieldStreak').innerText = 0; linkIteration = 1; ngValEl.innerText = 1; accumulator = 0; stageTimer = 0; formationTimer = 0; bombsSpawnedInWave = 0; comboChain = 0; comboTimer = 0; document.getElementById("overclock-ui").style.display = "none"; }
 
 function shoot() {
     if (audio) audio.playShoot();
@@ -737,7 +739,7 @@ function updateEnemies(ts) {
                 bullets.splice(bi, 1);
                 
                 if (e.hp <= 0) {
-                    enemies.splice(i, 1); score += 100; scoreEl.innerText = score;
+                    comboChain++; comboTimer = COMBO_MAX_TIME; enemies.splice(i, 1); score += 100 * comboChain; scoreEl.innerText = score;
                     if (audio) audio.playEnemyHit();
                     medals.push({ x: e.x, y: e.y });
                     if (bombsSpawnedInWave < 1 && Math.random() < 0.05) {
@@ -817,6 +819,36 @@ function update() {
     handleCollisions(ts);
     updateBoss(ts);
     updateEnemies(ts);
+        
+        if (comboChain > 0) {
+            comboTimer -= ts;
+            if (comboTimer <= 0) {
+                comboChain = 0;
+                comboTimer = 0;
+                let wb = document.getElementById('warning-border');
+                wb.style.display = 'block';
+                setTimeout(() => { wb.style.display = 'none'; }, 150);
+            }
+            
+            let ocUI = document.getElementById('overclock-ui');
+            if (comboChain > 0) {
+                ocUI.style.display = 'block';
+                document.getElementById('combo-chain').innerText = 'x' + comboChain;
+                document.getElementById('combo-bar-fill').style.width = Math.max(0, (comboTimer / COMBO_MAX_TIME * 100)) + '%';
+                
+                if (comboChain >= 10) {
+                    document.getElementById('combo-chain').style.color = '#ff006e';
+                    document.getElementById('combo-chain').style.textShadow = '0 0 10px #ff006e';
+                    document.getElementById('combo-bar-fill').style.background = '#ff006e';
+                } else {
+                    document.getElementById('combo-chain').style.color = '#00f2ff';
+                    document.getElementById('combo-chain').style.textShadow = 'none';
+                    document.getElementById('combo-bar-fill').style.background = '#00f2ff';
+                }
+            } else {
+                ocUI.style.display = 'none';
+            }
+        }
 }
 
 function draw() {
