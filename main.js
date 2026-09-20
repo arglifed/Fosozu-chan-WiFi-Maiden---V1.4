@@ -117,7 +117,7 @@ let bombsSpawnedInWave = 0;
 
 const keys = {}, bullets = [], bossBullets = [], enemyBullets = [], enemies = [], bombItems = [], powerItems = [], medals = [], effects = [];
 const stars = Array.from({ length: 80 }, () => ({ x: Math.random() * 600, y: Math.random() * 800, size: Math.random() * 2, speed: Math.random() * 2 + 1 }));
-const player = { x: 300, y: 700, speed: 6, focusSpeed: 2.5, hitboxSize: 4, grazeSize: 25, satellites: [{ x: 300, y: 700 }, { x: 300, y: 700 }, { x: 300, y: 700 }, { x: 300, y: 700 }] };
+const player = { x: 300, y: 700, speed: 4.5, focusSpeed: 2.5, hitboxSize: 4, grazeSize: 25, satellites: [{ x: 300, y: 700 }, { x: 300, y: 700 }, { x: 300, y: 700 }, { x: 300, y: 700 }] };
 
 let audio = null;
 
@@ -656,11 +656,12 @@ function updateBoss(ts) {
 }
 
 function updateEnemies(ts) {
-    if (!bossMode && waveClearTimer <= 0 && stageTimer < WAVE_DURATION && Math.random() < 0.12) {
-        enemies.push({ x: Math.random() * 540 + 30, y: -50, speed: (3.5 + (difficultyWave * 0.4)) * Math.min(3.5, 1 + (linkIteration - 1) * 0.05), type: Math.random() > 0.5 ? 'blue' : 'green', lastShot: Date.now() });
+    if (!bossMode && waveClearTimer <= 0 && stageTimer < WAVE_DURATION && Math.random() < 0.04) {
+        enemies.push({ x: Math.random() * 540 + 30, y: -50, speed: (3.5 + (difficultyWave * 0.4)) * Math.min(3.5, 1 + (linkIteration - 1) * 0.05), type: Math.random() > 0.5 ? 'blue' : 'green', lastShot: Date.now(), hp: 15 });
     }
 
-    enemies.forEach((e, i) => {
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        let e = enemies[i];
         e.y += e.speed * ts;
         if (Date.now() - e.lastShot > 1000) {
             let eSpd = Math.min(3.5, 1 + (linkIteration - 1) * 0.1);
@@ -668,20 +669,30 @@ function updateEnemies(ts) {
             else { let a_b = Math.atan2(player.y - e.y, player.x - e.x); for (let j = -2; j <= 2; j++) { let a = a_b + (j * 0.25); enemyBullets.push({ x: e.x, y: e.y, vx: Math.cos(a) * 3.5 * eSpd, vy: Math.sin(a) * 3.5 * eSpd, grazed: false }); } }
             e.lastShot = Date.now();
         }
+        
+        let died = false;
         for (let bi = bullets.length - 1; bi >= 0; bi--) {
             if (Math.hypot(bullets[bi].x - e.x, bullets[bi].y - e.y) < 40) {
-                enemies.splice(i, 1); bullets.splice(bi, 1); score += 100; scoreEl.innerText = score;
-                if (audio) audio.playEnemyHit();
-                medals.push({ x: e.x, y: e.y });
-                if (bombsSpawnedInWave < 1 && Math.random() < 0.05) {
-                    bombItems.push({ x: e.x, y: e.y });
-                    bombsSpawnedInWave++;
+                if (e.hp === undefined) e.hp = 15;
+                e.hp -= (bullets[bi].damage || 1);
+                bullets.splice(bi, 1);
+                
+                if (e.hp <= 0) {
+                    enemies.splice(i, 1); score += 100; scoreEl.innerText = score;
+                    if (audio) audio.playEnemyHit();
+                    medals.push({ x: e.x, y: e.y });
+                    if (bombsSpawnedInWave < 1 && Math.random() < 0.05) {
+                        bombItems.push({ x: e.x, y: e.y });
+                        bombsSpawnedInWave++;
+                    }
+                    if (Math.random() < 0.45) powerItems.push({ x: e.x, y: e.y });
+                    died = true;
+                    break;
                 }
-                if (Math.random() < 0.45) powerItems.push({ x: e.x, y: e.y });
             }
         }
-        if (e.y > 900) enemies.splice(i, 1);
-    });
+        if (!died && e.y > 900) enemies.splice(i, 1);
+    }
 
     const isPoCActive = player.y < 150 && ((inputMode === 'keyboard' && keys[keyMap.focus]) || (inputMode === 'gamepad' && gamepadState.focus));
 
