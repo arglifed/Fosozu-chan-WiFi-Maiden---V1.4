@@ -337,9 +337,9 @@ window.addEventListener('keydown', e => {
 
     // STAFF MODE:
     if (isDevMode) {
-        if (k === 'd') { linkIteration++; ngValEl.innerText = linkIteration; }
-        if (k === 'b') { bombs = 9; bombsEl.innerText = bombs; power = 64; powerEl.innerText = power; }
-        if (k === 's') {
+        if (k === '1') { linkIteration++; ngValEl.innerText = linkIteration; }
+        if (k === '2') { bombs = 9; bombsEl.innerText = bombs; power = 64; powerEl.innerText = power; }
+        if (k === '3') {
             if (boss) { boss.hp = 0; }
             else { stageTimer = WAVE_DURATION; enemies.length = 0; waveClearTimer = 0; }
         }
