@@ -111,7 +111,7 @@ let waveClearTimer = 0, bombEffectTimer = 0, invulnTimer = 0, shakeTimer = 0, st
 let slowMoTimer = 0, flashTimer = 0, grazeStreak = 0, streakTimer = 0, hasShield = false, waveGraze = 0, dialogueIndex = 0, resetAnimTimer = 0, linkIteration = 1, shieldBrokenInWave = false;
 
 // WAVE-BASED MECHANICS
-let stageTimer = 0;
+let stageTimer = 0, formationTimer = 0;
 const WAVE_DURATION = 1800;
 let bombsSpawnedInWave = 0;
 
@@ -418,7 +418,7 @@ function useBomb() {
 }
 
 function closeSummary() { summaryBox.style.display = 'none'; isPaused = false; waveGraze = 0; scoreAtLastBoss = score; shieldBrokenInWave = false; updateHighScore(); }
-function processContinue() { updateHighScore(); continueCountdown = 0; continueUsed = true; continueUI.style.display = 'none'; lives = 3; livesEl.innerText = lives; bombs = 3; bombsEl.innerText = bombs; power = 0; powerEl.innerText = power; score = 0; scoreEl.innerText = score; scoreAtLastBoss = 0; invulnTimer = 180; bossBullets.length = 0; enemyBullets.length = 0; enemies.length = 0; bombItems.length = 0; powerItems.length = 0; hasShield = false; grazeStreak = 0; shieldBrokenInWave = false; document.getElementById('shieldStat').style.display = 'none'; document.getElementById('shieldStreak').innerText = 0; linkIteration = 1; ngValEl.innerText = 1; accumulator = 0; stageTimer = 0; bombsSpawnedInWave = 0; }
+function processContinue() { updateHighScore(); continueCountdown = 0; continueUsed = true; continueUI.style.display = 'none'; lives = 3; livesEl.innerText = lives; bombs = 3; bombsEl.innerText = bombs; power = 0; powerEl.innerText = power; score = 0; scoreEl.innerText = score; scoreAtLastBoss = 0; invulnTimer = 180; bossBullets.length = 0; enemyBullets.length = 0; enemies.length = 0; bombItems.length = 0; powerItems.length = 0; hasShield = false; grazeStreak = 0; shieldBrokenInWave = false; document.getElementById('shieldStat').style.display = 'none'; document.getElementById('shieldStreak').innerText = 0; linkIteration = 1; ngValEl.innerText = 1; accumulator = 0; stageTimer = 0; formationTimer = 0; bombsSpawnedInWave = 0; }
 
 function shoot() {
     if (audio) audio.playShoot();
@@ -611,7 +611,7 @@ function handleCollisions(ts) {
         }
 
         if (boss.hp <= 0) {
-            score += 5000; difficultyWave++; waveClearTimer = 150; bossMode = false; stageTimer = 0; bombsSpawnedInWave = 0;
+            score += 5000; difficultyWave++; waveClearTimer = 150; bossMode = false; stageTimer = 0; formationTimer = 0; bombsSpawnedInWave = 0;
             if (audio) audio.playExplosion();
             let b_name = boss.name;
             let b_defeat = boss.defeat;
@@ -655,14 +655,48 @@ function updateBoss(ts) {
     }
 }
 
+
+function spawnFormation(type) {
+    let baseSpeed = (3.5 + (difficultyWave * 0.4)) * Math.min(3.5, 1 + (linkIteration - 1) * 0.05);
+    let hp = 1;
+    let shootDelay = 1500; // milliseconds before they start firing
+
+    if (type === 'V_SHAPE') {
+        const xs = [300, 250, 350, 200, 400];
+        const ys = [-50, -100, -100, -150, -150];
+        for (let i = 0; i < 5; i++) {
+            enemies.push({ x: xs[i], y: ys[i], vx: 0, vy: baseSpeed, speed: baseSpeed, type: 'blue', lastShot: Date.now() + shootDelay, hp: hp });
+        }
+    } else if (type === 'SWEEP_LEFT') {
+        for (let i = 0; i < 4; i++) {
+            enemies.push({ x: 50 + i * 40, y: -50 - i * 40, vx: baseSpeed * 0.7, vy: baseSpeed, speed: baseSpeed, type: 'green', lastShot: Date.now() + shootDelay, hp: hp });
+        }
+    } else if (type === 'SWEEP_RIGHT') {
+        for (let i = 0; i < 4; i++) {
+            enemies.push({ x: 550 - i * 40, y: -50 - i * 40, vx: -baseSpeed * 0.7, vy: baseSpeed, speed: baseSpeed, type: 'green', lastShot: Date.now() + shootDelay, hp: hp });
+        }
+    } else if (type === 'CIRCLE') {
+        for (let i = 0; i < 6; i++) {
+            let a = (i * Math.PI * 2) / 6;
+            enemies.push({ x: 300 + Math.cos(a)*50, y: -100 + Math.sin(a)*50, vx: Math.cos(a) * 0.5, vy: baseSpeed + Math.sin(a) * 0.5, speed: baseSpeed, type: 'blue', lastShot: Date.now() + shootDelay, hp: hp });
+        }
+    }
+}
+
 function updateEnemies(ts) {
-    if (!bossMode && waveClearTimer <= 0 && stageTimer < WAVE_DURATION && Math.random() < 0.04) {
-        enemies.push({ x: Math.random() * 540 + 30, y: -50, speed: (3.5 + (difficultyWave * 0.4)) * Math.min(3.5, 1 + (linkIteration - 1) * 0.05), type: Math.random() > 0.5 ? 'blue' : 'green', lastShot: Date.now(), hp: 15 });
+    if (!bossMode && waveClearTimer <= 0 && stageTimer < WAVE_DURATION) {
+        formationTimer -= ts;
+        if (formationTimer <= 0) {
+            const types = ['V_SHAPE', 'SWEEP_LEFT', 'SWEEP_RIGHT', 'CIRCLE'];
+            spawnFormation(types[Math.floor(Math.random() * types.length)]);
+            formationTimer = 200; // Approx 3.3 seconds at 60fps
+        }
     }
 
     for (let i = enemies.length - 1; i >= 0; i--) {
         let e = enemies[i];
-        e.y += e.speed * ts;
+        e.x += (e.vx || 0) * ts;
+        e.y += (e.vy !== undefined ? e.vy : e.speed) * ts;
         if (Date.now() - e.lastShot > 1000) {
             let eSpd = Math.min(3.5, 1 + (linkIteration - 1) * 0.1);
             if (e.type === 'blue') { let r = (Date.now() / 400); for (let j = 0; j < 4; j++) { let a = r + (j * Math.PI / 2); enemyBullets.push({ x: e.x, y: e.y, vx: Math.cos(a) * 3 * eSpd, vy: Math.sin(a) * 3 * eSpd, grazed: false }); } }
@@ -673,7 +707,7 @@ function updateEnemies(ts) {
         let died = false;
         for (let bi = bullets.length - 1; bi >= 0; bi--) {
             if (Math.hypot(bullets[bi].x - e.x, bullets[bi].y - e.y) < 40) {
-                if (e.hp === undefined) e.hp = 15;
+                if (e.hp === undefined) e.hp = 1;
                 e.hp -= (bullets[bi].damage || 1);
                 bullets.splice(bi, 1);
                 
