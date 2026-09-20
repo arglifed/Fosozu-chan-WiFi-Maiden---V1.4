@@ -412,7 +412,7 @@ function useBomb() {
         enemies.length = 0;
         scoreEl.innerText = score;
 
-        if (boss) boss.hp -= 40;
+        if (boss) boss.hp -= 300;
         if (audio) audio.playExplosion();
     }
 }
