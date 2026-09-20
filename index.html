@@ -145,6 +145,22 @@
                 menuFX.appendChild(p);
             }
         }
+        function toggleLeaderboard(show) {
+            document.getElementById('leaderboard-ui').style.display = show ? 'block' : 'none';
+        }
+
+        // Inline resize logic to bypass browser caching of main.js
+        function resizeGame() {
+            const wrapper = document.getElementById('game-wrapper');
+            if (!wrapper) return;
+            const targetWidth = 1200;
+            const targetHeight = 800;
+            const scale = Math.min(window.innerWidth / targetWidth, window.innerHeight / targetHeight);
+            wrapper.style.transform = 'scale(' + scale + ')';
+        }
+        window.addEventListener('resize', resizeGame);
+        window.addEventListener('load', resizeGame);
+        resizeGame(); // Call immediately
     </script>
     </div>
 </body>
