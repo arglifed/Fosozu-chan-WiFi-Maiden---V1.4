@@ -150,7 +150,7 @@ const waveTimelines = {
         // Gap of 15s (900 frames) for the duel.
         { time: 1800, type: 'DIVER_SWOOP', spawned: false }
     ],
-    4: [ // Escalate for Wave 4+
+    4: [ // Escalate for Wave 4
         { time: 0, type: 'SHIELD_WALL', spawned: false },
         { time: 150, type: 'DIVER_SWOOP', spawned: false },
         { time: 200, type: 'DIVER_SWOOP', spawned: false },
@@ -159,9 +159,52 @@ const waveTimelines = {
         { time: 600, type: 'FLANK_LEFT', y: 200, spawned: false },
         { time: 600, type: 'FLANK_RIGHT', y: 400, spawned: false },
         { time: 700, type: 'WALL', spawned: false },
-        { time: 900, type: 'MID_BOSS_PINGKO', spawned: false },
-        // Gap of 15s (900 frames). Mid-boss flees if not killed by 1800.
-        { time: 1800, type: 'DIVER_SWOOP', spawned: false }
+        { time: 850, type: 'V_SHAPE', spawned: false },
+        { time: 1000, type: 'DIVER_SWOOP', spawned: false },
+        { time: 1150, type: 'SWEEP_LEFT', spawned: false },
+        { time: 1150, type: 'SWEEP_RIGHT', spawned: false },
+        { time: 1300, type: 'SHIELD_WALL', spawned: false },
+        { time: 1450, type: 'CIRCLE', spawned: false },
+        { time: 1600, type: 'DIVER_SWOOP', spawned: false }
+    ],
+    5: [ // Highly aggressive Wave 5
+        { time: 0, type: 'SWEEP_LEFT', spawned: false },
+        { time: 50, type: 'SWEEP_RIGHT', spawned: false },
+        { time: 200, type: 'DIVER_SWOOP', spawned: false },
+        { time: 300, type: 'DIVER_SWOOP', spawned: false },
+        { time: 400, type: 'DIVER_SWOOP', spawned: false },
+        { time: 550, type: 'FLANK_LEFT', y: 150, spawned: false },
+        { time: 550, type: 'FLANK_RIGHT', y: 300, spawned: false },
+        { time: 750, type: 'SWEEP_LEFT', spawned: false },
+        { time: 800, type: 'SWEEP_RIGHT', spawned: false },
+        { time: 950, type: 'V_SHAPE', spawned: false },
+        { time: 1050, type: 'DIVER_SWOOP', spawned: false },
+        { time: 1150, type: 'DIVER_SWOOP', spawned: false },
+        { time: 1300, type: 'FLANK_LEFT', y: 100, spawned: false },
+        { time: 1300, type: 'FLANK_RIGHT', y: 200, spawned: false },
+        { time: 1450, type: 'SWEEP_LEFT', spawned: false },
+        { time: 1500, type: 'SWEEP_RIGHT', spawned: false },
+        { time: 1650, type: 'DIVER_SWOOP', spawned: false }
+    ],
+    6: [ // Madame Satsuki Prelude Wave 6
+        { time: 0, type: 'SHIELD_WALL', spawned: false },
+        { time: 0, type: 'SHIELD_WALL', spawned: false },
+        { time: 150, type: 'SLOW_CIRCLE', spawned: false },
+        { time: 300, type: 'FLANK_LEFT', y: 100, spawned: false },
+        { time: 300, type: 'FLANK_RIGHT', y: 400, spawned: false },
+        { time: 450, type: 'SHIELD_WALL', spawned: false },
+        { time: 550, type: 'SLOW_CIRCLE', spawned: false },
+        { time: 550, type: 'SLOW_CIRCLE', spawned: false },
+        { time: 700, type: 'FLANK_LEFT', y: 200, spawned: false },
+        { time: 700, type: 'FLANK_RIGHT', y: 300, spawned: false },
+        { time: 850, type: 'SHIELD_WALL', spawned: false },
+        { time: 1000, type: 'SLOW_CIRCLE', spawned: false },
+        { time: 1150, type: 'FLANK_LEFT', y: 150, spawned: false },
+        { time: 1150, type: 'FLANK_RIGHT', y: 350, spawned: false },
+        { time: 1300, type: 'SHIELD_WALL', spawned: false },
+        { time: 1450, type: 'SLOW_CIRCLE', spawned: false },
+        { time: 1600, type: 'FLANK_LEFT', y: 250, spawned: false },
+        { time: 1600, type: 'FLANK_RIGHT', y: 250, spawned: false }
     ]
 };
 
@@ -891,7 +934,8 @@ function spawnFormation(type, spawnY) {
 
 function updateEnemies(ts) {
     if (!bossMode && waveClearTimer <= 0 && stageTimer < WAVE_DURATION) {
-        let currentTimeline = waveTimelines[difficultyWave] || waveTimelines[4];
+        let waveIndex = ((difficultyWave - 1) % 6) + 1;
+        let currentTimeline = waveTimelines[waveIndex];
         
         currentTimeline.forEach(event => {
             if (!event.spawned && stageTimer >= event.time) {
@@ -990,7 +1034,7 @@ function updateEnemies(ts) {
                 }
             }
         }
-        if (!died && (e.y > 900 || e.x < -100 || e.x > 700)) enemies.splice(i, 1);
+        if (!died && (e.y > 900 || (e.isMidBoss && e.fleeTimer <= 0 && e.y < -100) || e.x < -100 || e.x > 700)) enemies.splice(i, 1);
     }
 
     const isPoCActive = player.y < 150 && ((inputMode === 'keyboard' && keys[keyMap.focus]) || (inputMode === 'gamepad' && gamepadState.focus));
