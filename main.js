@@ -23,6 +23,8 @@ for (let key in gamepadMap) {
     if (typeof gamepadMap[key] === 'number') gamepadMap[key] = 'B' + gamepadMap[key];
 }
 let rebindingGamepadAction = null;
+let rebindingActionP2 = null;
+let rebindingGamepadActionP2 = null;
 
 let defaultKeyMapP2 = { up: 'w', down: 's', left: 'a', right: 'd', shoot: 'c', bomb: 'v', focus: 'f', start: 't' };
 let keyMapP2 = JSON.parse(localStorage.getItem('fosozu_keymapP2')) || defaultKeyMapP2;
@@ -236,7 +238,7 @@ const keys = {}, bullets = [], bossBullets = [], enemyBullets = [], enemies = []
 const stars = Array.from({ length: 80 }, () => ({ x: Math.random() * 600, y: Math.random() * 800, size: Math.random() * 2, speed: Math.random() * 2 + 1 }));
 const player = { x: 300, y: 700, speed: 4.5, focusSpeed: 2.5, hitboxSize: 4, grazeSize: 25, satellites: [{ x: 300, y: 700 }, { x: 300, y: 700 }, { x: 300, y: 700 }, { x: 300, y: 700 }] };
 const player2 = { x: 350, y: 700, speed: 5.3, focusSpeed: 3.0, hitboxSize: 4, grazeSize: 25, satellites: [{ x: 350, y: 700 }, { x: 350, y: 700 }, { x: 350, y: 700 }, { x: 350, y: 700 }], image: new Image() };
-player2.image.src = 'img/pink_girl.png';
+player2.image.src = 'pink_girl.png';
 
 let audio = null;
 
@@ -305,37 +307,47 @@ function pollGamepad() {
 }
 
 function pollGamepadRebind() {
-    if (!rebindingGamepadAction) return;
+    if (!rebindingGamepadAction && !rebindingGamepadActionP2) return;
     const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
-    let gp = null;
+    
+    let pressedBinding = null;
     for (let i = 0; i < gamepads.length; i++) {
-        if (gamepads[i]) { gp = gamepads[i]; break; }
+        let gp = gamepads[i];
+        if (gp) {
+            for (let j = 0; j < gp.buttons.length; j++) {
+                if (gp.buttons[j].pressed) {
+                    pressedBinding = 'B' + j;
+                    break;
+                }
+            }
+            if (!pressedBinding) {
+                for (let j = 0; j < gp.axes.length; j++) {
+                    if (gp.axes[j] < -0.5) { pressedBinding = 'A' + j + '_-1'; break; }
+                    if (gp.axes[j] > 0.5) { pressedBinding = 'A' + j + '_1'; break; }
+                }
+            }
+            if (pressedBinding) break;
+        }
     }
-    if (gp) {
-        let pressedBinding = null;
-        for (let i = 0; i < gp.buttons.length; i++) {
-            if (gp.buttons[i].pressed) {
-                pressedBinding = 'B' + i;
-                break;
-            }
-        }
-        if (!pressedBinding) {
-            for (let i = 0; i < gp.axes.length; i++) {
-                if (gp.axes[i] < -0.5) { pressedBinding = 'A' + i + '_-1'; break; }
-                if (gp.axes[i] > 0.5) { pressedBinding = 'A' + i + '_1'; break; }
-            }
-        }
 
-        if (pressedBinding) {
+    if (pressedBinding) {
+        if (rebindingGamepadAction) {
             gamepadMap[rebindingGamepadAction] = pressedBinding;
             localStorage.setItem('fosozu_gamepadmap', JSON.stringify(gamepadMap));
             let btn = document.querySelector(`.rebind-gp-btn[data-action="${rebindingGamepadAction}"]`);
             btn.innerText = formatGamepadBinding(pressedBinding);
             btn.classList.remove('listening');
             rebindingGamepadAction = null;
-            updateUIPrompts();
-            return;
+        } else if (rebindingGamepadActionP2) {
+            gamepadMapP2[rebindingGamepadActionP2] = pressedBinding;
+            localStorage.setItem('fosozu_gamepadmapP2', JSON.stringify(gamepadMapP2));
+            let btn = document.querySelector(`.rebind-gp-btn-p2[data-action="${rebindingGamepadActionP2}"]`);
+            btn.innerText = formatGamepadBinding(pressedBinding);
+            btn.classList.remove('listening');
+            rebindingGamepadActionP2 = null;
         }
+        updateUIPrompts();
+        return;
     }
     requestAnimationFrame(pollGamepadRebind);
 }
@@ -475,7 +487,7 @@ document.querySelectorAll('.rebind-btn').forEach(btn => {
     const action = btn.getAttribute('data-action');
     btn.innerText = keyMap[action].toUpperCase();
     btn.addEventListener('click', (e) => {
-        if (rebindingAction || rebindingGamepadAction) return;
+        if (rebindingAction || rebindingGamepadAction || rebindingActionP2 || rebindingGamepadActionP2) return;
         rebindingAction = action;
         e.target.innerText = "PRESS KEY...";
         e.target.classList.add('listening');
@@ -486,8 +498,31 @@ document.querySelectorAll('.rebind-gp-btn').forEach(btn => {
     const action = btn.getAttribute('data-action');
     btn.innerText = formatGamepadBinding(gamepadMap[action]);
     btn.addEventListener('click', (e) => {
-        if (rebindingAction || rebindingGamepadAction) return;
+        if (rebindingAction || rebindingGamepadAction || rebindingActionP2 || rebindingGamepadActionP2) return;
         rebindingGamepadAction = action;
+        e.target.innerText = "PRESS BTN/DIR...";
+        e.target.classList.add('listening');
+        requestAnimationFrame(pollGamepadRebind);
+    });
+});
+
+document.querySelectorAll('.rebind-btn-p2').forEach(btn => {
+    const action = btn.getAttribute('data-action');
+    btn.innerText = keyMapP2[action].toUpperCase();
+    btn.addEventListener('click', (e) => {
+        if (rebindingAction || rebindingGamepadAction || rebindingActionP2 || rebindingGamepadActionP2) return;
+        rebindingActionP2 = action;
+        e.target.innerText = "PRESS KEY...";
+        e.target.classList.add('listening');
+    });
+});
+
+document.querySelectorAll('.rebind-gp-btn-p2').forEach(btn => {
+    const action = btn.getAttribute('data-action');
+    btn.innerText = formatGamepadBinding(gamepadMapP2[action]);
+    btn.addEventListener('click', (e) => {
+        if (rebindingAction || rebindingGamepadAction || rebindingActionP2 || rebindingGamepadActionP2) return;
+        rebindingGamepadActionP2 = action;
         e.target.innerText = "PRESS BTN/DIR...";
         e.target.classList.add('listening');
         requestAnimationFrame(pollGamepadRebind);
@@ -506,6 +541,20 @@ window.addEventListener('keydown', e => {
         btn.innerText = key.toUpperCase();
         btn.classList.remove('listening');
         rebindingAction = null;
+        updateUIPrompts();
+        e.preventDefault();
+        return;
+    }
+
+    if (rebindingActionP2) {
+        let key = e.key.toLowerCase();
+        if (key === ' ') key = 'space'; // Normalize spacebar
+        keyMapP2[rebindingActionP2] = key;
+        localStorage.setItem('fosozu_keymapP2', JSON.stringify(keyMapP2));
+        let btn = document.querySelector(`.rebind-btn-p2[data-action="${rebindingActionP2}"]`);
+        btn.innerText = key.toUpperCase();
+        btn.classList.remove('listening');
+        rebindingActionP2 = null;
         updateUIPrompts();
         e.preventDefault();
         return;
@@ -854,7 +903,10 @@ function handleCollisions(ts) {
                 }
             };
             checkP(player, isFocused);
-            if (is2PMode) checkP(player2, (inputMode === 'gamepad' && gamepadState2.focus));
+            if (is2PMode) {
+                let p2Foc = (inputModeP2 === 'keyboard' && keys[keyMapP2.focus]) || (inputModeP2 === 'gamepad' && gamepadState2.focus);
+                checkP(player2, p2Foc);
+            }
 
             if (b.y > 850 || b.y < -50 || b.x < -50 || b.x > 650 || hit) arr.splice(i, 1);
         }
@@ -1269,7 +1321,7 @@ function drawPlayer(pObj, isP1) {
             if (assets.player.loaded) ctx.drawImage(assets.player.img, pObj.x - 50, pObj.y - 50, 100, 100); 
             else { ctx.fillStyle = 'purple'; ctx.beginPath(); ctx.arc(pObj.x, pObj.y, 25, 0, 7); ctx.fill(); }
         } else {
-            if (pObj.image && pObj.image.complete) ctx.drawImage(pObj.image, pObj.x - 50, pObj.y - 50, 100, 100); 
+            if (pObj.image && pObj.image.complete && pObj.image.naturalWidth > 0) ctx.drawImage(pObj.image, pObj.x - 50, pObj.y - 50, 100, 100); 
             else { ctx.fillStyle = 'pink'; ctx.beginPath(); ctx.arc(pObj.x, pObj.y, 25, 0, 7); ctx.fill(); }
         }
     }
@@ -1401,7 +1453,7 @@ function drawSatellites(pObj) {
     ctx.fillStyle = '#0f0'; enemyBullets.forEach(b => { ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, 7); ctx.fill(); });
     const isFocused1 = (inputMode === 'keyboard' && keys[keyMap.focus]) || (inputMode === 'gamepad' && gamepadState.focus);
     if (isFocused1) { ctx.fillStyle = 'red'; ctx.beginPath(); ctx.arc(player.x, player.y, player.hitboxSize, 0, 7); ctx.fill(); }
-    const isFocused2 = (inputMode === 'gamepad' && gamepadState2.focus);
+    const isFocused2 = (inputModeP2 === 'keyboard' && keys[keyMapP2.focus]) || (inputModeP2 === 'gamepad' && gamepadState2.focus);
     if (is2PMode && isFocused2) { ctx.fillStyle = 'red'; ctx.beginPath(); ctx.arc(player2.x, player2.y, player2.hitboxSize, 0, 7); ctx.fill(); }
 
     if (isPaused && dialogueBox.style.display !== 'block' && summaryBox.style.display !== 'block' && resetAnimTimer <= 0) {
