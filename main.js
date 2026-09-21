@@ -532,7 +532,46 @@ function useBomb() {
 }
 
 function closeSummary() { summaryBox.style.display = 'none'; isPaused = false; waveGraze = 0; scoreAtLastBoss = score; shieldBrokenInWave = false; updateHighScore(); }
-function processContinue() { updateHighScore(); continueCountdown = 0; continueUsed = true; continueUI.style.display = 'none'; lives = 3; livesEl.innerText = lives; bombs = 3; bombsEl.innerText = bombs; power = 0; powerEl.innerText = power; score = 0; scoreEl.innerText = score; scoreAtLastBoss = 0; invulnTimer = 180; bossBullets.length = 0; enemyBullets.length = 0; enemies.length = 0; bombItems.length = 0; powerItems.length = 0; hasShield = false; grazeStreak = 0; shieldBrokenInWave = false; document.getElementById('shieldStat').style.display = 'none'; document.getElementById('shieldStreak').innerText = 0; linkIteration = 1; ngValEl.innerText = 1; accumulator = 0; stageTimer = 0; resetTimelines(); bombsSpawnedInWave = 0; flankerWarning = { timer: 0, side: null, y: 0 }; comboChain = 0; comboTimer = 0; }
+function processContinue() {
+    updateHighScore();
+    continueCountdown = 0;
+    continueUsed = true;
+    document.getElementById('submit-score-ui').style.display = 'none';
+    continueUI.style.display = 'none';
+    lives = 3; livesEl.innerText = lives;
+    bombs = 3; bombsEl.innerText = bombs;
+    power = 0; powerEl.innerText = power;
+    score = 0; scoreEl.innerText = score;
+    scoreAtLastBoss = 0;
+    invulnTimer = 180;
+    
+    // Always clear bullets so player doesn't spawn into danger
+    bossBullets.length = 0;
+    enemyBullets.length = 0;
+    
+    hasShield = false;
+    grazeStreak = 0;
+    shieldBrokenInWave = false;
+    document.getElementById('shieldStat').style.display = 'none';
+    document.getElementById('shieldStreak').innerText = 0;
+    linkIteration = 1; ngValEl.innerText = 1;
+    accumulator = 0;
+    comboChain = 0; comboTimer = 0;
+
+    // Wave 6 1CC Punishment
+    if (difficultyWave >= 6) {
+        stageTimer = 0;
+        resetTimelines();
+        enemies.length = 0;
+        bombItems.length = 0;
+        powerItems.length = 0;
+        bombsSpawnedInWave = 0;
+        flankerWarning = { timer: 0, side: null, y: 0 };
+        bossMode = false;
+        boss = null;
+        document.getElementById('boss-ui').style.display = 'none';
+    }
+}
 
 function shoot() {
     if (audio) audio.playShoot();
