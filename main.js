@@ -713,7 +713,6 @@ function handleCollisions(ts) {
                 let wasPhase1 = boss.hp > boss.maxHP / 2;
                 boss.hp -= (bullets[i].damage || 1);
                 bullets.splice(i, 1);
-                hpFill.style.width = Math.max(0, (boss.hp / boss.maxHP * 100)) + "%";
 
                 if (audio && Math.random() < 0.3) audio.playEnemyHit();
 
@@ -754,6 +753,7 @@ function handleCollisions(ts) {
 function updateBoss(ts) {
     if (boss) {
         boss.update(ts, player, bossBullets);
+        hpFill.style.width = Math.max(0, (boss.hp / boss.maxHP * 100)) + "%";
         hpFill.style.background = (boss.hp < boss.maxHP / 2) ? "#ffca3a" : "#ff006e";
     }
     // Spawn Boss when wave timer concludes
