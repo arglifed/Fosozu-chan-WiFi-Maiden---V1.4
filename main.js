@@ -1033,14 +1033,15 @@ function updateEnemies(ts) {
         let e = enemies[i];
         
         if (e.isMidBoss) {
-            if (e.y < e.targetY) {
-                e.y += e.vy * ts;
-            } else {
-                e.y = e.targetY;
-                e.fleeTimer -= ts;
-                if (e.fleeTimer <= 0) {
-                    e.y -= 10 * ts; // flee rapidly
+            if (e.fleeTimer > 0) {
+                if (e.y < e.targetY) {
+                    e.y += e.vy * ts;
+                } else {
+                    e.y = e.targetY;
+                    e.fleeTimer -= ts;
                 }
+            } else {
+                e.y -= 10 * ts; // flee rapidly
             }
         } else {
             e.x += (e.vx || 0) * ts;
