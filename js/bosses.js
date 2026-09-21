@@ -569,8 +569,8 @@ class MadameSatsuki extends Boss {
                 this.flashTimer = 20;
             } else {
                 let cx = 300, cy = 100;
-                this.x += (cx - this.x) * 0.02 * ts;
-                this.y += (cy - this.y) * 0.02 * ts;
+                this.x += (cx - this.x) * 0.003 * ts;
+                this.y += (cy - this.y) * 0.003 * ts;
                 if (this.flashTimer <= 0) this.shoot(player, bossBullets);
             }
         }
