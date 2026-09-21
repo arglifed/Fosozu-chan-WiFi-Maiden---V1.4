@@ -1307,10 +1307,13 @@ function updateEnemies(ts) {
     }
 
     const isPoCActive = player.y < 150 && ((inputMode === 'keyboard' && keys[keyMap.focus]) || (inputMode === 'gamepad' && gamepadState.focus));
+    const isPoCActive2 = is2PMode && player2.y < 150 && ((inputModeP2 === 'keyboard' && keys[keyMapP2.focus]) || (inputModeP2 === 'gamepad' && gamepadState2.focus));
+    // Determine the collecting player (P1 takes priority if both active)
+    const pocCollector = isPoCActive ? player : (isPoCActive2 ? player2 : null);
 
     bombItems.forEach((p, i) => {
-        if (isPoCActive) {
-            let angle = Math.atan2(player.y - p.y, player.x - p.x);
+        if (pocCollector) {
+            let angle = Math.atan2(pocCollector.y - p.y, pocCollector.x - p.x);
             p.x += Math.cos(angle) * 15 * ts;
             p.y += Math.sin(angle) * 15 * ts;
         } else {
@@ -1319,12 +1322,13 @@ function updateEnemies(ts) {
             else { p.y += 3 * ts; }
         }
         if ((!p.spawnTime || Date.now() - p.spawnTime > 500) && Math.hypot(player.x - p.x, player.y - p.y) < 30) { bombs++; bombsEl.innerText = bombs; bombItems.splice(i, 1); }
+        else if (is2PMode && (!p.spawnTime || Date.now() - p.spawnTime > 500) && Math.hypot(player2.x - p.x, player2.y - p.y) < 30) { bombs++; bombsEl.innerText = bombs; bombItems.splice(i, 1); }
         else if (p.y > 850 || p.x < -100 || p.x > 700) bombItems.splice(i, 1);
     });
 
     powerItems.forEach((p, i) => {
-        if (isPoCActive) {
-            let angle = Math.atan2(player.y - p.y, player.x - p.x);
+        if (pocCollector) {
+            let angle = Math.atan2(pocCollector.y - p.y, pocCollector.x - p.x);
             p.x += Math.cos(angle) * 15 * ts;
             p.y += Math.sin(angle) * 15 * ts;
         } else {
@@ -1333,12 +1337,13 @@ function updateEnemies(ts) {
             else { p.y += 3.5 * ts; }
         }
         if ((!p.spawnTime || Date.now() - p.spawnTime > 500) && Math.hypot(player.x - p.x, player.y - p.y) < 30) { power = Math.min(64, power + 1); powerEl.innerText = power; powerItems.splice(i, 1); }
+        else if (is2PMode && (!p.spawnTime || Date.now() - p.spawnTime > 500) && Math.hypot(player2.x - p.x, player2.y - p.y) < 30) { power = Math.min(64, power + 1); powerEl.innerText = power; powerItems.splice(i, 1); }
         else if (p.y > 850 || p.x < -100 || p.x > 700) powerItems.splice(i, 1);
     });
 
     lifeItems.forEach((p, i) => {
-        if (isPoCActive) {
-            let a = Math.atan2(player.y - p.y, player.x - p.x);
+        if (pocCollector) {
+            let a = Math.atan2(pocCollector.y - p.y, pocCollector.x - p.x);
             p.x += Math.cos(a) * 8; p.y += Math.sin(a) * 8;
         } else {
             p.x += (p.vx || 0); p.y += (p.vy || 2);
@@ -1347,18 +1352,23 @@ function updateEnemies(ts) {
             lives++; livesEl.innerText = lives; lifeItems.splice(i, 1); 
             if (audio) audio.playPowerup();
         }
+        else if (is2PMode && (!p.spawnTime || Date.now() - p.spawnTime > 500) && Math.hypot(player2.x - p.x, player2.y - p.y) < 30) {
+            lives++; livesEl.innerText = lives; lifeItems.splice(i, 1);
+            if (audio) audio.playPowerup();
+        }
         else if (p.y > 850 || p.x < -100 || p.x > 700) lifeItems.splice(i, 1);
     });
 
     medals.forEach((m, i) => {
-        if (isPoCActive) {
-            let angle = Math.atan2(player.y - m.y, player.x - m.x);
+        if (pocCollector) {
+            let angle = Math.atan2(pocCollector.y - m.y, pocCollector.x - m.x);
             m.x += Math.cos(angle) * 15 * ts;
             m.y += Math.sin(angle) * 15 * ts;
         } else {
             m.y += 4 * ts;
         }
         if (Math.hypot(player.x - m.x, player.y - m.y) < 30) { score += 500; scoreEl.innerText = score; medals.splice(i, 1); }
+        else if (is2PMode && Math.hypot(player2.x - m.x, player2.y - m.y) < 30) { score += 500; scoreEl.innerText = score; medals.splice(i, 1); }
         else if (m.y > 850) medals.splice(i, 1);
     });
 }
