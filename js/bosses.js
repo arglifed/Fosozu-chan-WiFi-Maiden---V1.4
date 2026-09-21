@@ -545,28 +545,31 @@ class MadameSatsuki extends Boss {
             this.y += 2.5 * ts;
         } else {
             this.timer += ts;
-            if (this.teleportTimer === undefined) this.teleportTimer = 120;
+            if (this.teleportTimer === undefined) this.teleportTimer = 150;
             this.teleportTimer -= ts;
             
             if (this.teleportTimer <= 0) {
                 if (player) {
-                    if (Math.random() < 0.35) {
-                        // 35% Jumpscare: Teleport BELOW the player
-                        this.x = Math.max(50, Math.min(550, player.x + (Math.random() * 100 - 50)));
-                        this.y = Math.max(100, Math.min(700, player.y + 150 + Math.random() * 100));
+                    if (Math.random() < 0.25) {
+                        // 25% Jumpscare: Teleport BELOW the player — but give breathing room
+                        this.x = Math.max(80, Math.min(520, player.x + (Math.random() * 160 - 80)));
+                        this.y = Math.max(100, Math.min(650, player.y + 220 + Math.random() * 120));
                     } else {
-                        // 65% Normal: Teleport directly above or to the top corners of the player
-                        let offsetX = (Math.random() > 0.5 ? 1 : -1) * (50 + Math.random() * 150);
-                        let offsetY = -(100 + Math.random() * 150);
-                        this.x = Math.max(50, Math.min(550, player.x + offsetX));
-                        this.y = Math.max(50, Math.min(450, player.y + offsetY));
+                        // 75% Normal: Teleport above/sides — enforce a minimum safe gap
+                        let side = Math.random() > 0.5 ? 1 : -1;
+                        let offsetX = side * (120 + Math.random() * 180); // min 120px away horizontally
+                        let offsetY = -(160 + Math.random() * 160);       // min 160px above
+                        this.x = Math.max(60, Math.min(540, player.x + offsetX));
+                        this.y = Math.max(50, Math.min(400, player.y + offsetY));
                     }
                 } else {
-                    this.x = 50 + Math.random() * 500;
-                    this.y = 50 + Math.random() * 200;
+                    this.x = 80 + Math.random() * 440;
+                    this.y = 60 + Math.random() * 180;
                 }
-                this.teleportTimer = 120 + Math.random() * 60;
-                this.flashTimer = 20;
+                // Longer cooldown between teleports: 2.5–4 seconds
+                this.teleportTimer = 150 + Math.random() * 90;
+                // Longer flash delay so player has time to react
+                this.flashTimer = 40;
             } else {
                 let cx = 300, cy = 100;
                 this.x += (cx - this.x) * 0.003 * ts;
@@ -580,42 +583,42 @@ class MadameSatsuki extends Boss {
         this.attackTimer++;
         
         if (!this.phase2) {
-            const spd = Math.min(3.5, 1.0 * (1 + (this.linkIteration - 1) * 0.1));
-            if (this.attackTimer % 8 === 0) {
+            const spd = Math.min(3.0, 1.0 * (1 + (this.linkIteration - 1) * 0.1));
+            if (this.attackTimer % 10 === 0) {  // slowed from 8 -> 10
                 let arms = 5;
                 for (let i = 0; i < arms; i++) {
                     let a = (this.attackTimer * 0.05) + (i * Math.PI * 2 / arms);
-                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a)*Math.min(5.0, 5*spd), vy:Math.sin(a)*Math.min(5.0, 5*spd), color:'#d90429'});
-                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(-a)*Math.min(5.0, 5*spd), vy:Math.sin(-a)*Math.min(5.0, 5*spd), color:'#ffb3c1'});
+                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a)*Math.min(4.5, 5*spd), vy:Math.sin(a)*Math.min(4.5, 5*spd), color:'#d90429'});
+                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(-a)*Math.min(4.5, 5*spd), vy:Math.sin(-a)*Math.min(4.5, 5*spd), color:'#ffb3c1'});
                 }
             }
         } else {
             // Spell Card Phase: Root System Protocol: OVERRIDE
-            const p2Spd = Math.min(3.5, 1.8 * (1 + (this.linkIteration - 1) * 0.1));
+            const p2Spd = Math.min(3.0, 1.6 * (1 + (this.linkIteration - 1) * 0.1));
             
-            // 8-arm fast spiral
-            if (this.attackTimer % 5 === 0) {
-                let baseAngle = this.attackTimer * 0.12;
+            // 8-arm fast spiral (unchanged cadence, just capped lower)
+            if (this.attackTimer % 6 === 0) {  // slowed from 5 -> 6
+                let baseAngle = this.attackTimer * 0.10;  // slightly slower rotation
                 for(let i=0; i<8; i++) {
                     let a = baseAngle + (i * Math.PI * 2 / 8);
-                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a)*Math.min(5.0, 6*p2Spd), vy:Math.sin(a)*Math.min(5.0, 6*p2Spd), color:'#d90429'});
+                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a)*Math.min(4.5, 6*p2Spd), vy:Math.sin(a)*Math.min(4.5, 6*p2Spd), color:'#d90429'});
                 }
             }
             
-            // 180-degree firewall (spawn exactly downwards)
+            // 180-degree firewall (unchanged)
             if (this.attackTimer % 70 === 0) {
                 for (let i=0; i<=15; i++) {
                     let a = (i * Math.PI) / 15;
-                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a)*Math.min(5.0, 4*p2Spd), vy:Math.sin(a)*Math.min(5.0, 4*p2Spd), color:'#ffb3c1'});
+                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a)*Math.min(4.5, 4*p2Spd), vy:Math.sin(a)*Math.min(4.5, 4*p2Spd), color:'#ffb3c1'});
                 }
             }
             
-            // 3-way fast aimed shot
-            if (this.attackTimer % 30 === 0) {
+            // 3-way fast aimed shot — slower cadence and lower speed cap
+            if (this.attackTimer % 45 === 0) {  // slowed from 30 -> 45
                 let burstCenterA = Math.atan2(player.y - this.y, player.x - this.x);
                 for(let i=-1; i<=1; i++) {
-                    let a = burstCenterA + (i * 0.1);
-                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a)*Math.min(5.0, 10*p2Spd), vy:Math.sin(a)*Math.min(5.0, 10*p2Spd), color:'#ffffff'});
+                    let a = burstCenterA + (i * 0.15);  // slightly wider spread so center beam is easier to dodge
+                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a)*Math.min(4.5, 7*p2Spd), vy:Math.sin(a)*Math.min(4.5, 7*p2Spd), color:'#ffffff'});
                 }
             }
         }
