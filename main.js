@@ -111,7 +111,71 @@ let waveClearTimer = 0, bombEffectTimer = 0, invulnTimer = 0, shakeTimer = 0, st
 let slowMoTimer = 0, flashTimer = 0, grazeStreak = 0, streakTimer = 0, hasShield = false, waveGraze = 0, dialogueIndex = 0, resetAnimTimer = 0, linkIteration = 1, shieldBrokenInWave = false;
 
 // WAVE-BASED MECHANICS
-let stageTimer = 0, formationTimer = 0;
+let stageTimer = 0;
+
+const waveTimelines = {
+    1: [
+        { time: 0, type: 'WALL', spawned: false },
+        { time: 240, type: 'SWEEP_LEFT', spawned: false },
+        { time: 240, type: 'SWEEP_RIGHT', spawned: false },
+        { time: 540, type: 'CIRCLE', spawned: false },
+        { time: 720, type: 'FLANK_LEFT', y: 300, spawned: false },
+        { time: 960, type: 'WALL', spawned: false },
+        { time: 1080, type: 'V_SHAPE', spawned: false },
+        { time: 1320, type: 'FLANK_RIGHT', y: 400, spawned: false },
+        { time: 1500, type: 'DIVER_SWOOP', spawned: false }
+    ],
+    2: [
+        { time: 0, type: 'SLOW_CIRCLE', spawned: false },
+        { time: 120, type: 'V_SHAPE', spawned: false },
+        { time: 300, type: 'WALL', spawned: false },
+        { time: 500, type: 'FLANK_LEFT', y: 250, spawned: false },
+        { time: 500, type: 'FLANK_RIGHT', y: 250, spawned: false },
+        { time: 750, type: 'SHIELD_WALL', spawned: false },
+        { time: 900, type: 'DIVER_SWOOP', spawned: false },
+        { time: 1100, type: 'SWEEP_LEFT', spawned: false },
+        { time: 1100, type: 'SWEEP_RIGHT', spawned: false },
+        { time: 1300, type: 'CIRCLE', spawned: false },
+        { time: 1500, type: 'V_SHAPE', spawned: false }
+    ],
+    3: [
+        { time: 0, type: 'SHIELD_WALL', spawned: false },
+        { time: 100, type: 'V_SHAPE', spawned: false },
+        { time: 250, type: 'WALL', spawned: false },
+        { time: 400, type: 'DIVER_SWOOP', spawned: false },
+        { time: 550, type: 'CIRCLE', spawned: false },
+        { time: 700, type: 'FLANK_LEFT', y: 150, spawned: false },
+        { time: 750, type: 'FLANK_RIGHT', y: 350, spawned: false },
+        { time: 900, type: 'MID_BOSS_PINGKO', spawned: false },
+        // Gap of 10s (600 frames). Mid-boss flees if not killed by 1500.
+        { time: 1550, type: 'DIVER_SWOOP', spawned: false },
+        { time: 1650, type: 'V_SHAPE', spawned: false }
+    ],
+    4: [ // Escalate for Wave 4+
+        { time: 0, type: 'SHIELD_WALL', spawned: false },
+        { time: 150, type: 'DIVER_SWOOP', spawned: false },
+        { time: 200, type: 'DIVER_SWOOP', spawned: false },
+        { time: 350, type: 'CIRCLE', spawned: false },
+        { time: 350, type: 'SLOW_CIRCLE', spawned: false },
+        { time: 600, type: 'FLANK_LEFT', y: 200, spawned: false },
+        { time: 600, type: 'FLANK_RIGHT', y: 400, spawned: false },
+        { time: 700, type: 'WALL', spawned: false },
+        { time: 850, type: 'V_SHAPE', spawned: false },
+        { time: 1000, type: 'DIVER_SWOOP', spawned: false },
+        { time: 1150, type: 'SWEEP_LEFT', spawned: false },
+        { time: 1150, type: 'SWEEP_RIGHT', spawned: false },
+        { time: 1300, type: 'SHIELD_WALL', spawned: false },
+        { time: 1450, type: 'CIRCLE', spawned: false },
+        { time: 1600, type: 'DIVER_SWOOP', spawned: false }
+    ]
+};
+
+function resetTimelines() {
+    for (let wave in waveTimelines) {
+        waveTimelines[wave].forEach(event => event.spawned = false);
+    }
+}
+
 const WAVE_DURATION = 1800;
 let bombsSpawnedInWave = 0;
 let comboChain = 0, comboTimer = 0;
@@ -214,6 +278,7 @@ function handleGamepadButtons() {
                 } else {
                     if (!audio) { audio = new AudioManager(); audio.resume(); }
                     gameStarted = true;
+                    resetTimelines();
                 }
             }
         } else if (continueCountdown > 0) {
@@ -373,6 +438,7 @@ window.addEventListener('keydown', e => {
         if (inputMode === 'keyboard' && (k === 'space' || k === keyMap.start || k === keyMap.shoot)) {
             if (!audio) { audio = new AudioManager(); audio.resume(); }
             gameStarted = true;
+            resetTimelines();
         }
     } else {
         if (k === keyMap.start || e.code === 'Escape') {
@@ -471,7 +537,7 @@ function useBomb() {
 }
 
 function closeSummary() { summaryBox.style.display = 'none'; isPaused = false; waveGraze = 0; scoreAtLastBoss = score; shieldBrokenInWave = false; updateHighScore(); }
-function processContinue() { updateHighScore(); continueCountdown = 0; continueUsed = true; continueUI.style.display = 'none'; lives = 3; livesEl.innerText = lives; bombs = 3; bombsEl.innerText = bombs; power = 0; powerEl.innerText = power; score = 0; scoreEl.innerText = score; scoreAtLastBoss = 0; invulnTimer = 180; bossBullets.length = 0; enemyBullets.length = 0; enemies.length = 0; bombItems.length = 0; powerItems.length = 0; hasShield = false; grazeStreak = 0; shieldBrokenInWave = false; document.getElementById('shieldStat').style.display = 'none'; document.getElementById('shieldStreak').innerText = 0; linkIteration = 1; ngValEl.innerText = 1; accumulator = 0; stageTimer = 0; formationTimer = 0; bombsSpawnedInWave = 0; flankerWarning = { timer: 0, side: null, y: 0 }; comboChain = 0; comboTimer = 0; flankerWarning = { timer: 0, side: null, y: 0 }; }
+function processContinue() { updateHighScore(); continueCountdown = 0; continueUsed = true; continueUI.style.display = 'none'; lives = 3; livesEl.innerText = lives; bombs = 3; bombsEl.innerText = bombs; power = 0; powerEl.innerText = power; score = 0; scoreEl.innerText = score; scoreAtLastBoss = 0; invulnTimer = 180; bossBullets.length = 0; enemyBullets.length = 0; enemies.length = 0; bombItems.length = 0; powerItems.length = 0; hasShield = false; grazeStreak = 0; shieldBrokenInWave = false; document.getElementById('shieldStat').style.display = 'none'; document.getElementById('shieldStreak').innerText = 0; linkIteration = 1; ngValEl.innerText = 1; accumulator = 0; stageTimer = 0; resetTimelines(); bombsSpawnedInWave = 0; flankerWarning = { timer: 0, side: null, y: 0 }; comboChain = 0; comboTimer = 0; }
 
 function shoot() {
     if (audio) audio.playShoot();
@@ -665,7 +731,7 @@ function handleCollisions(ts) {
         }
 
         if (boss.hp <= 0) {
-            score += 5000; difficultyWave++; waveClearTimer = 150; bossMode = false; stageTimer = 0; formationTimer = 0; bombsSpawnedInWave = 0; flankerWarning = { timer: 0, side: null, y: 0 };
+            score += 5000; difficultyWave++; waveClearTimer = 150; bossMode = false; stageTimer = 0; resetTimelines(); bombsSpawnedInWave = 0; flankerWarning = { timer: 0, side: null, y: 0 };
             if (audio) audio.playExplosion();
             let b_name = boss.name;
             let b_defeat = boss.defeat;
@@ -713,13 +779,18 @@ function updateBoss(ts) {
 function spawnFormation(type, spawnY) {
     let baseSpeed = (3.5 + (difficultyWave * 0.4)) * Math.min(3.5, 1 + (linkIteration - 1) * 0.05);
     
-    let hp, shootDelay, speedMult, repeatsShot;
+    let hp = 1, shootDelay = 500, speedMult = 1.0, repeatsShot = false;
     
-    if (type === 'WALL' || type === 'SLOW_CIRCLE') {
-        // Creeper / Artillery Archetype
+    if (type === 'MID_BOSS_PINGKO') {
+        hp = 50;
+        shootDelay = 800; // Overridden by custom logic, but set baseline
+        speedMult = 0; // Moves to fixed position
+        repeatsShot = true;
+    } else if (type === 'WALL' || type === 'CIRCLE' || type === 'SLOW_CIRCLE') {
+        // Slow Fixture Archetype
         hp = 4;
         shootDelay = 800;
-        speedMult = 0.4;
+        speedMult = 0.3;
         repeatsShot = true;
     } else if (type === 'SHIELD_WALL') {
         hp = 8;
@@ -727,7 +798,7 @@ function spawnFormation(type, spawnY) {
         speedMult = 0.2;
         repeatsShot = false;
     } else {
-        // Rushdown Archetype (V_SHAPE, SWEEP_LEFT, SWEEP_RIGHT, CIRCLE, DIVER_SWOOP, FLANK_LEFT, FLANK_RIGHT)
+        // Rushdown Archetype (V_SHAPE, SWEEP_LEFT, SWEEP_RIGHT, DIVER_SWOOP, FLANK_LEFT, FLANK_RIGHT)
         hp = 1;
         shootDelay = 500;
         speedMult = 1.3;
@@ -737,10 +808,13 @@ function spawnFormation(type, spawnY) {
     
     let speed = baseSpeed * speedMult;
 
-    if (type === 'V_SHAPE') {
-        const xs = [300, 250, 350, 200, 400];
-        const ys = [-50, -100, -100, -150, -150];
-        for (let i = 0; i < 5; i++) {
+    if (type === 'MID_BOSS_PINGKO') {
+        // PingKo drops down to y=150 and stays there.
+        enemies.push({ x: 300, y: -50, vx: 0, vy: 2, speed: 0, type: 'midboss', nextShot: Date.now() + 2000, hp: hp, repeatsShot: true, isMidBoss: true, fleeTimer: 600, targetY: 150 });
+    } else if (type === 'V_SHAPE') {
+        const xs = [300, 240, 360, 180, 420, 120, 480];
+        const ys = [-50, -100, -100, -150, -150, -200, -200];
+        for (let i = 0; i < 7; i++) {
             enemies.push({ x: xs[i], y: ys[i], vx: 0, vy: speed, speed: speed, type: 'blue', nextShot: Date.now() + shootDelay, hp: hp, repeatsShot: repeatsShot });
         }
     } else if (type === 'SWEEP_LEFT') {
@@ -752,9 +826,9 @@ function spawnFormation(type, spawnY) {
             enemies.push({ x: 550 - i * 40, y: -50 - i * 40, vx: -speed * 0.7, vy: speed, speed: speed, type: 'green', nextShot: Date.now() + shootDelay, hp: hp, repeatsShot: repeatsShot });
         }
     } else if (type === 'CIRCLE' || type === 'SLOW_CIRCLE') {
-        for (let i = 0; i < 6; i++) {
-            let a = (i * Math.PI * 2) / 6;
-            enemies.push({ x: 300 + Math.cos(a)*50, y: -100 + Math.sin(a)*50, vx: Math.cos(a) * 0.5 * (type==='SLOW_CIRCLE'?0.5:1), vy: speed + Math.sin(a) * 0.5 * (type==='SLOW_CIRCLE'?0.5:1), speed: speed, type: 'blue', nextShot: Date.now() + shootDelay, hp: hp, repeatsShot: repeatsShot });
+        for (let i = 0; i < 8; i++) {
+            let a = (i * Math.PI * 2) / 8;
+            enemies.push({ x: 300 + Math.cos(a)*50, y: -100 + Math.sin(a)*50, vx: Math.cos(a) * 0.5, vy: speed + Math.sin(a) * 0.5, speed: speed, type: 'blue', nextShot: Date.now() + shootDelay, hp: hp, repeatsShot: repeatsShot });
         }
     } else if (type === 'WALL') {
         for (let i = 0; i < 7; i++) {
@@ -782,44 +856,38 @@ function spawnFormation(type, spawnY) {
 
 function updateEnemies(ts) {
     if (!bossMode && waveClearTimer <= 0 && stageTimer < WAVE_DURATION) {
-        formationTimer -= ts;
-        if (formationTimer <= 0) {
-            let types;
-            if (difficultyWave >= 4) {
-                types = [
-                    'DIVER_SWOOP', 'DIVER_SWOOP', 'DIVER_SWOOP',
-                    'FLANK_LEFT', 'FLANK_LEFT', 'FLANK_LEFT',
-                    'FLANK_RIGHT', 'FLANK_RIGHT', 'FLANK_RIGHT',
-                    'SHIELD_WALL', 'SHIELD_WALL', 'SHIELD_WALL',
-                    'V_SHAPE', 'CIRCLE', 'WALL'
-                ];
-            } else {
-                types = ['V_SHAPE', 'SWEEP_LEFT', 'SWEEP_RIGHT', 'CIRCLE', 'WALL', 'SLOW_CIRCLE'];
-            }
-            let selectedType = types[Math.floor(Math.random() * types.length)];
-            
-            if (selectedType === 'FLANK_LEFT' || selectedType === 'FLANK_RIGHT') {
-                flankerWarning.timer = 60;
-                flankerWarning.side = selectedType;
-                flankerWarning.y = 100 + Math.random() * 200;
-            } else {
-                spawnFormation(selectedType);
-            }
-            formationTimer = 200; // Approx 3.3 seconds at 60fps
-        }
+        let currentTimeline = waveTimelines[difficultyWave] || waveTimelines[4];
         
-        if (flankerWarning.timer > 0) {
-            flankerWarning.timer -= ts;
-            if (flankerWarning.timer <= 0) {
-                spawnFormation(flankerWarning.side, flankerWarning.y);
+        currentTimeline.forEach(event => {
+            if (!event.spawned && stageTimer >= event.time) {
+                event.spawned = true;
+                if (event.type === 'FLANK_LEFT' || event.type === 'FLANK_RIGHT') {
+                    spawnFormation(event.type, event.y || (100 + Math.random() * 200));
+                } else {
+                    spawnFormation(event.type);
+                }
             }
-        }
+        });
     }
 
     for (let i = enemies.length - 1; i >= 0; i--) {
         let e = enemies[i];
-        e.x += (e.vx || 0) * ts;
-        e.y += (e.vy !== undefined ? e.vy : e.speed) * ts;
+        
+        if (e.isMidBoss) {
+            if (e.y < e.targetY) {
+                e.y += e.vy * ts;
+            } else {
+                e.y = e.targetY;
+                e.fleeTimer -= ts;
+                if (e.fleeTimer <= 0) {
+                    e.y -= 10 * ts; // flee rapidly
+                }
+            }
+        } else {
+            e.x += (e.vx || 0) * ts;
+            e.y += (e.vy !== undefined ? e.vy : e.speed) * ts;
+        }
+        
         if (e.diverState) {
             if (e.diverState === 'DOWN' && e.y >= 500) {
                 e.vy = -e.speed;
@@ -829,13 +897,23 @@ function updateEnemies(ts) {
                 e.diverState = 'AWAY';
             }
         }
-        if (Date.now() >= (e.nextShot || e.lastShot + 1000)) {
+        
+        if (Date.now() >= (e.nextShot || e.lastShot + 1000) && (!e.isMidBoss || e.y >= e.targetY)) {
             let eSpd = Math.min(3.5, 1 + (linkIteration - 1) * 0.1);
-            if (e.type === 'blue') { let r = (Date.now() / 400); for (let j = 0; j < 4; j++) { let a = r + (j * Math.PI / 2); enemyBullets.push({ x: e.x, y: e.y, vx: Math.cos(a) * 3 * eSpd, vy: Math.sin(a) * 3 * eSpd, grazed: false }); } }
+            if (e.isMidBoss && e.fleeTimer > 0) {
+                // Fast 8-way spiral for midboss
+                let r = (Date.now() / 150); 
+                for (let j = 0; j < 8; j++) { 
+                    let a = r + (j * Math.PI / 4); 
+                    enemyBullets.push({ x: e.x, y: e.y, vx: Math.cos(a) * 4 * eSpd, vy: Math.sin(a) * 4 * eSpd, grazed: false, color: '#ffca3a' }); 
+                }
+                e.nextShot = Date.now() + 250; // fast fire rate
+            }
+            else if (e.type === 'blue') { let r = (Date.now() / 400); for (let j = 0; j < 4; j++) { let a = r + (j * Math.PI / 2); enemyBullets.push({ x: e.x, y: e.y, vx: Math.cos(a) * 3 * eSpd, vy: Math.sin(a) * 3 * eSpd, grazed: false }); } }
             else { let a_b = Math.atan2(player.y - e.y, player.x - e.x); for (let j = -2; j <= 2; j++) { let a = a_b + (j * 0.25); enemyBullets.push({ x: e.x, y: e.y, vx: Math.cos(a) * 3.5 * eSpd, vy: Math.sin(a) * 3.5 * eSpd, grazed: false }); } }
             
             if (e.repeatsShot) {
-                e.nextShot = Date.now() + 1500;
+                e.nextShot = e.isMidBoss ? Date.now() + 250 : Date.now() + 1500;
             } else {
                 e.nextShot = Date.now() + 9999999;
             }
@@ -849,14 +927,21 @@ function updateEnemies(ts) {
                 bullets.splice(bi, 1);
                 
                 if (e.hp <= 0) {
-                    comboChain++; comboTimer = COMBO_MAX_TIME; enemies.splice(i, 1); score += 100 * comboChain; scoreEl.innerText = score;
+                    comboChain++; comboTimer = COMBO_MAX_TIME; enemies.splice(i, 1); score += (e.isMidBoss ? 5000 : 100) * comboChain; scoreEl.innerText = score;
                     if (audio) audio.playEnemyHit();
-                    medals.push({ x: e.x, y: e.y });
-                    if (bombsSpawnedInWave < 1 && Math.random() < 0.05) {
-                        bombItems.push({ x: e.x, y: e.y });
-                        bombsSpawnedInWave++;
+                    if (e.isMidBoss) {
+                        power = 64; powerEl.innerText = power;
+                        bombs = 9; bombsEl.innerText = bombs;
+                        lives++; livesEl.innerText = lives;
+                        for(let k=0; k<10; k++) { medals.push({ x: e.x + (Math.random()-0.5)*40, y: e.y + (Math.random()-0.5)*40 }); }
+                    } else {
+                        medals.push({ x: e.x, y: e.y });
+                        if (bombsSpawnedInWave < 1 && Math.random() < 0.05) {
+                            bombItems.push({ x: e.x, y: e.y });
+                            bombsSpawnedInWave++;
+                        }
+                        if (Math.random() < 0.45) powerItems.push({ x: e.x, y: e.y });
                     }
-                    if (Math.random() < 0.45) powerItems.push({ x: e.x, y: e.y });
                     died = true;
                     break;
                 }
@@ -1005,7 +1090,24 @@ function draw() {
         ctx.fillText('!', flankerWarning.side === 'FLANK_LEFT' ? 20 : 560, flankerWarning.y);
     }
     
-    enemies.forEach(e => { ctx.fillStyle = '#444'; ctx.fillRect(e.x - 15, e.y - 15, 30, 30); ctx.strokeStyle = (e.type === 'blue' ? '#00f2ff' : '#0f0'); ctx.strokeRect(e.x - 15, e.y - 15, 30, 30); });
+    enemies.forEach(e => { 
+        if (e.isMidBoss) {
+            ctx.save();
+            ctx.translate(e.x, e.y);
+            ctx.fillStyle = '#ff006e';
+            ctx.beginPath(); ctx.arc(0, 0, 20, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#ffca3a';
+            ctx.beginPath(); ctx.moveTo(-20, -10); ctx.lineTo(-40, -30); ctx.lineTo(-10, -20); ctx.fill();
+            ctx.beginPath(); ctx.moveTo(20, -10); ctx.lineTo(40, -30); ctx.lineTo(10, -20); ctx.fill();
+            ctx.fillStyle = '#000'; ctx.fillRect(-10, -5, 20, 10);
+            ctx.fillStyle = '#00f2ff'; ctx.fillRect(-5, -3, 10, 6);
+            ctx.restore();
+        } else {
+            ctx.fillStyle = '#444'; ctx.fillRect(e.x - 15, e.y - 15, 30, 30); 
+            ctx.strokeStyle = (e.type === 'blue' ? '#00f2ff' : (e.type === 'pink' ? '#ff006e' : '#0f0')); 
+            ctx.strokeRect(e.x - 15, e.y - 15, 30, 30); 
+        }
+    });
 
     bombItems.forEach(p => { ctx.fillStyle = '#f0f'; ctx.beginPath(); ctx.arc(p.x, p.y, 15, 0, 7); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillText("B", p.x - 4, p.y + 4); });
     powerItems.forEach(p => { ctx.fillStyle = '#ff006e'; ctx.beginPath(); ctx.arc(p.x, p.y, 10, 0, 7); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillText("P", p.x - 4, p.y + 4); });
