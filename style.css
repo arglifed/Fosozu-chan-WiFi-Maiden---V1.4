@@ -24,7 +24,7 @@ canvas { border: 4px solid #9d4edd; box-shadow: 0 0 30px #9d4edd; background: #0
 #reset-text { color: black; font-size: 60px; font-weight: bold; display: none; }
 #iter-text { color: black; font-size: 24px; margin-top: 10px; display: none; }
 body { margin: 0; background: #000; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; color: #fff; font-family: 'Courier New', Courier, monospace; }
-canvas { border: 4px solid #9d4edd; box-shadow: 0 0 30px #9d4edd; background: #050505; cursor: none; max-height: 100vh; max-width: 100vw; object-fit: contain; aspect-ratio: 3 / 4; }
+canvas { border: 4px solid #9d4edd; box-shadow: 0 0 30px #9d4edd; background: #050505; cursor: none; max-height: 100%; max-width: 100%; object-fit: contain; aspect-ratio: 3 / 4; }
 #ui { position: absolute; top: 20px; left: 20px; font-size: 18px; text-shadow: 2px 2px #000; pointer-events: none; z-index: 10; }
 #leaderboard-ui { position: absolute; top: 20px; right: 20px; font-size: 16px; color: #ffca3a; text-shadow: 2px 2px #000; text-align: left; background: rgba(0,0,0,0.5); padding: 15px; border: 2px solid #9d4edd; }
 #leaderboard-list { padding-left: 35px; margin: 0; }
@@ -43,7 +43,7 @@ canvas { border: 4px solid #9d4edd; box-shadow: 0 0 30px #9d4edd; background: #0
 #hp-bar-fill { width: 100%; height: 100%; background: #ff006e; transition: width 0.1s; }
 #dialogue-box, #summary-box { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 450px; background: rgba(20, 0, 40, 0.95); border: 4px solid #00f2ff; padding: 25px; display: none; z-index: 100; text-align: center; box-shadow: 0 0 50px #00f2ff; }
 #continue-ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 200; }
-#warning-border { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; border: 15px solid red; box-sizing: border-box; pointer-events: none; display: none; z-index: 5; animation: flash 0.2s infinite; }
+#warning-border { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 15px solid red; box-sizing: border-box; pointer-events: none; display: none; z-index: 5; animation: flash 0.2s infinite; }
 @keyframes flash { 0% { opacity: 0.8; } 100% { opacity: 0.2; } }
 #reset-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background:white; opacity:0; pointer-events:none; z-index:300; display: flex; flex-direction: column; justify-content: center; align-items: center; }
 #reset-text { color: black; font-size: 60px; font-weight: bold; display: none; }
