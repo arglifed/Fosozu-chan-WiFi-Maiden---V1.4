@@ -30,7 +30,8 @@ canvas { border: 4px solid #9d4edd; box-sizing: border-box; box-shadow: 0 0 30px
 #leaderboard-list { padding-left: 35px; margin: 0; }
 #leaderboard-list li { margin-bottom: 5px; }
 #submit-score-ui { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 400px; background: rgba(20, 0, 40, 0.95); border: 4px solid #ffca3a; padding: 25px; display: none; z-index: 100; text-align: center; box-shadow: 0 0 50px #ffca3a; }
-#playerName { background: #000; color: #ffca3a; border: 2px solid #ffca3a; font-size: 24px; text-align: center; width: 100px; padding: 5px; text-transform: uppercase; font-family: 'Courier New', Courier, monospace; outline: none; }
+.active-letter { border-bottom: 4px solid #ffca3a; color: #fff; text-shadow: 0 0 10px #ffca3a; animation: letter-flash 0.5s infinite alternate; }
+@keyframes letter-flash { 0% { opacity: 1; } 100% { opacity: 0.5; } }
 .menu-btn { background: #00f2ff; color: #000; border: none; font-size: 20px; padding: 10px 20px; cursor: pointer; font-weight: bold; font-family: 'DotGothic16', sans-serif; min-width: 200px; box-shadow: 0 0 15px #00f2ff; transition: 0.1s; }
 .menu-btn:hover { background: #fff; box-shadow: 0 0 25px #fff; }
 .keybind-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 16px; font-weight: bold; }

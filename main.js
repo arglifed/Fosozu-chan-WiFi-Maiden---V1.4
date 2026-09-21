@@ -334,6 +334,16 @@ window.addEventListener('keydown', e => {
 
     let k = e.key.toLowerCase();
     if (k === ' ') k = 'space';
+    
+    if (document.getElementById('submit-score-ui').style.display === 'block') {
+        if (k === keyMap.up || e.code === 'ArrowUp') handleArcadeInput('up');
+        else if (k === keyMap.down || e.code === 'ArrowDown') handleArcadeInput('down');
+        else if (k === keyMap.shoot || e.code === 'Enter') handleArcadeInput('shoot');
+        else if (k === keyMap.bomb || e.code === 'Backspace') handleArcadeInput('bomb');
+        e.preventDefault();
+        return;
+    }
+
     keys[e.code] = true; keys[k] = true;
 
     if (e.code === 'KeyF' || k === 'f') toggleFullscreen();
@@ -382,17 +392,55 @@ window.addEventListener('keyup', e => {
     keys[e.code] = false; keys[k] = false; 
 });
 
-document.getElementById('submitScoreBtn').addEventListener('click', () => {
-    let name = document.getElementById('playerName').value.trim();
-    if (!name || name.length > 3) name = 'AAA';
+const CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_".split('');
+let initialIndices = [0, 0, 0];
+let currentCursor = 0;
+
+function updateArcadeNameEntry() {
+    for (let i = 0; i < 3; i++) {
+        const span = document.getElementById('char' + i);
+        if (span) {
+            span.innerText = CHARS[initialIndices[i]];
+            if (i === currentCursor) span.classList.add('active-letter');
+            else span.classList.remove('active-letter');
+        }
+    }
+}
+
+function finalizeScoreSubmission(name) {
     submitScore(name, score, difficultyWave);
     document.getElementById('submit-score-ui').style.display = 'none';
-
-    // Normal game over state
     continueCountdown = 10;
     continueUI.style.display = 'flex';
     document.getElementById('continue-timer').innerText = 10;
-});
+}
+
+function handleArcadeInput(action) {
+    if (action === 'up') {
+        initialIndices[currentCursor] = (initialIndices[currentCursor] + 1) % CHARS.length;
+        updateArcadeNameEntry();
+        if (audio) audio.playGraze();
+    } else if (action === 'down') {
+        initialIndices[currentCursor] = (initialIndices[currentCursor] - 1 + CHARS.length) % CHARS.length;
+        updateArcadeNameEntry();
+        if (audio) audio.playGraze();
+    } else if (action === 'shoot' || action === 'start') {
+        currentCursor++;
+        if (currentCursor >= 3) {
+            let name = CHARS[initialIndices[0]] + CHARS[initialIndices[1]] + CHARS[initialIndices[2]];
+            finalizeScoreSubmission(name);
+        } else {
+            updateArcadeNameEntry();
+            if (audio) audio.playPowerup();
+        }
+    } else if (action === 'bomb') {
+        if (currentCursor > 0) {
+            currentCursor--;
+            updateArcadeNameEntry();
+            if (audio) audio.playHit();
+        }
+    }
+}
 
 function updateHighScore() { if (score > sessionHiScore) { sessionHiScore = score; localStorage.setItem('fosozu_hiScore', sessionHiScore); } }
 function startBossDialogue() { isPaused = true; dialogueIndex = 0; document.getElementById('dialogue-text').innerText = boss.intro[0]; dialogueBox.style.display = 'block'; }
@@ -556,8 +604,9 @@ function playerTakeDamage() {
             } else {
                 // Pause the game state and show submit modal
                 document.getElementById('submit-score-ui').style.display = 'block';
-                document.getElementById('playerName').value = '';
-                document.getElementById('playerName').focus();
+                initialIndices = [0, 0, 0];
+                currentCursor = 0;
+                updateArcadeNameEntry();
             }
         }
         else { invulnTimer = 120; shakeTimer = 25; if (audio) audio.playExplosion(); }
@@ -1036,6 +1085,13 @@ function loop(timestamp) {
 
     if (document.getElementById('submit-score-ui').style.display === 'block') {
         // Halt loop while submitting score
+        if (inputMode === 'gamepad') {
+            if (gamepadState.up && !prevGamepadState.up) handleArcadeInput('up');
+            if (gamepadState.down && !prevGamepadState.down) handleArcadeInput('down');
+            if (gamepadState.shoot && !prevGamepadState.shoot) handleArcadeInput('shoot');
+            if (gamepadState.start && !prevGamepadState.start) handleArcadeInput('start');
+            if (gamepadState.bomb && !prevGamepadState.bomb) handleArcadeInput('bomb');
+        }
         requestAnimationFrame(loop);
         return;
     }
