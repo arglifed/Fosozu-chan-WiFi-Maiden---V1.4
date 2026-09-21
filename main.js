@@ -499,13 +499,13 @@ function handleArcadeInput(action) {
             finalizeScoreSubmission(name);
         } else {
             updateArcadeNameEntry();
-            if (audio) audio.playPowerup();
+            if (audio) audio.playShoot();
         }
     } else if (action === 'bomb') {
         if (currentCursor > 0) {
             currentCursor--;
             updateArcadeNameEntry();
-            if (audio) audio.playHit();
+            if (audio) audio.playEnemyHit();
         }
     }
 }
