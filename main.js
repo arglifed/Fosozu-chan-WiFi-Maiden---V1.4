@@ -254,7 +254,7 @@ let comboChain = 0, comboTimer = 0;
 let flankerWarning = { timer: 0, side: null, y: 0 };
 const COMBO_MAX_TIME = 120;
 
-const keys = {}, bullets = [], bossBullets = [], enemyBullets = [], enemies = [], bombItems = [], powerItems = [], lifeItems = [], medals = [], effects = [];
+const keys = {}, bullets = [], bossBullets = [], enemyBullets = [], enemies = [], bombItems = [], powerItems = [], lifeItems = [], medals = [], effects = [], bowlSteam = [];
 const stars = Array.from({ length: 80 }, () => ({ x: Math.random() * 600, y: Math.random() * 800, size: Math.random() * 2, speed: Math.random() * 2 + 1 }));
 const player = { x: 300, y: 700, speed: 4.5, focusSpeed: 2.5, hitboxSize: 4, grazeSize: 25, satellites: [{ x: 300, y: 700 }, { x: 300, y: 700 }, { x: 300, y: 700 }, { x: 300, y: 700 }] };
 const player2 = { x: 350, y: 700, speed: 5.3, focusSpeed: 3.0, hitboxSize: 4, grazeSize: 25, satellites: [{ x: 350, y: 700 }, { x: 350, y: 700 }, { x: 350, y: 700 }, { x: 350, y: 700 }], image: new Image() };
@@ -951,6 +951,13 @@ function updateProjectiles(ts) {
         if (b.y < -50 || b.x < -50 || b.x > 650) bullets.splice(i, 1);
     });
     effects.forEach((eff, i) => { eff.r += 6; eff.opacity -= 0.05; if (eff.opacity <= 0) effects.splice(i, 1); });
+    
+    for (let i = bowlSteam.length - 1; i >= 0; i--) {
+        let p = bowlSteam[i];
+        p.y -= 2 * ts;
+        p.life -= 0.03 * ts;
+        if (p.life <= 0) bowlSteam.splice(i, 1);
+    }
 }
 
 function playerTakeDamage() {
@@ -1103,9 +1110,18 @@ function handleCollisions(ts) {
 
 function updateBoss(ts) {
     if (boss) {
+        let lastX = boss.x;
         boss.update(ts, player, bossBullets);
+        boss.vx = boss.x - lastX;
+
         hpFill.style.width = Math.max(0, (boss.hp / boss.maxHP * 100)) + "%";
         hpFill.style.background = (boss.hp < boss.maxHP / 2) ? "#ffca3a" : "#ff006e";
+
+        if (is2PMode && boss.type === 'pink') {
+            if (Math.random() < 0.25 * ts) {
+                bowlSteam.push({ x: boss.x + (Math.random() * 16 - 8), y: boss.y - 15, size: 2 + Math.random() * 5, life: 1.0 });
+            }
+        }
     }
     // Spawn Boss when wave timer concludes
     if (!bossMode && waveClearTimer <= 0 && stageTimer >= WAVE_DURATION && enemies.length === 0) {
@@ -1526,7 +1542,16 @@ function drawSatellites(pObj) {
         let renderType = (is2PMode && boss.type === 'pink') ? 'bowl' : boss.type;
         if (assets[renderType] && assets[renderType].loaded) {
             if (boss.hp < boss.maxHP / 2 && Date.now() % 200 < 100) ctx.globalAlpha = 0.5;
-            ctx.drawImage(assets[renderType].img, boss.x - 75, boss.y - 75, 150, 150);
+            if (renderType === 'bowl') {
+                let rotation = boss.vx ? Math.max(-0.35, Math.min(0.35, boss.vx * 0.1)) : 0;
+                ctx.save();
+                ctx.translate(boss.x, boss.y);
+                ctx.rotate(rotation);
+                ctx.drawImage(assets.bowl.img, -75, -75, 150, 150);
+                ctx.restore();
+            } else {
+                ctx.drawImage(assets[renderType].img, boss.x - 75, boss.y - 75, 150, 150);
+            }
             ctx.globalAlpha = 1.0;
         } else {
             const colorMap = { pink: '#ff006e', blue: '#00f2ff', green: '#0f0', purple: '#b5179e', amber: '#f77f00', crimson: '#d90429' };
@@ -1537,6 +1562,13 @@ function drawSatellites(pObj) {
             ctx.fill();
             ctx.globalAlpha = 1.0;
         }
+
+        bowlSteam.forEach(p => {
+            ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0, p.life * 0.4)})`;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+        });
 
         if (boss.flashTimer > 0 && Math.floor(boss.flashTimer) % 6 < 3) {
             ctx.globalCompositeOperation = 'lighter';
