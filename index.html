@@ -3,11 +3,17 @@
 <head>
     <title>Fosozu-chan: WiFi Maiden - V1.4</title>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=DotGothic16&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css?v=1.4.1">
+    <link rel="stylesheet" href="style.css?v=1.4.2">
 </head>
 <body>
     <div id="game-wrapper">
-
+    <div id="reset-overlay"><div id="reset-text">SERVER RESET</div><div id="iter-text">OVERCLOCKING...</div></div>
+    <div id="warning-border"></div>
+    <div id="continue-ui">
+        <h1 style="color:#ff006e; font-size: 48px;">CONTINUE?</h1>
+        <div id="continue-timer" style="font-size: 80px; margin: 20px 0;">10</div>
+        <p style="font-size: 20px;">PRESS <span id="prompt-continue" style="color:#00f2ff;">[C]</span> TO RECONNECT</p>
+    </div>
     <div id="dialogue-box"><div id="dialogue-text" style="font-size: 20px; margin-bottom: 15px; color: #00f2ff;"></div><div id="prompt-dialogue" style="font-size:12px; color: #ffca3a;">-- PRESS Z TO CONTINUE --</div></div>
     <div id="summary-box">
         <h2 id="summary-title" style="color:#00f2ff; margin-top:0;">WAVE ANALYTICS</h2>
@@ -156,14 +162,6 @@
         window.addEventListener('load', resizeGame);
         resizeGame(); // Call immediately
     </script>
-    </div>
-    
-    <div id="reset-overlay"><div id="reset-text">SERVER RESET</div><div id="iter-text">OVERCLOCKING...</div></div>
-    <div id="warning-border"></div>
-    <div id="continue-ui">
-        <h1 style="color:#ff006e; font-size: 48px;">CONTINUE?</h1>
-        <div id="continue-timer" style="font-size: 80px; margin: 20px 0;">10</div>
-        <p style="font-size: 20px;">PRESS <span id="prompt-continue" style="color:#00f2ff;">[C]</span> TO RECONNECT</p>
     </div>
 </body>
 </html>
