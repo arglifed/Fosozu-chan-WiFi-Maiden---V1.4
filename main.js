@@ -338,8 +338,10 @@ window.addEventListener('keydown', e => {
     if (document.getElementById('submit-score-ui').style.display === 'block') {
         if (k === keyMap.up || e.code === 'ArrowUp') handleArcadeInput('up');
         else if (k === keyMap.down || e.code === 'ArrowDown') handleArcadeInput('down');
-        else if (k === keyMap.shoot || e.code === 'Enter') handleArcadeInput('shoot');
-        else if (k === keyMap.bomb || e.code === 'Backspace') handleArcadeInput('bomb');
+        else if (!e.repeat) {
+            if (k === keyMap.shoot || e.code === 'Enter') handleArcadeInput('shoot');
+            else if (k === keyMap.bomb || e.code === 'Backspace') handleArcadeInput('bomb');
+        }
         e.preventDefault();
         return;
     }
