@@ -970,7 +970,7 @@ function playerTakeDamage() {
         document.getElementById('shieldStat').style.display = 'none'; grazeStreak = 0; document.getElementById('shieldStreak').innerText = 0;
         effects.push({ x: player.x, y: player.y, r: 40, opacity: 1 }); if (audio) audio.playShieldBreak();
     } else {
-        let bombsLost = bombs;
+        let bombsLost = Math.max(0, bombs - 3);
         bombs = 3; bombsEl.innerText = bombs;
         for (let i = 0; i < bombsLost; i++) {
             let angle = Math.random() * Math.PI * 2;
