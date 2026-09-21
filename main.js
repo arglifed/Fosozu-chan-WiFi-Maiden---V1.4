@@ -732,9 +732,17 @@ function updateEnemies(ts) {
     if (!bossMode && waveClearTimer <= 0 && stageTimer < WAVE_DURATION) {
         formationTimer -= ts;
         if (formationTimer <= 0) {
-            const types = ['V_SHAPE', 'SWEEP_LEFT', 'SWEEP_RIGHT', 'CIRCLE', 'WALL', 'SLOW_CIRCLE'];
+            let types;
             if (difficultyWave >= 4) {
-                types.push('DIVER_SWOOP', 'FLANK_LEFT', 'FLANK_RIGHT', 'SHIELD_WALL');
+                types = [
+                    'DIVER_SWOOP', 'DIVER_SWOOP', 'DIVER_SWOOP',
+                    'FLANK_LEFT', 'FLANK_LEFT', 'FLANK_LEFT',
+                    'FLANK_RIGHT', 'FLANK_RIGHT', 'FLANK_RIGHT',
+                    'SHIELD_WALL', 'SHIELD_WALL', 'SHIELD_WALL',
+                    'V_SHAPE', 'CIRCLE', 'WALL'
+                ];
+            } else {
+                types = ['V_SHAPE', 'SWEEP_LEFT', 'SWEEP_RIGHT', 'CIRCLE', 'WALL', 'SLOW_CIRCLE'];
             }
             let selectedType = types[Math.floor(Math.random() * types.length)];
             
