@@ -7,6 +7,8 @@ const fpsCounterEl = document.getElementById('fpsCounter'), hpFill = document.ge
 const SUPABASE_URL = 'https://hzmkoqtciabaqcfkwmeg.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_OE_63zUsDgyisFTY0zQHDA_9H3-ToId';
 let isDevMode = localStorage.getItem('fosozu_devMode') === 'true';
+let gameCleared = localStorage.getItem('fosozu_gameCleared') === 'true';
+let is2PMode = false;
 
 let defaultKeyMap = { up: 'arrowup', down: 'arrowdown', left: 'arrowleft', right: 'arrowright', shoot: 'z', bomb: 'x', focus: 'shift', start: 'enter' };
 let keyMap = JSON.parse(localStorage.getItem('fosozu_keymap')) || defaultKeyMap;
@@ -21,6 +23,14 @@ for (let key in gamepadMap) {
 }
 let rebindingGamepadAction = null;
 
+let defaultKeyMapP2 = { up: 'w', down: 's', left: 'a', right: 'd', shoot: 'c', bomb: 'v', focus: 'f', start: 't' };
+let keyMapP2 = JSON.parse(localStorage.getItem('fosozu_keymapP2')) || defaultKeyMapP2;
+
+let defaultGamepadMapP2 = { up: 'B12', down: 'B13', left: 'B14', right: 'B15', shoot: 'B0', bomb: 'B1', focus: 'B2', start: 'B9' };
+let gamepadMapP2 = JSON.parse(localStorage.getItem('fosozu_gamepadmapP2')) || defaultGamepadMapP2;
+for (let key in gamepadMapP2) {
+    if (typeof gamepadMapP2[key] === 'number') gamepadMapP2[key] = 'B' + gamepadMapP2[key];
+}
 function formatGamepadBinding(binding) {
     if (typeof binding === 'number') return 'BTN ' + binding;
     if (!binding) return 'NONE';
@@ -92,7 +102,8 @@ const assets = {
     green: { img: new Image(), src: 'green_girl.png', loaded: false },
     purple: { img: new Image(), src: 'crow.png', loaded: false },
     amber: { img: new Image(), src: 'lief.png', loaded: false },
-    crimson: { img: new Image(), src: 'satsuki.png', loaded: false }
+    crimson: { img: new Image(), src: 'satsuki.png', loaded: false },
+    bowl: { img: new Image(), src: 'bowl.png', loaded: false }
 };
 let assetsLoaded = 0;
 const totalAssets = Object.keys(assets).length;
@@ -223,11 +234,15 @@ const COMBO_MAX_TIME = 120;
 const keys = {}, bullets = [], bossBullets = [], enemyBullets = [], enemies = [], bombItems = [], powerItems = [], lifeItems = [], medals = [], effects = [];
 const stars = Array.from({ length: 80 }, () => ({ x: Math.random() * 600, y: Math.random() * 800, size: Math.random() * 2, speed: Math.random() * 2 + 1 }));
 const player = { x: 300, y: 700, speed: 4.5, focusSpeed: 2.5, hitboxSize: 4, grazeSize: 25, satellites: [{ x: 300, y: 700 }, { x: 300, y: 700 }, { x: 300, y: 700 }, { x: 300, y: 700 }] };
+const player2 = { x: 350, y: 700, speed: 5.3, focusSpeed: 3.0, hitboxSize: 4, grazeSize: 25, satellites: [{ x: 350, y: 700 }, { x: 350, y: 700 }, { x: 350, y: 700 }, { x: 350, y: 700 }], image: new Image() };
+player2.image.src = 'img/pink_girl.png';
 
 let audio = null;
 
 let gamepadState = { up: false, down: false, left: false, right: false, shoot: false, bomb: false, focus: false, start: false, select: false };
 let prevGamepadState = Object.assign({}, gamepadState);
+let gamepadState2 = { up: false, down: false, left: false, right: false, shoot: false, bomb: false, focus: false, start: false, select: false };
+let prevGamepadState2 = Object.assign({}, gamepadState2);
 
 function getGamepadInput(gp, binding) {
     if (!binding) return false;
@@ -247,25 +262,44 @@ function getGamepadInput(gp, binding) {
 
 function pollGamepad() {
     prevGamepadState = Object.assign({}, gamepadState);
+    prevGamepadState2 = Object.assign({}, gamepadState2);
     const gamepads = navigator.getGamepads ? navigator.getGamepads() : (navigator.webkitGetGamepads ? navigator.webkitGetGamepads() : []);
-    let gp = null;
+    
+    let gp1 = null, gp2 = null;
+    let gpCount = 0;
     for (let i = 0; i < gamepads.length; i++) {
-        if (gamepads[i]) { gp = gamepads[i]; break; }
+        if (gamepads[i]) {
+            if (gpCount === 0) { gp1 = gamepads[i]; gpCount++; }
+            else if (gpCount === 1) { gp2 = gamepads[i]; break; }
+        }
     }
 
-    if (gp) {
-        gamepadState.left = getGamepadInput(gp, gamepadMap.left) || gp.axes[0] < -0.3;
-        gamepadState.right = getGamepadInput(gp, gamepadMap.right) || gp.axes[0] > 0.3;
-        gamepadState.up = getGamepadInput(gp, gamepadMap.up) || gp.axes[1] < -0.3;
-        gamepadState.down = getGamepadInput(gp, gamepadMap.down) || gp.axes[1] > 0.3;
-
-        gamepadState.shoot = getGamepadInput(gp, gamepadMap.shoot);
-        gamepadState.bomb = getGamepadInput(gp, gamepadMap.bomb);
-        gamepadState.focus = getGamepadInput(gp, gamepadMap.focus);
-        gamepadState.start = getGamepadInput(gp, gamepadMap.start);
-        gamepadState.select = gp.buttons[8] && gp.buttons[8].pressed;
+    if (gp1) {
+        gamepadState.left = getGamepadInput(gp1, gamepadMap.left) || gp1.axes[0] < -0.3;
+        gamepadState.right = getGamepadInput(gp1, gamepadMap.right) || gp1.axes[0] > 0.3;
+        gamepadState.up = getGamepadInput(gp1, gamepadMap.up) || gp1.axes[1] < -0.3;
+        gamepadState.down = getGamepadInput(gp1, gamepadMap.down) || gp1.axes[1] > 0.3;
+        gamepadState.shoot = getGamepadInput(gp1, gamepadMap.shoot);
+        gamepadState.bomb = getGamepadInput(gp1, gamepadMap.bomb);
+        gamepadState.focus = getGamepadInput(gp1, gamepadMap.focus);
+        gamepadState.start = getGamepadInput(gp1, gamepadMap.start);
+        gamepadState.select = gp1.buttons[8] && gp1.buttons[8].pressed;
     } else {
         gamepadState = { up: false, down: false, left: false, right: false, shoot: false, bomb: false, focus: false, start: false, select: false };
+    }
+    
+    if (gp2) {
+        gamepadState2.left = getGamepadInput(gp2, gamepadMapP2.left) || gp2.axes[0] < -0.3;
+        gamepadState2.right = getGamepadInput(gp2, gamepadMapP2.right) || gp2.axes[0] > 0.3;
+        gamepadState2.up = getGamepadInput(gp2, gamepadMapP2.up) || gp2.axes[1] < -0.3;
+        gamepadState2.down = getGamepadInput(gp2, gamepadMapP2.down) || gp2.axes[1] > 0.3;
+        gamepadState2.shoot = getGamepadInput(gp2, gamepadMapP2.shoot);
+        gamepadState2.bomb = getGamepadInput(gp2, gamepadMapP2.bomb);
+        gamepadState2.focus = getGamepadInput(gp2, gamepadMapP2.focus);
+        gamepadState2.start = getGamepadInput(gp2, gamepadMapP2.start);
+        gamepadState2.select = gp2.buttons[8] && gp2.buttons[8].pressed;
+    } else {
+        gamepadState2 = { up: false, down: false, left: false, right: false, shoot: false, bomb: false, focus: false, start: false, select: false };
     }
 }
 
@@ -326,7 +360,7 @@ function handleGamepadButtons() {
         }
     }
 
-    if (gameStarted && !gameOver && !isPaused && gamepadState.bomb && !prevGamepadState.bomb) {
+    if (gameStarted && !gameOver && !isPaused && ((gamepadState.bomb && !prevGamepadState.bomb) || (gamepadState2.bomb && !prevGamepadState2.bomb))) {
         useBomb();
     }
 
@@ -349,13 +383,26 @@ function toggleFullscreen() {
 }
 
 // UI Menu Logic
-document.getElementById('btn-start-game').addEventListener('click', () => {
+// UI Menu Logic
+function startGameCommon() {
     const menu = document.getElementById('main-menu-ui');
     menu.classList.add('menu-dismiss');
     setTimeout(() => {
         menu.style.display = 'none';
         menu.classList.remove('menu-dismiss');
     }, 1500);
+}
+
+document.getElementById('btn-start-game').addEventListener('click', () => {
+    is2PMode = false;
+    startGameCommon();
+});
+
+document.getElementById('btn-start-2p').addEventListener('click', () => {
+    is2PMode = true;
+    player.x = 250; player.y = 700;
+    player2.x = 350; player2.y = 700;
+    startGameCommon();
 });
 
 document.getElementById('btn-settings').addEventListener('click', () => {
@@ -368,9 +415,16 @@ document.getElementById('btn-close-settings').addEventListener('click', () => {
 
 const devToggle = document.getElementById('dev-mode-toggle');
 devToggle.checked = isDevMode;
+
+function update2PButton() {
+    document.getElementById('btn-start-2p').style.display = (gameCleared || isDevMode) ? 'block' : 'none';
+}
+update2PButton();
+
 devToggle.addEventListener('change', (e) => {
     isDevMode = e.target.checked;
     localStorage.setItem('fosozu_devMode', isDevMode);
+    update2PButton();
 });
 
 const inputModeSelect = document.getElementById('input-mode-select');
@@ -489,7 +543,7 @@ window.addEventListener('keydown', e => {
     if (inputMode === 'keyboard') {
         if (isPaused) { if (summaryBox.style.display === 'block' && (k === keyMap.shoot)) closeSummary(); else if (dialogueBox.style.display === 'block' && (k === keyMap.shoot)) progressDialogue(); }
         if (continueCountdown > 0 && (k === keyMap.start)) processContinue();
-        if (gameStarted && !gameOver && !isPaused && (k === keyMap.bomb)) useBomb();
+        if (gameStarted && !gameOver && !isPaused && (k === keyMap.bomb || (is2PMode && k === keyMapP2.bomb))) useBomb();
     }
 });
 window.addEventListener('keyup', e => { 
@@ -617,64 +671,64 @@ function processContinue() {
     }
 }
 
-function shoot() {
+function shoot(pObj) {
     if (audio) audio.playShoot();
 
     // Core Shots
-    if (hasShield) { bullets.push({ x: player.x, y: player.y - 30, vx: 0, vy: -18, w: 10, h: 40, damage: 2 }); bullets.push({ x: player.x - 15, y: player.y - 20, vx: -1.5, vy: -18, w: 10, h: 40, damage: 2 }); bullets.push({ x: player.x + 15, y: player.y - 20, vx: 1.5, vy: -18, w: 10, h: 40, damage: 2 }); }
-    else if (grazeStreak >= 5) { bullets.push({ x: player.x, y: player.y - 30, vx: 0, vy: -20, w: 4, h: 15, damage: 1.2 }); bullets.push({ x: player.x - 12, y: player.y - 20, vx: -3, vy: -18, w: 6, h: 15, damage: 1.2 }); bullets.push({ x: player.x + 12, y: player.y - 20, vx: 3, vy: -18, w: 6, h: 15, damage: 1.2 }); }
-    else { bullets.push({ x: player.x, y: player.y - 30, vx: 0, vy: -15, w: 4, h: 10, damage: 1 }); bullets.push({ x: player.x - 10, y: player.y - 20, vx: -2.5, vy: -14, w: 4, h: 10, damage: 1 }); bullets.push({ x: player.x + 10, y: player.y - 20, vx: 2.5, vy: -14, w: 4, h: 10, damage: 1 }); }
+    if (hasShield) { bullets.push({ x: pObj.x, y: pObj.y - 30, vx: 0, vy: -18, w: 10, h: 40, damage: 2 }); bullets.push({ x: pObj.x - 15, y: pObj.y - 20, vx: -1.5, vy: -18, w: 10, h: 40, damage: 2 }); bullets.push({ x: pObj.x + 15, y: pObj.y - 20, vx: 1.5, vy: -18, w: 10, h: 40, damage: 2 }); }
+    else if (grazeStreak >= 5) { bullets.push({ x: pObj.x, y: pObj.y - 30, vx: 0, vy: -20, w: 4, h: 15, damage: 1.2 }); bullets.push({ x: pObj.x - 12, y: pObj.y - 20, vx: -3, vy: -18, w: 6, h: 15, damage: 1.2 }); bullets.push({ x: pObj.x + 12, y: pObj.y - 20, vx: 3, vy: -18, w: 6, h: 15, damage: 1.2 }); }
+    else { bullets.push({ x: pObj.x, y: pObj.y - 30, vx: 0, vy: -15, w: 4, h: 10, damage: 1 }); bullets.push({ x: pObj.x - 10, y: pObj.y - 20, vx: -2.5, vy: -14, w: 4, h: 10, damage: 1 }); bullets.push({ x: pObj.x + 10, y: pObj.y - 20, vx: 2.5, vy: -14, w: 4, h: 10, damage: 1 }); }
 
     // Homing Tracking Packets
     let homingCount = Math.floor(power / 16);
     if (homingCount > 0) {
         for (let i = 0; i < homingCount; i++) {
             let offset = (i - (homingCount - 1) / 2) * 10;
-            bullets.push({ x: player.x + offset, y: player.y - 10, vx: (Math.random() - 0.5) * 4, vy: -10, w: 6, h: 6, damage: 0.5, isHoming: true, color: '#ffca3a' });
+            bullets.push({ x: pObj.x + offset, y: pObj.y - 10, vx: (Math.random() - 0.5) * 4, vy: -10, w: 6, h: 6, damage: 0.5, isHoming: true, color: '#ffca3a' });
         }
     }
 
     // Satellite Shots
     let activeCount = power >= 48 ? 4 : (power >= 32 ? 3 : (power >= 16 ? 2 : (power >= 8 ? 1 : 0)));
     for (let i = 0; i < activeCount; i++) {
-        bullets.push({ x: player.satellites[i].x, y: player.satellites[i].y, vx: 0, vy: -20, w: 4, h: 15, damage: 0.8, color: '#00f2ff' });
+        bullets.push({ x: pObj.satellites[i].x, y: pObj.satellites[i].y, vx: 0, vy: -20, w: 4, h: 15, damage: 0.8, color: '#00f2ff' });
     }
 }
 
-function updatePlayer(ts) {
-    const isFocused = (inputMode === 'keyboard' && keys[keyMap.focus]) || (inputMode === 'gamepad' && gamepadState.focus);
-    let s_cur = isFocused ? player.focusSpeed : player.speed;
-    if ((inputMode === 'keyboard' && keys[keyMap.up]) || (inputMode === 'gamepad' && gamepadState.up)) player.y -= s_cur;
-    if ((inputMode === 'keyboard' && keys[keyMap.down]) || (inputMode === 'gamepad' && gamepadState.down)) player.y += s_cur;
-    if ((inputMode === 'keyboard' && keys[keyMap.left]) || (inputMode === 'gamepad' && gamepadState.left)) player.x -= s_cur;
-    if ((inputMode === 'keyboard' && keys[keyMap.right]) || (inputMode === 'gamepad' && gamepadState.right)) player.x += s_cur;
+function updatePlayer(ts, pObj, gpState, kMap) {
+    const isFocused = (kMap && inputMode === 'keyboard' && keys[kMap.focus]) || (gpState && gpState.focus);
+    let s_cur = isFocused ? pObj.focusSpeed : pObj.speed;
+    if ((kMap && inputMode === 'keyboard' && keys[kMap.up]) || (gpState && gpState.up)) pObj.y -= s_cur;
+    if ((kMap && inputMode === 'keyboard' && keys[kMap.down]) || (gpState && gpState.down)) pObj.y += s_cur;
+    if ((kMap && inputMode === 'keyboard' && keys[kMap.left]) || (gpState && gpState.left)) pObj.x -= s_cur;
+    if ((kMap && inputMode === 'keyboard' && keys[kMap.right]) || (gpState && gpState.right)) pObj.x += s_cur;
 
     // Satellites lerping
     let activeCount = power >= 48 ? 4 : (power >= 32 ? 3 : (power >= 16 ? 2 : (power >= 8 ? 1 : 0)));
     for (let i = 0; i < 4; i++) {
-        let targetX = player.x, targetY = player.y;
+        let targetX = pObj.x, targetY = pObj.y;
         if (i < activeCount) {
             if (isFocused) {
                 let offsets = activeCount === 1 ? [0] :
                     activeCount === 2 ? [-45, 45] :
                         activeCount === 3 ? [-60, 0, 60] :
                             [-60, -30, 30, 60];
-                targetX = player.x + offsets[i];
-                targetY = player.y + 10;
+                targetX = pObj.x + offsets[i];
+                targetY = pObj.y + 10;
             } else {
                 let angle = (Date.now() / 400) + (i * Math.PI * 2 / activeCount);
-                targetX = player.x + Math.cos(angle) * 55;
-                targetY = player.y + Math.sin(angle) * 15;
+                targetX = pObj.x + Math.cos(angle) * 55;
+                targetY = pObj.y + Math.sin(angle) * 15;
             }
         }
-        player.satellites[i].x += (targetX - player.satellites[i].x) * 0.3 * ts;
-        player.satellites[i].y += (targetY - player.satellites[i].y) * 0.3 * ts;
+        pObj.satellites[i].x += (targetX - pObj.satellites[i].x) * 0.3 * ts;
+        pObj.satellites[i].y += (targetY - pObj.satellites[i].y) * 0.3 * ts;
     }
 
-    if ((inputMode === 'keyboard' && keys[keyMap.shoot]) || (inputMode === 'gamepad' && gamepadState.shoot)) { if (Date.now() % 60 < 10) shoot(); }
+    if ((kMap && inputMode === 'keyboard' && keys[kMap.shoot]) || (gpState && gpState.shoot)) { if (Date.now() % 60 < 10) shoot(pObj); }
 
-    const isOff = (player.x < 0 || player.x > 600 || player.y < 0 || player.y > 800);
-    if (isOff) { stallingTimer++; warningBorder.style.display = 'block'; if (stallingTimer > 90) { shakeTimer = 40; player.x = 300; player.y = 600; stallingTimer = 0; score = Math.max(0, score - 500); scoreEl.innerText = score; } } else { stallingTimer = 0; document.getElementById('warning-border').style.display = 'none'; }
+    const isOff = (pObj.x < 0 || pObj.x > 600 || pObj.y < 0 || pObj.y > 800);
+    if (isOff) { stallingTimer++; warningBorder.style.display = 'block'; if (stallingTimer > 90) { shakeTimer = 40; pObj.x = 300; pObj.y = 600; stallingTimer = 0; score = Math.max(0, score - 500); scoreEl.innerText = score; } } else { stallingTimer = 0; document.getElementById('warning-border').style.display = 'none'; }
 }
 
 function updateProjectiles(ts) {
@@ -764,30 +818,49 @@ function handleCollisions(ts) {
     [bossBullets, enemyBullets].forEach(arr => {
         for (let i = arr.length - 1; i >= 0; i--) {
             let b = arr[i]; b.x += b.vx * ts; b.y += b.vy * ts;
-            let d = Math.hypot(player.x - b.x, player.y - b.y);
-            if (isFocused && !b.grazed && d < player.grazeSize && d > player.hitboxSize + 4 && invulnTimer === 0 && bombEffectTimer === 0) {
-                b.grazed = true; graze++; waveGraze++; score += 50; scoreEl.innerText = score; document.getElementById('grazeVal').innerText = graze; slowMoTimer = 15;
-                if (audio) audio.playGraze();
-                if (!hasShield) { grazeStreak++; streakTimer = 90; document.getElementById('shieldStreak').innerText = grazeStreak; if (grazeStreak >= 10) { hasShield = true; document.getElementById('shieldStat').style.display = 'inline'; } }
-            }
-            if (d < player.hitboxSize + 4 && invulnTimer === 0 && bombEffectTimer === 0) {
-                playerTakeDamage();
-            }
-            if (b.y > 850 || b.y < -50 || b.x < -50 || b.x > 650) arr.splice(i, 1);
+            let hit = false;
+            let checkP = (pObj, pIsFoc) => {
+                let d = Math.hypot(pObj.x - b.x, pObj.y - b.y);
+                if (pIsFoc && !b.grazed && d < pObj.grazeSize && d > pObj.hitboxSize + 4 && invulnTimer === 0 && bombEffectTimer === 0) {
+                    b.grazed = true; graze++; waveGraze++; score += 50; scoreEl.innerText = score; document.getElementById('grazeVal').innerText = graze; slowMoTimer = 15;
+                    if (audio) audio.playGraze();
+                    if (!hasShield) { grazeStreak++; streakTimer = 90; document.getElementById('shieldStreak').innerText = grazeStreak; if (grazeStreak >= 10) { hasShield = true; document.getElementById('shieldStat').style.display = 'inline'; } }
+                }
+                if (d < pObj.hitboxSize + 4 && invulnTimer === 0 && bombEffectTimer === 0) {
+                    playerTakeDamage();
+                    hit = true;
+                }
+            };
+            checkP(player, isFocused);
+            if (is2PMode) checkP(player2, (inputMode === 'gamepad' && gamepadState2.focus));
+
+            if (b.y > 850 || b.y < -50 || b.x < -50 || b.x > 650 || hit) arr.splice(i, 1);
         }
     });
 
     for (let i = enemies.length - 1; i >= 0; i--) {
         let e = enemies[i];
-        let d = Math.hypot(player.x - e.x, player.y - e.y);
-        if (d < player.hitboxSize + 15 && invulnTimer === 0 && bombEffectTimer === 0) {
+        let hit = false;
+        let d1 = Math.hypot(player.x - e.x, player.y - e.y);
+        if (d1 < player.hitboxSize + 15 && invulnTimer === 0 && bombEffectTimer === 0) {
             playerTakeDamage();
-            enemies.splice(i, 1);
+            hit = true;
         }
+        if (is2PMode && !hit) {
+            let d2 = Math.hypot(player2.x - e.x, player2.y - e.y);
+            if (d2 < player2.hitboxSize + 15 && invulnTimer === 0 && bombEffectTimer === 0) {
+                playerTakeDamage();
+                hit = true;
+            }
+        }
+        if (hit) enemies.splice(i, 1);
     }
 
     if (boss) {
         if (Math.hypot(player.x - boss.x, player.y - boss.y) < player.hitboxSize + 50 && invulnTimer === 0 && bombEffectTimer === 0) {
+            playerTakeDamage();
+        }
+        if (is2PMode && Math.hypot(player2.x - boss.x, player2.y - boss.y) < player2.hitboxSize + 50 && invulnTimer === 0 && bombEffectTimer === 0) {
             playerTakeDamage();
         }
 
@@ -821,10 +894,17 @@ function handleCollisions(ts) {
                 linkIteration++; ngValEl.innerText = linkIteration;
                 iterText.innerText = "OVERCLOCKING TO ITERATION " + linkIteration + "...";
                 resetAnimTimer = 120; shakeTimer = 120; flashTimer = 50;
+            } else {
+                isPaused = true; summaryBox.style.display = 'block';
             }
-            else { isPaused = true; summaryBox.style.display = 'block'; }
 
-            let bonusAmt = (waveGraze * 100);
+            if (difficultyWave === 7) { // Since we incremented difficultyWave on line 835
+                gameCleared = true;
+                localStorage.setItem('fosozu_gameCleared', 'true');
+                update2PButton();
+            }
+
+            let bonusAmt = Math.floor(waveGraze * 1.5 * difficultyWave);
             let bonusMsg = `<p style="color:#ff006e; font-style:italic;">"${b_defeat}"</p><hr>WAVE ${difficultyWave - 1} COMPLETE<br>GRAZE BONUS: +${bonusAmt}`;
             if (!shieldBrokenInWave) { bonusMsg += `<br>FLAWLESS UPLINK: +25,000!`; score += 25000; }
             if (difficultyWave > 3 && !continueUsed) { bonusMsg += `<br>FULL BUFFER BONUS: +50,000!`; score += 50000; }
@@ -1110,7 +1190,8 @@ function update() {
 
     stars.forEach(s => { s.y += s.speed * ts; if (s.y > 800) s.y = 0; });
 
-    updatePlayer(ts);
+    updatePlayer(ts, player, gamepadState, keyMap);
+    if (is2PMode) updatePlayer(ts, player2, gamepadState2, keyMapP2);
     updateProjectiles(ts);
     handleCollisions(ts);
     updateBoss(ts);
@@ -1159,13 +1240,83 @@ function draw() {
         ctx.restore(); return;
     }
 
+function drawPlayer(pObj, isP1) {
+    if (invulnTimer % 10 < 5) { 
+        if (isP1) {
+            if (assets.player.loaded) ctx.drawImage(assets.player.img, pObj.x - 50, pObj.y - 50, 100, 100); 
+            else { ctx.fillStyle = 'purple'; ctx.beginPath(); ctx.arc(pObj.x, pObj.y, 25, 0, 7); ctx.fill(); }
+        } else {
+            if (pObj.image && pObj.image.complete) ctx.drawImage(pObj.image, pObj.x - 50, pObj.y - 50, 100, 100); 
+            else { ctx.fillStyle = 'pink'; ctx.beginPath(); ctx.arc(pObj.x, pObj.y, 25, 0, 7); ctx.fill(); }
+        }
+    }
+}
+
+function drawSatellites(pObj) {
+    let activeCount = power >= 48 ? 4 : (power >= 32 ? 3 : (power >= 16 ? 2 : (power >= 8 ? 1 : 0)));
+    let isP2 = (pObj === player2);
+    for (let i = 0; i < activeCount; i++) {
+        let s = pObj.satellites[i];
+        ctx.save();
+        ctx.translate(s.x, s.y);
+        
+        if (isP2) {
+            // Moe Moe Kyun Hearts
+            ctx.scale(0.8, 0.8);
+            ctx.rotate(Math.sin((Date.now() % 2000) * 0.003 + i) * 0.2); // slight swaying
+            ctx.fillStyle = '#ff007f';
+            ctx.beginPath();
+            ctx.moveTo(0, 5);
+            ctx.bezierCurveTo(0, 5, 20, -15, 0, -25);
+            ctx.bezierCurveTo(-20, -15, 0, 5, 0, 5);
+            ctx.fill();
+            
+            // Inner heart
+            ctx.fillStyle = '#ffb3d9';
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.bezierCurveTo(0, 0, 10, -10, 0, -18);
+            ctx.bezierCurveTo(-10, -10, 0, 0, 0, 0);
+            ctx.fill();
+        } else {
+            // Yin-Yang Orbs
+            ctx.rotate((Date.now() % 10000) * 0.02);
+
+            ctx.fillStyle = '#00f2ff';
+            ctx.beginPath();
+            ctx.arc(0, 0, 15, Math.PI / 2, Math.PI * 1.5);
+            ctx.fill();
+
+            ctx.fillStyle = '#b5179e';
+            ctx.beginPath();
+            ctx.arc(0, 0, 15, Math.PI * 1.5, Math.PI * 2.5);
+            ctx.fill();
+
+            ctx.fillStyle = '#b5179e';
+            ctx.beginPath(); ctx.arc(0, -7.5, 7.5, 0, Math.PI * 2); ctx.fill();
+
+            ctx.fillStyle = '#00f2ff';
+            ctx.beginPath(); ctx.arc(0, 7.5, 7.5, 0, Math.PI * 2); ctx.fill();
+
+            ctx.fillStyle = '#00f2ff';
+            ctx.beginPath(); ctx.arc(0, -7.5, 2, 0, Math.PI * 2); ctx.fill();
+
+            ctx.fillStyle = '#b5179e';
+            ctx.beginPath(); ctx.arc(0, 7.5, 2, 0, Math.PI * 2); ctx.fill();
+        }
+        ctx.restore();
+    }
+}
+
     stars.forEach(s => { ctx.fillStyle = '#fff'; ctx.fillRect(s.x, s.y, s.size, s.size); });
-    if (invulnTimer % 10 < 5) { if (assets.player.loaded) ctx.drawImage(assets.player.img, player.x - 50, player.y - 50, 100, 100); else { ctx.fillStyle = 'purple'; ctx.beginPath(); ctx.arc(player.x, player.y, 25, 0, 7); ctx.fill(); } }
+    drawPlayer(player, true);
+    if (is2PMode) drawPlayer(player2, false);
 
     if (boss) {
-        if (assets[boss.type] && assets[boss.type].loaded) {
+        let renderType = (is2PMode && boss.type === 'pink') ? 'bowl' : boss.type;
+        if (assets[renderType] && assets[renderType].loaded) {
             if (boss.hp < boss.maxHP / 2 && Date.now() % 200 < 100) ctx.globalAlpha = 0.5;
-            ctx.drawImage(assets[boss.type].img, boss.x - 75, boss.y - 75, 150, 150);
+            ctx.drawImage(assets[renderType].img, boss.x - 75, boss.y - 75, 150, 150);
             ctx.globalAlpha = 1.0;
         } else {
             const colorMap = { pink: '#ff006e', blue: '#00f2ff', green: '#0f0', purple: '#b5179e', amber: '#f77f00', crimson: '#d90429' };
@@ -1193,9 +1344,10 @@ function draw() {
     
     enemies.forEach(e => { 
         if (e.isMidBoss) {
-            if (assets['pink'] && assets['pink'].loaded) {
+            let renderType = is2PMode ? 'bowl' : 'pink';
+            if (assets[renderType] && assets[renderType].loaded) {
                 if (e.hp < 75 && Date.now() % 200 < 100) ctx.globalAlpha = 0.5;
-                ctx.drawImage(assets['pink'].img, e.x - 40, e.y - 40, 80, 80);
+                ctx.drawImage(assets[renderType].img, e.x - 40, e.y - 40, 80, 80);
                 ctx.globalAlpha = 1.0;
             } else {
                 ctx.save();
@@ -1216,53 +1368,18 @@ function draw() {
     lifeItems.forEach(p => { ctx.fillStyle = '#11ff11'; ctx.beginPath(); ctx.arc(p.x, p.y, 15, 0, 7); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillText("1UP", p.x - 12, p.y + 4); });
     medals.forEach(m => { ctx.fillStyle = '#ffca3a'; ctx.beginPath(); ctx.arc(m.x, m.y, 10, 0, 7); ctx.fill(); ctx.fillStyle = '#000'; ctx.fillText("M", m.x - 3, m.y + 4); });
 
-    // Draw Satellites
-    let activeCount = power >= 48 ? 4 : (power >= 32 ? 3 : (power >= 16 ? 2 : (power >= 8 ? 1 : 0)));
-    for (let i = 0; i < activeCount; i++) {
-        let s = player.satellites[i];
-
-        ctx.save();
-        ctx.translate(s.x, s.y);
-        ctx.rotate((Date.now() % 10000) * 0.02);
-
-        // 4. Left hemisphere (Cyan)
-        ctx.fillStyle = '#00f2ff';
-        ctx.beginPath();
-        ctx.arc(0, 0, 15, Math.PI / 2, Math.PI * 1.5);
-        ctx.fill();
-
-        // 5. Right hemisphere (Magenta)
-        ctx.fillStyle = '#b5179e';
-        ctx.beginPath();
-        ctx.arc(0, 0, 15, Math.PI * 1.5, Math.PI * 2.5);
-        ctx.fill();
-
-        // 6. Top teardrop (Magenta)
-        ctx.fillStyle = '#b5179e';
-        ctx.beginPath(); ctx.arc(0, -7.5, 7.5, 0, Math.PI * 2); ctx.fill();
-
-        // 7. Bottom teardrop (Cyan)
-        ctx.fillStyle = '#00f2ff';
-        ctx.beginPath(); ctx.arc(0, 7.5, 7.5, 0, Math.PI * 2); ctx.fill();
-
-        // 8. Top eye (Cyan)
-        ctx.fillStyle = '#00f2ff';
-        ctx.beginPath(); ctx.arc(0, -7.5, 2, 0, Math.PI * 2); ctx.fill();
-
-        // 9. Bottom eye (Magenta)
-        ctx.fillStyle = '#b5179e';
-        ctx.beginPath(); ctx.arc(0, 7.5, 2, 0, Math.PI * 2); ctx.fill();
-
-        ctx.restore();
-    }
+    drawSatellites(player);
+    if (is2PMode) drawSatellites(player2);
 
     bullets.forEach(b => { ctx.fillStyle = b.color || (hasShield ? '#00f2ff' : (grazeStreak >= 5 ? '#ffca3a' : '#00f2ff')); ctx.fillRect(b.x - (b.w || 4) / 2, b.y - (b.h || 10), (b.w || 4), (b.h || 10)); });
     effects.forEach(eff => { ctx.strokeStyle = `rgba(0, 242, 255, ${eff.opacity})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(eff.x, eff.y, eff.r, 0, Math.PI * 2); ctx.stroke(); });
     bossBullets.forEach(b => { ctx.fillStyle = b.color; ctx.beginPath(); ctx.arc(b.x, b.y, 6, 0, 7); ctx.fill(); });
 
     ctx.fillStyle = '#0f0'; enemyBullets.forEach(b => { ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, 7); ctx.fill(); });
-    const isFocused = (inputMode === 'keyboard' && keys[keyMap.focus]) || (inputMode === 'gamepad' && gamepadState.focus);
-    if (isFocused) { ctx.fillStyle = 'red'; ctx.beginPath(); ctx.arc(player.x, player.y, player.hitboxSize, 0, 7); ctx.fill(); }
+    const isFocused1 = (inputMode === 'keyboard' && keys[keyMap.focus]) || (inputMode === 'gamepad' && gamepadState.focus);
+    if (isFocused1) { ctx.fillStyle = 'red'; ctx.beginPath(); ctx.arc(player.x, player.y, player.hitboxSize, 0, 7); ctx.fill(); }
+    const isFocused2 = (inputMode === 'gamepad' && gamepadState2.focus);
+    if (is2PMode && isFocused2) { ctx.fillStyle = 'red'; ctx.beginPath(); ctx.arc(player2.x, player2.y, player2.hitboxSize, 0, 7); ctx.fill(); }
 
     if (isPaused && dialogueBox.style.display !== 'block' && summaryBox.style.display !== 'block' && resetAnimTimer <= 0) {
         ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0, 0, 600, 800);

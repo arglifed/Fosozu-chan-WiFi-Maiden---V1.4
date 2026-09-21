@@ -64,6 +64,7 @@
             <div style="font-family: 'Cinzel', serif; font-weight: 900; color:#ffca3a; font-size:64px; letter-spacing: 8px; text-shadow: 0 0 20px #ffca3a;">WIFI MAIDEN</div>
         </h1>
         <button id="btn-start-game" class="menu-btn" style="position:relative; z-index:10;">START UPLINK</button>
+        <button id="btn-start-2p" class="menu-btn" style="margin-top:20px; position:relative; z-index:10; display:none;">START 2P UPLINK</button>
         <button id="btn-settings" class="menu-btn" style="margin-top:20px; position:relative; z-index:10;">OPTIONS</button>
     </div>
 
@@ -91,27 +92,53 @@
                 </select>
             </label>
         </div>
-        <div id="keyboard-bindings">
-            <h3 style="color:#ffca3a; text-align:left; margin-bottom:10px; font-size:16px;">KEYBOARD BINDINGS</h3>
-            <div class="keybind-row"><span>UP:</span> <button class="rebind-btn" data-action="up">...</button></div>
-            <div class="keybind-row"><span>DOWN:</span> <button class="rebind-btn" data-action="down">...</button></div>
-            <div class="keybind-row"><span>LEFT:</span> <button class="rebind-btn" data-action="left">...</button></div>
-            <div class="keybind-row"><span>RIGHT:</span> <button class="rebind-btn" data-action="right">...</button></div>
-            <div class="keybind-row"><span>SHOOT:</span> <button class="rebind-btn" data-action="shoot">...</button></div>
-            <div class="keybind-row"><span>BOMB:</span> <button class="rebind-btn" data-action="bomb">...</button></div>
-            <div class="keybind-row"><span>FOCUS:</span> <button class="rebind-btn" data-action="focus">...</button></div>
-            <div class="keybind-row"><span>START:</span> <button class="rebind-btn" data-action="start">...</button></div>
+        <div id="keyboard-bindings" style="display:flex; justify-content:space-between; gap:20px;">
+            <div style="flex:1;">
+                <h3 style="color:#ffca3a; text-align:left; margin-bottom:10px; font-size:16px;">P1 KEYBOARD BINDINGS</h3>
+                <div class="keybind-row"><span>UP:</span> <button class="rebind-btn" data-action="up">...</button></div>
+                <div class="keybind-row"><span>DOWN:</span> <button class="rebind-btn" data-action="down">...</button></div>
+                <div class="keybind-row"><span>LEFT:</span> <button class="rebind-btn" data-action="left">...</button></div>
+                <div class="keybind-row"><span>RIGHT:</span> <button class="rebind-btn" data-action="right">...</button></div>
+                <div class="keybind-row"><span>SHOOT:</span> <button class="rebind-btn" data-action="shoot">...</button></div>
+                <div class="keybind-row"><span>BOMB:</span> <button class="rebind-btn" data-action="bomb">...</button></div>
+                <div class="keybind-row"><span>FOCUS:</span> <button class="rebind-btn" data-action="focus">...</button></div>
+                <div class="keybind-row"><span>START:</span> <button class="rebind-btn" data-action="start">...</button></div>
+            </div>
+            <div style="flex:1;">
+                <h3 style="color:#ffca3a; text-align:left; margin-bottom:10px; font-size:16px;">P2 KEYBOARD BINDINGS</h3>
+                <div class="keybind-row"><span>UP:</span> <button class="rebind-btn-p2" data-action="up">...</button></div>
+                <div class="keybind-row"><span>DOWN:</span> <button class="rebind-btn-p2" data-action="down">...</button></div>
+                <div class="keybind-row"><span>LEFT:</span> <button class="rebind-btn-p2" data-action="left">...</button></div>
+                <div class="keybind-row"><span>RIGHT:</span> <button class="rebind-btn-p2" data-action="right">...</button></div>
+                <div class="keybind-row"><span>SHOOT:</span> <button class="rebind-btn-p2" data-action="shoot">...</button></div>
+                <div class="keybind-row"><span>BOMB:</span> <button class="rebind-btn-p2" data-action="bomb">...</button></div>
+                <div class="keybind-row"><span>FOCUS:</span> <button class="rebind-btn-p2" data-action="focus">...</button></div>
+                <div class="keybind-row"><span>START:</span> <button class="rebind-btn-p2" data-action="start">...</button></div>
+            </div>
         </div>
-        <div id="gamepad-bindings" style="display:none;">
-            <h3 style="color:#ffca3a; text-align:left; margin-bottom:10px; font-size:16px;">GAMEPAD BINDINGS (BUTTONS)</h3>
-            <div class="keybind-row"><span>UP:</span> <button class="rebind-gp-btn" data-action="up">...</button></div>
-            <div class="keybind-row"><span>DOWN:</span> <button class="rebind-gp-btn" data-action="down">...</button></div>
-            <div class="keybind-row"><span>LEFT:</span> <button class="rebind-gp-btn" data-action="left">...</button></div>
-            <div class="keybind-row"><span>RIGHT:</span> <button class="rebind-gp-btn" data-action="right">...</button></div>
-            <div class="keybind-row"><span>SHOOT:</span> <button class="rebind-gp-btn" data-action="shoot">...</button></div>
-            <div class="keybind-row"><span>BOMB:</span> <button class="rebind-gp-btn" data-action="bomb">...</button></div>
-            <div class="keybind-row"><span>FOCUS:</span> <button class="rebind-gp-btn" data-action="focus">...</button></div>
-            <div class="keybind-row"><span>START:</span> <button class="rebind-gp-btn" data-action="start">...</button></div>
+        <div id="gamepad-bindings" style="display:none; justify-content:space-between; gap:20px;">
+            <div style="flex:1;">
+                <h3 style="color:#ffca3a; text-align:left; margin-bottom:10px; font-size:16px;">P1 GAMEPAD BINDINGS</h3>
+                <div class="keybind-row"><span>UP:</span> <button class="rebind-gp-btn" data-action="up">...</button></div>
+                <div class="keybind-row"><span>DOWN:</span> <button class="rebind-gp-btn" data-action="down">...</button></div>
+                <div class="keybind-row"><span>LEFT:</span> <button class="rebind-gp-btn" data-action="left">...</button></div>
+                <div class="keybind-row"><span>RIGHT:</span> <button class="rebind-gp-btn" data-action="right">...</button></div>
+                <div class="keybind-row"><span>SHOOT:</span> <button class="rebind-gp-btn" data-action="shoot">...</button></div>
+                <div class="keybind-row"><span>BOMB:</span> <button class="rebind-gp-btn" data-action="bomb">...</button></div>
+                <div class="keybind-row"><span>FOCUS:</span> <button class="rebind-gp-btn" data-action="focus">...</button></div>
+                <div class="keybind-row"><span>START:</span> <button class="rebind-gp-btn" data-action="start">...</button></div>
+            </div>
+            <div style="flex:1;">
+                <h3 style="color:#ffca3a; text-align:left; margin-bottom:10px; font-size:16px;">P2 GAMEPAD BINDINGS</h3>
+                <div class="keybind-row"><span>UP:</span> <button class="rebind-gp-btn-p2" data-action="up">...</button></div>
+                <div class="keybind-row"><span>DOWN:</span> <button class="rebind-gp-btn-p2" data-action="down">...</button></div>
+                <div class="keybind-row"><span>LEFT:</span> <button class="rebind-gp-btn-p2" data-action="left">...</button></div>
+                <div class="keybind-row"><span>RIGHT:</span> <button class="rebind-gp-btn-p2" data-action="right">...</button></div>
+                <div class="keybind-row"><span>SHOOT:</span> <button class="rebind-gp-btn-p2" data-action="shoot">...</button></div>
+                <div class="keybind-row"><span>BOMB:</span> <button class="rebind-gp-btn-p2" data-action="bomb">...</button></div>
+                <div class="keybind-row"><span>FOCUS:</span> <button class="rebind-gp-btn-p2" data-action="focus">...</button></div>
+                <div class="keybind-row"><span>START:</span> <button class="rebind-gp-btn-p2" data-action="start">...</button></div>
+            </div>
         </div>
         <br>
         <button id="btn-close-settings" class="menu-btn" style="background:#ff006e;">CLOSE</button>
