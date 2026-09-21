@@ -789,12 +789,62 @@ function processContinue() {
 function shoot(pObj) {
     if (audio) audio.playShoot();
 
-    // Core Shots
+    if (pObj === player2) {
+        // --- PingKo's Trident Lasers ---
+        // Color escalates from pink -> magenta based on power
+        let tridentColor = power >= 32 ? '#cc00ff' : (power >= 16 ? '#e91e8c' : '#ff69b4');
+        let tridentDmg = power >= 48 ? 1.8 : (power >= 32 ? 1.5 : (power >= 16 ? 1.2 : 1.0));
+
+        if (hasShield) {
+            // Shield: 5-beam spread trident
+            bullets.push({ x: pObj.x,      y: pObj.y - 30, vx: 0,    vy: -22, w: 5, h: 28, damage: tridentDmg * 1.2, color: tridentColor, isP2Bullet: true });
+            bullets.push({ x: pObj.x - 16, y: pObj.y - 20, vx: -0.8, vy: -22, w: 5, h: 28, damage: tridentDmg * 1.2, color: tridentColor, isP2Bullet: true });
+            bullets.push({ x: pObj.x + 16, y: pObj.y - 20, vx:  0.8, vy: -22, w: 5, h: 28, damage: tridentDmg * 1.2, color: tridentColor, isP2Bullet: true });
+            bullets.push({ x: pObj.x - 30, y: pObj.y - 10, vx: -1.6, vy: -21, w: 4, h: 20, damage: tridentDmg * 0.9, color: tridentColor, isP2Bullet: true });
+            bullets.push({ x: pObj.x + 30, y: pObj.y - 10, vx:  1.6, vy: -21, w: 4, h: 20, damage: tridentDmg * 0.9, color: tridentColor, isP2Bullet: true });
+        } else if (grazeStreak >= 5) {
+            // Graze streak: powered trident
+            bullets.push({ x: pObj.x,      y: pObj.y - 30, vx: 0,    vy: -22, w: 6, h: 24, damage: tridentDmg * 1.3, color: '#cc00ff', isP2Bullet: true });
+            bullets.push({ x: pObj.x - 14, y: pObj.y - 20, vx: -0.7, vy: -21, w: 5, h: 22, damage: tridentDmg * 1.1, color: '#cc00ff', isP2Bullet: true });
+            bullets.push({ x: pObj.x + 14, y: pObj.y - 20, vx:  0.7, vy: -21, w: 5, h: 22, damage: tridentDmg * 1.1, color: '#cc00ff', isP2Bullet: true });
+        } else {
+            // Base trident: tight 3-beam formation
+            bullets.push({ x: pObj.x,      y: pObj.y - 30, vx: 0,    vy: -18, w: 5, h: 22, damage: tridentDmg, color: tridentColor, isP2Bullet: true });
+            bullets.push({ x: pObj.x - 12, y: pObj.y - 20, vx: -0.6, vy: -17, w: 4, h: 18, damage: tridentDmg * 0.9, color: tridentColor, isP2Bullet: true });
+            bullets.push({ x: pObj.x + 12, y: pObj.y - 20, vx:  0.6, vy: -17, w: 4, h: 18, damage: tridentDmg * 0.9, color: tridentColor, isP2Bullet: true });
+        }
+
+        // Homing Missiles (single-target, lock-on-spawn)
+        let homingCount = Math.floor(power / 16);
+        if (homingCount > 0) {
+            // Find the best target once at spawn time
+            let lockTarget = null;
+            let minDist = Infinity;
+            if (boss && boss.hp > 0) { lockTarget = boss; minDist = Math.hypot(boss.x - pObj.x, boss.y - pObj.y); }
+            enemies.forEach(e => {
+                let d = Math.hypot(e.x - pObj.x, e.y - pObj.y);
+                if (d < minDist) { minDist = d; lockTarget = e; }
+            });
+            for (let i = 0; i < homingCount; i++) {
+                let offset = (i - (homingCount - 1) / 2) * 10;
+                bullets.push({ x: pObj.x + offset, y: pObj.y - 10, vx: (Math.random() - 0.5) * 3, vy: -10, w: 5, h: 5, damage: 0.5, isHoming: true, isP2Homing: true, lockedTarget: lockTarget, color: '#ff69b4' });
+            }
+        }
+
+        // Satellite shots (pink)
+        let activeCount = power >= 48 ? 4 : (power >= 32 ? 3 : (power >= 16 ? 2 : (power >= 8 ? 1 : 0)));
+        for (let i = 0; i < activeCount; i++) {
+            bullets.push({ x: pObj.satellites[i].x, y: pObj.satellites[i].y, vx: 0, vy: -20, w: 4, h: 18, damage: 0.8, color: tridentColor, isP2Bullet: true });
+        }
+        return;
+    }
+
+    // --- Fosozu (P1) shots ---
     if (hasShield) { bullets.push({ x: pObj.x, y: pObj.y - 30, vx: 0, vy: -18, w: 10, h: 40, damage: 2 }); bullets.push({ x: pObj.x - 15, y: pObj.y - 20, vx: -1.5, vy: -18, w: 10, h: 40, damage: 2 }); bullets.push({ x: pObj.x + 15, y: pObj.y - 20, vx: 1.5, vy: -18, w: 10, h: 40, damage: 2 }); }
     else if (grazeStreak >= 5) { bullets.push({ x: pObj.x, y: pObj.y - 30, vx: 0, vy: -20, w: 4, h: 15, damage: 1.2 }); bullets.push({ x: pObj.x - 12, y: pObj.y - 20, vx: -3, vy: -18, w: 6, h: 15, damage: 1.2 }); bullets.push({ x: pObj.x + 12, y: pObj.y - 20, vx: 3, vy: -18, w: 6, h: 15, damage: 1.2 }); }
     else { bullets.push({ x: pObj.x, y: pObj.y - 30, vx: 0, vy: -15, w: 4, h: 10, damage: 1 }); bullets.push({ x: pObj.x - 10, y: pObj.y - 20, vx: -2.5, vy: -14, w: 4, h: 10, damage: 1 }); bullets.push({ x: pObj.x + 10, y: pObj.y - 20, vx: 2.5, vy: -14, w: 4, h: 10, damage: 1 }); }
 
-    // Homing Tracking Packets
+    // Homing Tracking Packets (aggressive re-acquire)
     let homingCount = Math.floor(power / 16);
     if (homingCount > 0) {
         for (let i = 0; i < homingCount; i++) {
@@ -849,30 +899,50 @@ function updatePlayer(ts, pObj, gpState, kMap) {
 function updateProjectiles(ts) {
     bullets.forEach((b, i) => {
         if (b.isHoming) {
-            let closest = null;
-            let minDist = Infinity;
-            if (boss && boss.hp > 0) {
-                let d = Math.hypot(boss.x - b.x, boss.y - b.y);
-                if (d < minDist) { minDist = d; closest = boss; }
-            }
-            enemies.forEach(e => {
-                let d = Math.hypot(e.x - b.x, e.y - b.y);
-                if (d < minDist) { minDist = d; closest = e; }
-            });
-
-            if (closest) {
-                let targetAngle = Math.atan2(closest.y - b.y, closest.x - b.x);
-                let currentAngle = Math.atan2(b.vy, b.vx);
-
-                let diff = targetAngle - currentAngle;
-                while (diff > Math.PI) diff -= Math.PI * 2;
-                while (diff < -Math.PI) diff += Math.PI * 2;
-
-                let turnRate = 0.1 * ts;
-                let newAngle = currentAngle + Math.max(-turnRate, Math.min(turnRate, diff));
-                let speed = Math.hypot(b.vx, b.vy);
-                b.vx = Math.cos(newAngle) * speed;
-                b.vy = Math.sin(newAngle) * speed;
+            if (b.isP2Homing) {
+                // PingKo: single-target lock — only track if the locked target is still alive
+                let target = b.lockedTarget;
+                let targetAlive = target && (
+                    (target === boss && boss && boss.hp > 0) ||
+                    enemies.includes(target)
+                );
+                if (targetAlive) {
+                    let targetAngle = Math.atan2(target.y - b.y, target.x - b.x);
+                    let currentAngle = Math.atan2(b.vy, b.vx);
+                    let diff = targetAngle - currentAngle;
+                    while (diff > Math.PI) diff -= Math.PI * 2;
+                    while (diff < -Math.PI) diff += Math.PI * 2;
+                    let turnRate = 0.08 * ts;
+                    let newAngle = currentAngle + Math.max(-turnRate, Math.min(turnRate, diff));
+                    let speed = Math.hypot(b.vx, b.vy);
+                    b.vx = Math.cos(newAngle) * speed;
+                    b.vy = Math.sin(newAngle) * speed;
+                }
+                // If target is gone, bullet flies straight — no re-acquire
+            } else {
+                // Fosozu: aggressive re-acquire on nearest target
+                let closest = null;
+                let minDist = Infinity;
+                if (boss && boss.hp > 0) {
+                    let d = Math.hypot(boss.x - b.x, boss.y - b.y);
+                    if (d < minDist) { minDist = d; closest = boss; }
+                }
+                enemies.forEach(e => {
+                    let d = Math.hypot(e.x - b.x, e.y - b.y);
+                    if (d < minDist) { minDist = d; closest = e; }
+                });
+                if (closest) {
+                    let targetAngle = Math.atan2(closest.y - b.y, closest.x - b.x);
+                    let currentAngle = Math.atan2(b.vy, b.vx);
+                    let diff = targetAngle - currentAngle;
+                    while (diff > Math.PI) diff -= Math.PI * 2;
+                    while (diff < -Math.PI) diff += Math.PI * 2;
+                    let turnRate = 0.1 * ts;
+                    let newAngle = currentAngle + Math.max(-turnRate, Math.min(turnRate, diff));
+                    let speed = Math.hypot(b.vx, b.vy);
+                    b.vx = Math.cos(newAngle) * speed;
+                    b.vy = Math.sin(newAngle) * speed;
+                }
             }
         }
 
@@ -1380,22 +1450,33 @@ function drawSatellites(pObj) {
         ctx.translate(s.x, s.y);
         
         if (isP2) {
-            // Moe Moe Kyun Hearts
-            ctx.scale(0.8, 0.8);
-            ctx.rotate(Math.sin((Date.now() % 2000) * 0.003 + i) * 0.2); // slight swaying
+            // Moe Moe Kyun Hearts — proper two-lobe heart shape
+            ctx.scale(0.85, 0.85);
+            ctx.rotate(Math.sin((Date.now() % 2000) * 0.003 + i) * 0.15);
+
+            // Outer heart (deep pink)
             ctx.fillStyle = '#ff007f';
             ctx.beginPath();
-            ctx.moveTo(0, 5);
-            ctx.bezierCurveTo(0, 5, 20, -15, 0, -25);
-            ctx.bezierCurveTo(-20, -15, 0, 5, 0, 5);
+            // Start at the bottom tip
+            ctx.moveTo(0, 12);
+            // Right lobe: curve up-right then back to top-center
+            ctx.bezierCurveTo(12, 4,   18, -8,  9, -16);
+            ctx.bezierCurveTo(4,  -22,  0, -18,  0, -12);
+            // Left lobe: mirror
+            ctx.bezierCurveTo(0,  -18, -4, -22, -9, -16);
+            ctx.bezierCurveTo(-18, -8, -12,  4,   0,  12);
+            ctx.closePath();
             ctx.fill();
-            
-            // Inner heart
-            ctx.fillStyle = '#ffb3d9';
+
+            // Inner highlight (light pink)
+            ctx.fillStyle = 'rgba(255, 179, 217, 0.75)';
             ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.bezierCurveTo(0, 0, 10, -10, 0, -18);
-            ctx.bezierCurveTo(-10, -10, 0, 0, 0, 0);
+            ctx.moveTo(0, 4);
+            ctx.bezierCurveTo(6, -1,  10, -8,  5, -13);
+            ctx.bezierCurveTo(2, -16,  0, -12,  0, -8);
+            ctx.bezierCurveTo(0, -12, -2, -16, -5, -13);
+            ctx.bezierCurveTo(-10, -8, -6,  -1,   0,   4);
+            ctx.closePath();
             ctx.fill();
         } else {
             // Yin-Yang Orbs
@@ -1490,7 +1571,23 @@ function drawSatellites(pObj) {
     drawSatellites(player);
     if (is2PMode) drawSatellites(player2);
 
-    bullets.forEach(b => { ctx.fillStyle = b.color || (hasShield ? '#00f2ff' : (grazeStreak >= 5 ? '#ffca3a' : '#00f2ff')); ctx.fillRect(b.x - (b.w || 4) / 2, b.y - (b.h || 10), (b.w || 4), (b.h || 10)); });
+    bullets.forEach(b => {
+        if (b.isP2Bullet || b.isP2Homing) {
+            // PingKo: draw as a glowing elongated beam
+            ctx.save();
+            ctx.shadowColor = b.color || '#ff69b4';
+            ctx.shadowBlur = 8;
+            ctx.fillStyle = b.color || '#ff69b4';
+            ctx.fillRect(b.x - (b.w || 4) / 2, b.y - (b.h || 10), (b.w || 4), (b.h || 10));
+            // Bright core
+            ctx.fillStyle = 'rgba(255,255,255,0.6)';
+            ctx.fillRect(b.x - 1, b.y - (b.h || 10), 2, (b.h || 10));
+            ctx.restore();
+        } else {
+            ctx.fillStyle = b.color || (hasShield ? '#00f2ff' : (grazeStreak >= 5 ? '#ffca3a' : '#00f2ff'));
+            ctx.fillRect(b.x - (b.w || 4) / 2, b.y - (b.h || 10), (b.w || 4), (b.h || 10));
+        }
+    });
     effects.forEach(eff => { ctx.strokeStyle = `rgba(0, 242, 255, ${eff.opacity})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(eff.x, eff.y, eff.r, 0, Math.PI * 2); ctx.stroke(); });
     bossBullets.forEach(b => { ctx.fillStyle = b.color; ctx.beginPath(); ctx.arc(b.x, b.y, 6, 0, 7); ctx.fill(); });
 
