@@ -61,28 +61,48 @@ function updateUIPrompts() {
 
 async function fetchLeaderboard() {
     try {
-        let res = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard?select=*&order=score.desc&limit=10`, {
+        let res1P = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard?select=*&order=score.desc&limit=10`, {
             headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
         });
-        if (!res.ok) throw new Error("Failed to fetch");
-        let data = await res.json();
-        let listEl = document.getElementById('leaderboard-list');
-        listEl.innerHTML = '';
-        data.forEach(entry => {
-            let li = document.createElement('li');
-            li.innerText = `${entry.name} - ${entry.score.toLocaleString()} (W${entry.wave})`;
-            listEl.appendChild(li);
+        if (res1P.ok) {
+            let data = await res1P.json();
+            let listEl = document.getElementById('leaderboard-list');
+            listEl.innerHTML = '';
+            data.forEach(entry => {
+                let li = document.createElement('li');
+                li.innerText = `${entry.name} - ${entry.score.toLocaleString()} (W${entry.wave})`;
+                listEl.appendChild(li);
+            });
+        }
+
+        let res2P = await fetch(`${SUPABASE_URL}/rest/v1/coop_leaderboard?select=*&order=score.desc&limit=10`, {
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
         });
+        if (res2P.ok) {
+            let data = await res2P.json();
+            let listEl2p = document.getElementById('leaderboard-list-coop');
+            if (listEl2p) {
+                listEl2p.innerHTML = '';
+                data.forEach(entry => {
+                    let li = document.createElement('li');
+                    li.innerText = `${entry.name} - ${entry.score.toLocaleString()} (W${entry.wave})`;
+                    listEl2p.appendChild(li);
+                });
+            }
+        }
     } catch (e) {
         console.warn("Leaderboard fetch failed", e);
         document.getElementById('leaderboard-list').innerHTML = '<li>OFFLINE</li>';
+        let listEl2p = document.getElementById('leaderboard-list-coop');
+        if (listEl2p) listEl2p.innerHTML = '<li>OFFLINE</li>';
     }
 }
 
 async function submitScore(name, score, wave) {
     if (isDevMode) { console.log("Dev mode active: Score blocked."); return; }
     try {
-        await fetch(`${SUPABASE_URL}/rest/v1/leaderboard`, {
+        let endpoint = is2PMode ? 'coop_leaderboard' : 'leaderboard';
+        await fetch(`${SUPABASE_URL}/rest/v1/${endpoint}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY },
             body: JSON.stringify({ name: name.toUpperCase(), score: score, wave: wave })
@@ -353,9 +373,10 @@ function pollGamepadRebind() {
 }
 
 function handleGamepadButtons() {
-    if (inputMode !== 'gamepad') return;
+    let p1Start = (inputMode === 'gamepad' && gamepadState.start && !prevGamepadState.start);
+    let p2Start = (is2PMode && inputModeP2 === 'gamepad' && gamepadState2.start && !prevGamepadState2.start);
 
-    if (gamepadState.start && !prevGamepadState.start) {
+    if (p1Start || p2Start) {
         if (!gameStarted) {
             if (assetsLoaded === totalAssets) {
                 if (document.getElementById('main-menu-ui').style.display === 'flex') {
@@ -377,7 +398,10 @@ function handleGamepadButtons() {
         useBomb();
     }
 
-    if (isPaused && gamepadState.shoot && !prevGamepadState.shoot) {
+    let p1Shoot = (inputMode === 'gamepad' && gamepadState.shoot && !prevGamepadState.shoot);
+    let p2Shoot = (is2PMode && inputModeP2 === 'gamepad' && gamepadState2.shoot && !prevGamepadState2.shoot);
+
+    if (isPaused && (p1Shoot || p2Shoot)) {
         if (summaryBox.style.display === 'block') closeSummary();
         else if (dialogueBox.style.display === 'block') progressDialogue();
     }
@@ -564,11 +588,20 @@ window.addEventListener('keydown', e => {
     if (k === ' ') k = 'space';
     
     if (document.getElementById('submit-score-ui').style.display === 'block') {
-        if (k === keyMap.up || e.code === 'ArrowUp') handleArcadeInput('up');
-        else if (k === keyMap.down || e.code === 'ArrowDown') handleArcadeInput('down');
+        let isP1Up = (k === keyMap.up || e.code === 'ArrowUp');
+        let isP2Up = (is2PMode && k === keyMapP2.up);
+        let isP1Down = (k === keyMap.down || e.code === 'ArrowDown');
+        let isP2Down = (is2PMode && k === keyMapP2.down);
+        let isP1Shoot = (k === keyMap.shoot || e.code === 'Enter');
+        let isP2Shoot = (is2PMode && k === keyMapP2.shoot);
+        let isP1Bomb = (k === keyMap.bomb || e.code === 'Backspace');
+        let isP2Bomb = (is2PMode && k === keyMapP2.bomb);
+
+        if (isP1Up || isP2Up) handleArcadeInput('up');
+        else if (isP1Down || isP2Down) handleArcadeInput('down');
         else if (!e.repeat) {
-            if (k === keyMap.shoot || e.code === 'Enter') handleArcadeInput('shoot');
-            else if (k === keyMap.bomb || e.code === 'Backspace') handleArcadeInput('bomb');
+            if (isP1Shoot || isP2Shoot) handleArcadeInput('shoot');
+            else if (isP1Bomb || isP2Bomb) handleArcadeInput('bomb');
         }
         e.preventDefault();
         return;
@@ -598,24 +631,35 @@ window.addEventListener('keydown', e => {
         
         if (document.getElementById('settings-ui').style.display === 'block') return;
         
-        if (inputMode === 'keyboard' && (k === 'space' || k === keyMap.start || k === keyMap.shoot)) {
+        let p1Start = (inputMode === 'keyboard' && (k === 'space' || k === keyMap.start || k === keyMap.shoot));
+        let p2Start = (is2PMode && inputModeP2 === 'keyboard' && (k === keyMapP2.start || k === keyMapP2.shoot));
+
+        if (p1Start || p2Start) {
             if (!audio) { audio = new AudioManager(); audio.resume(); }
             gameStarted = true;
             resetTimelines();
         }
     } else {
-        if (k === keyMap.start || e.code === 'Escape') {
+        let p1Pause = (inputMode === 'keyboard' && k === keyMap.start) || e.code === 'Escape';
+        let p2Pause = (is2PMode && inputModeP2 === 'keyboard' && k === keyMapP2.start);
+        if (p1Pause || p2Pause) {
             if (!gameOver && dialogueBox.style.display !== 'block' && summaryBox.style.display !== 'block' && continueCountdown <= 0 && resetAnimTimer <= 0) {
                 isPaused = !isPaused;
             }
         }
     }
 
-    if (inputMode === 'keyboard') {
-        if (isPaused) { if (summaryBox.style.display === 'block' && (k === keyMap.shoot)) closeSummary(); else if (dialogueBox.style.display === 'block' && (k === keyMap.shoot)) progressDialogue(); }
-        if (continueCountdown > 0 && (k === keyMap.start)) processContinue();
-        if (gameStarted && !gameOver && !isPaused && (k === keyMap.bomb || (is2PMode && k === keyMapP2.bomb))) useBomb();
+    let p1Shoot = (inputMode === 'keyboard' && k === keyMap.shoot);
+    let p2Shoot = (is2PMode && inputModeP2 === 'keyboard' && k === keyMapP2.shoot);
+    let p1Continue = (inputMode === 'keyboard' && k === keyMap.start);
+    let p2Continue = (is2PMode && inputModeP2 === 'keyboard' && k === keyMapP2.start);
+
+    if (isPaused) { 
+        if (summaryBox.style.display === 'block' && (p1Shoot || p2Shoot)) closeSummary(); 
+        else if (dialogueBox.style.display === 'block' && (p1Shoot || p2Shoot)) progressDialogue(); 
     }
+    if (continueCountdown > 0 && (p1Continue || p2Continue)) processContinue();
+    if (gameStarted && !gameOver && !isPaused && (k === keyMap.bomb || (is2PMode && k === keyMapP2.bomb))) useBomb();
 });
 window.addEventListener('keyup', e => { 
     let k = e.key.toLowerCase();
@@ -1484,12 +1528,19 @@ function loop(timestamp) {
 
     if (document.getElementById('submit-score-ui').style.display === 'block') {
         // Halt loop while submitting score
-        if (inputMode === 'gamepad') {
-            if (gamepadState.up && !prevGamepadState.up) handleArcadeInput('up');
-            if (gamepadState.down && !prevGamepadState.down) handleArcadeInput('down');
-            if (gamepadState.shoot && !prevGamepadState.shoot) handleArcadeInput('shoot');
-            if (gamepadState.start && !prevGamepadState.start) handleArcadeInput('start');
-            if (gamepadState.bomb && !prevGamepadState.bomb) handleArcadeInput('bomb');
+        let isP1GP = inputMode === 'gamepad';
+        let isP2GP = is2PMode && inputModeP2 === 'gamepad';
+        if (isP1GP || isP2GP) {
+            let gpUp = (isP1GP && gamepadState.up && !prevGamepadState.up) || (isP2GP && gamepadState2.up && !prevGamepadState2.up);
+            let gpDown = (isP1GP && gamepadState.down && !prevGamepadState.down) || (isP2GP && gamepadState2.down && !prevGamepadState2.down);
+            let gpShoot = (isP1GP && gamepadState.shoot && !prevGamepadState.shoot) || (isP2GP && gamepadState2.shoot && !prevGamepadState2.shoot);
+            let gpStart = (isP1GP && gamepadState.start && !prevGamepadState.start) || (isP2GP && gamepadState2.start && !prevGamepadState2.start);
+            let gpBomb = (isP1GP && gamepadState.bomb && !prevGamepadState.bomb) || (isP2GP && gamepadState2.bomb && !prevGamepadState2.bomb);
+            if (gpUp) handleArcadeInput('up');
+            if (gpDown) handleArcadeInput('down');
+            if (gpShoot) handleArcadeInput('shoot');
+            if (gpStart) handleArcadeInput('start');
+            if (gpBomb) handleArcadeInput('bomb');
         }
         requestAnimationFrame(loop);
         return;
