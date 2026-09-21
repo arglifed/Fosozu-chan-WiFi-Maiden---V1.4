@@ -710,8 +710,9 @@ function spawnFormation(type, spawnY) {
             enemies.push({ x: 90 + i * 70, y: -50, vx: 0, vy: speed, speed: speed, type: 'green', nextShot: Date.now() + shootDelay, hp: hp, repeatsShot: repeatsShot });
         }
     } else if (type === 'DIVER_SWOOP') {
+        let dir = (Math.random() > 0.5) ? 1 : -1;
         for (let i = 0; i < 3; i++) {
-            enemies.push({ x: 200 + i * 100, y: -50 - i * 30, vx: 0, vy: speed, speed: speed, type: 'green', nextShot: Date.now() + shootDelay, hp: hp, repeatsShot: repeatsShot, diverState: 'DOWN' });
+            enemies.push({ x: 300 - (dir * 200) + (i * 60 * -dir), y: -50 - i * 40, vx: (speed * 0.7) * dir, vy: speed * 1.2, speed: speed * 1.2, type: 'green', nextShot: Date.now() + shootDelay, hp: hp, repeatsShot: repeatsShot, diverState: 'DOWN' });
         }
     } else if (type === 'FLANK_LEFT') {
         for (let i = 0; i < 2; i++) {
@@ -769,10 +770,10 @@ function updateEnemies(ts) {
         e.x += (e.vx || 0) * ts;
         e.y += (e.vy !== undefined ? e.vy : e.speed) * ts;
         if (e.diverState) {
-            if (e.diverState === 'DOWN' && e.y >= 200) {
+            if (e.diverState === 'DOWN' && e.y >= 500) {
                 e.vy = -e.speed;
                 e.diverState = 'UP';
-            } else if (e.diverState === 'UP' && e.y <= 50) {
+            } else if (e.diverState === 'UP' && e.y <= -20) {
                 e.vy = e.speed;
                 e.diverState = 'AWAY';
             }
