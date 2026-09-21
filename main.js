@@ -147,9 +147,8 @@ const waveTimelines = {
         { time: 700, type: 'FLANK_LEFT', y: 150, spawned: false },
         { time: 750, type: 'FLANK_RIGHT', y: 350, spawned: false },
         { time: 900, type: 'MID_BOSS_PINGKO', spawned: false },
-        // Gap of 10s (600 frames). Mid-boss flees if not killed by 1500.
-        { time: 1550, type: 'DIVER_SWOOP', spawned: false },
-        { time: 1650, type: 'V_SHAPE', spawned: false }
+        // Gap of 15s (900 frames) for the duel.
+        { time: 1800, type: 'DIVER_SWOOP', spawned: false }
     ],
     4: [ // Escalate for Wave 4+
         { time: 0, type: 'SHIELD_WALL', spawned: false },
@@ -160,13 +159,9 @@ const waveTimelines = {
         { time: 600, type: 'FLANK_LEFT', y: 200, spawned: false },
         { time: 600, type: 'FLANK_RIGHT', y: 400, spawned: false },
         { time: 700, type: 'WALL', spawned: false },
-        { time: 850, type: 'V_SHAPE', spawned: false },
-        { time: 1000, type: 'DIVER_SWOOP', spawned: false },
-        { time: 1150, type: 'SWEEP_LEFT', spawned: false },
-        { time: 1150, type: 'SWEEP_RIGHT', spawned: false },
-        { time: 1300, type: 'SHIELD_WALL', spawned: false },
-        { time: 1450, type: 'CIRCLE', spawned: false },
-        { time: 1600, type: 'DIVER_SWOOP', spawned: false }
+        { time: 900, type: 'MID_BOSS_PINGKO', spawned: false },
+        // Gap of 15s (900 frames). Mid-boss flees if not killed by 1800.
+        { time: 1800, type: 'DIVER_SWOOP', spawned: false }
     ]
 };
 
@@ -782,7 +777,7 @@ function spawnFormation(type, spawnY) {
     let hp = 1, shootDelay = 500, speedMult = 1.0, repeatsShot = false;
     
     if (type === 'MID_BOSS_PINGKO') {
-        hp = 50;
+        hp = 150;
         shootDelay = 800; // Overridden by custom logic, but set baseline
         speedMult = 0; // Moves to fixed position
         repeatsShot = true;
@@ -810,7 +805,7 @@ function spawnFormation(type, spawnY) {
 
     if (type === 'MID_BOSS_PINGKO') {
         // PingKo drops down to y=150 and stays there.
-        enemies.push({ x: 300, y: -50, vx: 0, vy: 2, speed: 0, type: 'midboss', nextShot: Date.now() + 2000, hp: hp, repeatsShot: true, isMidBoss: true, fleeTimer: 600, targetY: 150 });
+        enemies.push({ x: 300, y: -50, vx: 0, vy: 2, speed: 0, type: 'midboss', nextShot: Date.now() + 2000, hp: hp, repeatsShot: true, isMidBoss: true, fleeTimer: 900, targetY: 150 });
     } else if (type === 'V_SHAPE') {
         const xs = [300, 240, 360, 180, 420, 120, 480];
         const ys = [-50, -100, -100, -150, -150, -200, -200];
@@ -1092,16 +1087,17 @@ function draw() {
     
     enemies.forEach(e => { 
         if (e.isMidBoss) {
-            ctx.save();
-            ctx.translate(e.x, e.y);
-            ctx.fillStyle = '#ff006e';
-            ctx.beginPath(); ctx.arc(0, 0, 20, 0, Math.PI * 2); ctx.fill();
-            ctx.fillStyle = '#ffca3a';
-            ctx.beginPath(); ctx.moveTo(-20, -10); ctx.lineTo(-40, -30); ctx.lineTo(-10, -20); ctx.fill();
-            ctx.beginPath(); ctx.moveTo(20, -10); ctx.lineTo(40, -30); ctx.lineTo(10, -20); ctx.fill();
-            ctx.fillStyle = '#000'; ctx.fillRect(-10, -5, 20, 10);
-            ctx.fillStyle = '#00f2ff'; ctx.fillRect(-5, -3, 10, 6);
-            ctx.restore();
+            if (assets['pink'] && assets['pink'].loaded) {
+                if (e.hp < 75 && Date.now() % 200 < 100) ctx.globalAlpha = 0.5;
+                ctx.drawImage(assets['pink'].img, e.x - 40, e.y - 40, 80, 80);
+                ctx.globalAlpha = 1.0;
+            } else {
+                ctx.save();
+                ctx.translate(e.x, e.y);
+                ctx.fillStyle = '#ff006e';
+                ctx.beginPath(); ctx.arc(0, 0, 40, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+            }
         } else {
             ctx.fillStyle = '#444'; ctx.fillRect(e.x - 15, e.y - 15, 30, 30); 
             ctx.strokeStyle = (e.type === 'blue' ? '#00f2ff' : (e.type === 'pink' ? '#ff006e' : '#0f0')); 
