@@ -177,7 +177,7 @@ let comboChain = 0, comboTimer = 0;
 let flankerWarning = { timer: 0, side: null, y: 0 };
 const COMBO_MAX_TIME = 120;
 
-const keys = {}, bullets = [], bossBullets = [], enemyBullets = [], enemies = [], bombItems = [], powerItems = [], medals = [], effects = [];
+const keys = {}, bullets = [], bossBullets = [], enemyBullets = [], enemies = [], bombItems = [], powerItems = [], lifeItems = [], medals = [], effects = [];
 const stars = Array.from({ length: 80 }, () => ({ x: Math.random() * 600, y: Math.random() * 800, size: Math.random() * 2, speed: Math.random() * 2 + 1 }));
 const player = { x: 300, y: 700, speed: 4.5, focusSpeed: 2.5, hitboxSize: 4, grazeSize: 25, satellites: [{ x: 300, y: 700 }, { x: 300, y: 700 }, { x: 300, y: 700 }, { x: 300, y: 700 }] };
 
@@ -565,6 +565,7 @@ function processContinue() {
         enemies.length = 0;
         bombItems.length = 0;
         powerItems.length = 0;
+        lifeItems.length = 0;
         bombsSpawnedInWave = 0;
         flankerWarning = { timer: 0, side: null, y: 0 };
         bossMode = false;
@@ -964,9 +965,17 @@ function updateEnemies(ts) {
                     comboChain++; comboTimer = COMBO_MAX_TIME; enemies.splice(i, 1); score += (e.isMidBoss ? 5000 : 100) * comboChain; scoreEl.innerText = score;
                     if (audio) audio.playEnemyHit();
                     if (e.isMidBoss) {
-                        power = 64; powerEl.innerText = power;
-                        bombs = 9; bombsEl.innerText = bombs;
-                        lives++; livesEl.innerText = lives;
+                        for(let k=0; k<60; k++) { 
+                            let angle = Math.random() * Math.PI * 2;
+                            let spd = Math.random() * 5 + 2;
+                            powerItems.push({ x: e.x, y: e.y, vx: Math.cos(angle) * spd, vy: Math.sin(angle) * spd - 3, spawnTime: Date.now() }); 
+                        }
+                        for(let k=0; k<3; k++) { 
+                            let angle = Math.random() * Math.PI * 2;
+                            let spd = Math.random() * 4 + 2;
+                            bombItems.push({ x: e.x, y: e.y, vx: Math.cos(angle) * spd, vy: Math.sin(angle) * spd - 4, spawnTime: Date.now() }); 
+                        }
+                        lifeItems.push({ x: e.x, y: e.y, vx: 0, vy: -5, spawnTime: Date.now() });
                         for(let k=0; k<10; k++) { medals.push({ x: e.x + (Math.random()-0.5)*40, y: e.y + (Math.random()-0.5)*40 }); }
                     } else {
                         medals.push({ x: e.x, y: e.y });
@@ -1012,6 +1021,20 @@ function updateEnemies(ts) {
         }
         if ((!p.spawnTime || Date.now() - p.spawnTime > 500) && Math.hypot(player.x - p.x, player.y - p.y) < 30) { power = Math.min(64, power + 1); powerEl.innerText = power; powerItems.splice(i, 1); }
         else if (p.y > 850 || p.x < -100 || p.x > 700) powerItems.splice(i, 1);
+    });
+
+    lifeItems.forEach((p, i) => {
+        if (isPoCActive) {
+            let a = Math.atan2(player.y - p.y, player.x - p.x);
+            p.x += Math.cos(a) * 8; p.y += Math.sin(a) * 8;
+        } else {
+            p.x += (p.vx || 0); p.y += (p.vy || 2);
+        }
+        if ((!p.spawnTime || Date.now() - p.spawnTime > 500) && Math.hypot(player.x - p.x, player.y - p.y) < 30) { 
+            lives++; livesEl.innerText = lives; lifeItems.splice(i, 1); 
+            if (audio) audio.playPowerup();
+        }
+        else if (p.y > 850 || p.x < -100 || p.x > 700) lifeItems.splice(i, 1);
     });
 
     medals.forEach((m, i) => {
@@ -1146,6 +1169,7 @@ function draw() {
 
     bombItems.forEach(p => { ctx.fillStyle = '#f0f'; ctx.beginPath(); ctx.arc(p.x, p.y, 15, 0, 7); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillText("B", p.x - 4, p.y + 4); });
     powerItems.forEach(p => { ctx.fillStyle = '#ff006e'; ctx.beginPath(); ctx.arc(p.x, p.y, 10, 0, 7); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillText("P", p.x - 4, p.y + 4); });
+    lifeItems.forEach(p => { ctx.fillStyle = '#11ff11'; ctx.beginPath(); ctx.arc(p.x, p.y, 15, 0, 7); ctx.fill(); ctx.fillStyle = '#fff'; ctx.fillText("1UP", p.x - 12, p.y + 4); });
     medals.forEach(m => { ctx.fillStyle = '#ffca3a'; ctx.beginPath(); ctx.arc(m.x, m.y, 10, 0, 7); ctx.fill(); ctx.fillStyle = '#000'; ctx.fillText("M", m.x - 3, m.y + 4); });
 
     // Draw Satellites
