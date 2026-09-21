@@ -15,6 +15,7 @@ let keyMap = JSON.parse(localStorage.getItem('fosozu_keymap')) || defaultKeyMap;
 let rebindingAction = null;
 
 let inputMode = localStorage.getItem('fosozu_inputMode') || 'keyboard';
+let inputModeP2 = localStorage.getItem('fosozu_inputModeP2') || 'gamepad';
 let defaultGamepadMap = { up: 'B12', down: 'B13', left: 'B14', right: 'B15', shoot: 'B0', bomb: 'B1', focus: 'B2', start: 'B9' };
 let gamepadMap = JSON.parse(localStorage.getItem('fosozu_gamepadmap')) || defaultGamepadMap;
 // Migration step for old numeric mappings
@@ -406,6 +407,7 @@ document.getElementById('btn-start-2p').addEventListener('click', () => {
 });
 
 document.getElementById('btn-settings').addEventListener('click', () => {
+    updateSettingsUI();
     document.getElementById('settings-ui').style.display = 'block';
 });
 
@@ -427,25 +429,45 @@ devToggle.addEventListener('change', (e) => {
     update2PButton();
 });
 
+
+function updateSettingsUI() {
+    if (inputMode === 'keyboard') {
+        document.getElementById('p1-keyboard-bindings').style.display = 'block';
+        document.getElementById('p1-gamepad-bindings').style.display = 'none';
+    } else {
+        document.getElementById('p1-keyboard-bindings').style.display = 'none';
+        document.getElementById('p1-gamepad-bindings').style.display = 'block';
+    }
+
+    const p2ModeSelect = document.getElementById('input-mode-select-p2');
+    if (p2ModeSelect) {
+        if (inputModeP2 === 'keyboard') {
+            document.getElementById('p2-keyboard-bindings').style.display = 'block';
+            document.getElementById('p2-gamepad-bindings').style.display = 'none';
+        } else {
+            document.getElementById('p2-keyboard-bindings').style.display = 'none';
+            document.getElementById('p2-gamepad-bindings').style.display = 'block';
+        }
+    }
+}
+
 const inputModeSelect = document.getElementById('input-mode-select');
 if (inputModeSelect) {
     inputModeSelect.value = inputMode;
-    if (inputMode === 'gamepad') {
-        document.getElementById('keyboard-bindings').style.display = 'none';
-        document.getElementById('gamepad-bindings').style.display = 'block';
-    }
-
     inputModeSelect.addEventListener('change', (e) => {
         inputMode = e.target.value;
         localStorage.setItem('fosozu_inputMode', inputMode);
-        if (inputMode === 'gamepad') {
-            document.getElementById('keyboard-bindings').style.display = 'none';
-            document.getElementById('gamepad-bindings').style.display = 'block';
-        } else {
-            document.getElementById('keyboard-bindings').style.display = 'block';
-            document.getElementById('gamepad-bindings').style.display = 'none';
-        }
+        updateSettingsUI();
         updateUIPrompts();
+    });
+}
+const inputModeSelectP2 = document.getElementById('input-mode-select-p2');
+if (inputModeSelectP2) {
+    inputModeSelectP2.value = inputModeP2;
+    inputModeSelectP2.addEventListener('change', (e) => {
+        inputModeP2 = e.target.value;
+        localStorage.setItem('fosozu_inputModeP2', inputModeP2);
+        updateSettingsUI();
     });
 }
 
@@ -696,12 +718,12 @@ function shoot(pObj) {
 }
 
 function updatePlayer(ts, pObj, gpState, kMap) {
-    const isFocused = (kMap && inputMode === 'keyboard' && keys[kMap.focus]) || (gpState && gpState.focus);
+    const isFocused = (kMap && keys[kMap.focus]) || (gpState && gpState.focus);
     let s_cur = isFocused ? pObj.focusSpeed : pObj.speed;
-    if ((kMap && inputMode === 'keyboard' && keys[kMap.up]) || (gpState && gpState.up)) pObj.y -= s_cur;
-    if ((kMap && inputMode === 'keyboard' && keys[kMap.down]) || (gpState && gpState.down)) pObj.y += s_cur;
-    if ((kMap && inputMode === 'keyboard' && keys[kMap.left]) || (gpState && gpState.left)) pObj.x -= s_cur;
-    if ((kMap && inputMode === 'keyboard' && keys[kMap.right]) || (gpState && gpState.right)) pObj.x += s_cur;
+    if ((kMap && keys[kMap.up]) || (gpState && gpState.up)) pObj.y -= s_cur;
+    if ((kMap && keys[kMap.down]) || (gpState && gpState.down)) pObj.y += s_cur;
+    if ((kMap && keys[kMap.left]) || (gpState && gpState.left)) pObj.x -= s_cur;
+    if ((kMap && keys[kMap.right]) || (gpState && gpState.right)) pObj.x += s_cur;
 
     // Satellites lerping
     let activeCount = power >= 48 ? 4 : (power >= 32 ? 3 : (power >= 16 ? 2 : (power >= 8 ? 1 : 0)));
@@ -725,7 +747,7 @@ function updatePlayer(ts, pObj, gpState, kMap) {
         pObj.satellites[i].y += (targetY - pObj.satellites[i].y) * 0.3 * ts;
     }
 
-    if ((kMap && inputMode === 'keyboard' && keys[kMap.shoot]) || (gpState && gpState.shoot)) { if (Date.now() % 60 < 10) shoot(pObj); }
+    if ((kMap && keys[kMap.shoot]) || (gpState && gpState.shoot)) { if (Date.now() % 60 < 10) shoot(pObj); }
 
     const isOff = (pObj.x < 0 || pObj.x > 600 || pObj.y < 0 || pObj.y > 800);
     if (isOff) { stallingTimer++; warningBorder.style.display = 'block'; if (stallingTimer > 90) { shakeTimer = 40; pObj.x = 300; pObj.y = 600; stallingTimer = 0; score = Math.max(0, score - 500); scoreEl.innerText = score; } } else { stallingTimer = 0; document.getElementById('warning-border').style.display = 'none'; }
@@ -1191,8 +1213,8 @@ function update() {
 
     stars.forEach(s => { s.y += s.speed * ts; if (s.y > 800) s.y = 0; });
 
-    updatePlayer(ts, player, gamepadState, keyMap);
-    if (is2PMode) updatePlayer(ts, player2, gamepadState2, keyMapP2);
+    updatePlayer(ts, player, (inputMode === 'gamepad') ? gamepadState : null, (inputMode === 'keyboard') ? keyMap : null);
+    if (is2PMode) updatePlayer(ts, player2, (inputModeP2 === 'gamepad') ? gamepadState2 : null, (inputModeP2 === 'keyboard') ? keyMapP2 : null);
     updateProjectiles(ts);
     handleCollisions(ts);
     updateBoss(ts);
