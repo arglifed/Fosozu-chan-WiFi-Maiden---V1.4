@@ -56,6 +56,49 @@ class AudioManager {
         
         this.currentBGMKey = null;
         this.fadeInterval = null;
+        this.pausedTrackKey = null;
+    }
+
+    pauseForContinue() {
+        if (!this.currentBGMKey) return;
+        
+        if (this.fadeInterval) {
+            clearInterval(this.fadeInterval);
+            this.fadeInterval = null;
+        }
+        
+        let currentTrack = this.bgm[this.currentBGMKey];
+        if (currentTrack) {
+            currentTrack.pause();
+            this.pausedTrackKey = this.currentBGMKey;
+            this.currentBGMKey = null; // Clear so hardCut doesn't reset it
+        }
+        
+        this.hardCut('gameover');
+    }
+
+    resumeFromContinue() {
+        if (!this.pausedTrackKey) return;
+        
+        if (this.fadeInterval) {
+            clearInterval(this.fadeInterval);
+            this.fadeInterval = null;
+        }
+
+        if (this.currentBGMKey && this.bgm[this.currentBGMKey]) {
+            this.bgm[this.currentBGMKey].pause();
+            this.bgm[this.currentBGMKey].currentTime = 0;
+        }
+        
+        this.currentBGMKey = this.pausedTrackKey;
+        let resumeTrack = this.bgm[this.pausedTrackKey];
+        
+        if (resumeTrack) {
+            resumeTrack.volume = this.masterVolume * this.bgmVolume;
+            resumeTrack.play().catch(e => console.warn('BGM Autoplay prevented:', e));
+        }
+        
+        this.pausedTrackKey = null;
     }
 
     playBGM(trackKey) {

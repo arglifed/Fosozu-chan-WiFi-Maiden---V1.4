@@ -774,7 +774,7 @@ function finalizeScoreSubmission(name) {
     continueCountdown = 10;
     continueUI.style.display = 'flex';
     document.getElementById('continue-timer').innerText = 10;
-    if (audio) audio.fadeTransition('gameover');
+    if (audio) audio.pauseForContinue();
 }
 
 function handleArcadeInput(action) {
@@ -857,8 +857,8 @@ function processContinue() {
     power = 0; powerEl.innerText = power;
     score = 0; scoreEl.innerText = score;
     scoreAtLastBoss = 0;
-    if (audio && difficultyWave <= 6) {
-        audio.fadeTransition('stage' + difficultyWave);
+    if (audio) {
+        audio.resumeFromContinue();
     }
     invulnTimer = 180;
     
@@ -1093,7 +1093,7 @@ function playerTakeDamage() {
         lives--; livesEl.innerText = lives;
         if (lives <= 0) {
             updateHighScore();
-            if (audio) audio.fadeTransition('gameover');
+            if (audio) audio.pauseForContinue();
             if (isDevMode) {
                 // Skip the prompt entirely in dev mode
                 continueCountdown = 10;
