@@ -1051,7 +1051,7 @@ function handleCollisions(ts) {
         if (hit) enemies.splice(i, 1);
     }
 
-    if (boss) {
+    if (boss && !boss.intangible) {
         if (Math.hypot(player.x - boss.x, player.y - boss.y) < player.hitboxSize + 50 && invulnTimer === 0 && bombEffectTimer === 0) {
             playerTakeDamage();
         }
@@ -1539,42 +1539,66 @@ function drawSatellites(pObj) {
     if (is2PMode) drawPlayer(player2, false);
 
     if (boss) {
-        let renderType = (is2PMode && boss.type === 'pink') ? 'bowl' : boss.type;
-        if (assets[renderType] && assets[renderType].loaded) {
-            if (boss.hp < boss.maxHP / 2 && Date.now() % 200 < 100) ctx.globalAlpha = 0.5;
-            if (renderType === 'bowl') {
-                let rotation = boss.vx ? Math.max(-0.35, Math.min(0.35, boss.vx * 0.1)) : 0;
-                ctx.save();
-                ctx.translate(boss.x, boss.y);
-                ctx.rotate(rotation);
-                ctx.drawImage(assets.bowl.img, -75, -75, 150, 150);
-                ctx.restore();
-            } else {
-                ctx.drawImage(assets[renderType].img, boss.x - 75, boss.y - 75, 150, 150);
-            }
-            ctx.globalAlpha = 1.0;
+        if (boss.teleportWarnTimer > 0) {
+            ctx.save();
+            ctx.strokeStyle = '#ff006e';
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#ff006e';
+            
+            // Pulsing target circle
+            ctx.beginPath();
+            let reticlePulse = 60 + Math.sin(Date.now() * 0.02) * 10;
+            ctx.arc(boss.futureX, boss.futureY, reticlePulse, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Target crosshairs
+            ctx.beginPath();
+            ctx.moveTo(boss.futureX - 80, boss.futureY); ctx.lineTo(boss.futureX - 20, boss.futureY);
+            ctx.moveTo(boss.futureX + 20, boss.futureY); ctx.lineTo(boss.futureX + 80, boss.futureY);
+            ctx.moveTo(boss.futureX, boss.futureY - 80); ctx.lineTo(boss.futureX, boss.futureY - 20);
+            ctx.moveTo(boss.futureX, boss.futureY + 20); ctx.lineTo(boss.futureX, boss.futureY + 80);
+            ctx.stroke();
+            
+            ctx.restore();
         } else {
-            const colorMap = { pink: '#ff006e', blue: '#00f2ff', green: '#0f0', purple: '#b5179e', amber: '#f77f00', crimson: '#d90429' };
-            ctx.fillStyle = colorMap[boss.type] || '#fff';
-            if (boss.hp < boss.maxHP / 2 && Date.now() % 200 < 100) ctx.globalAlpha = 0.5;
-            ctx.beginPath();
-            ctx.arc(boss.x, boss.y, 75, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.globalAlpha = 1.0;
-        }
+            let renderType = (is2PMode && boss.type === 'pink') ? 'bowl' : boss.type;
+            if (assets[renderType] && assets[renderType].loaded) {
+                if (boss.hp < boss.maxHP / 2 && Date.now() % 200 < 100) ctx.globalAlpha = 0.5;
+                if (renderType === 'bowl') {
+                    let rotation = boss.vx ? Math.max(-0.35, Math.min(0.35, boss.vx * 0.1)) : 0;
+                    ctx.save();
+                    ctx.translate(boss.x, boss.y);
+                    ctx.rotate(rotation);
+                    ctx.drawImage(assets.bowl.img, -75, -75, 150, 150);
+                    ctx.restore();
+                } else {
+                    ctx.drawImage(assets[renderType].img, boss.x - 75, boss.y - 75, 150, 150);
+                }
+                ctx.globalAlpha = 1.0;
+            } else {
+                const colorMap = { pink: '#ff006e', blue: '#00f2ff', green: '#0f0', purple: '#b5179e', amber: '#f77f00', crimson: '#d90429' };
+                ctx.fillStyle = colorMap[boss.type] || '#fff';
+                if (boss.hp < boss.maxHP / 2 && Date.now() % 200 < 100) ctx.globalAlpha = 0.5;
+                ctx.beginPath();
+                ctx.arc(boss.x, boss.y, 75, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
 
-        bowlSteam.forEach(p => {
-            ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0, p.life * 0.4)})`;
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-            ctx.fill();
-        });
+            bowlSteam.forEach(p => {
+                ctx.fillStyle = `rgba(255, 255, 255, ${Math.max(0, p.life * 0.4)})`;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            });
 
-        if (boss.flashTimer > 0 && Math.floor(boss.flashTimer) % 6 < 3) {
-            ctx.globalCompositeOperation = 'lighter';
-            ctx.fillStyle = '#ffffff';
-            ctx.beginPath(); ctx.arc(boss.x, boss.y, 75, 0, Math.PI * 2); ctx.fill();
-            ctx.globalCompositeOperation = 'source-over';
+            if (boss.flashTimer > 0 && Math.floor(boss.flashTimer) % 6 < 3) {
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath(); ctx.arc(boss.x, boss.y, 75, 0, Math.PI * 2); ctx.fill();
+                ctx.globalCompositeOperation = 'source-over';
+            }
         }
     }
 

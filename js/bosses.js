@@ -546,30 +546,56 @@ class MadameSatsuki extends Boss {
         } else {
             this.timer += ts;
             if (this.teleportTimer === undefined) this.teleportTimer = 150;
-            this.teleportTimer -= ts;
             
-            if (this.teleportTimer <= 0) {
+            if (!this.teleportWarnTimer && this.teleportTimer > 0) {
+                this.teleportTimer -= ts;
+            }
+            
+            if (this.teleportTimer <= 0 && !this.teleportWarnTimer) {
+                this.teleportWarnTimer = 45;
+                this.intangible = true;
+                
                 if (player) {
                     if (Math.random() < 0.25) {
-                        // 25% Jumpscare: Teleport BELOW the player — but give breathing room
-                        this.x = Math.max(80, Math.min(520, player.x + (Math.random() * 160 - 80)));
-                        this.y = Math.max(100, Math.min(650, player.y + 220 + Math.random() * 120));
+                        // 25% Jumpscare: Teleport BELOW the player
+                        this.futureX = Math.max(80, Math.min(520, player.x + (Math.random() * 160 - 80)));
+                        this.futureY = Math.max(100, Math.min(650, player.y + 220 + Math.random() * 120));
                     } else {
-                        // 75% Normal: Teleport above/sides — enforce a minimum safe gap
+                        // 75% Normal: Teleport above/sides
                         let side = Math.random() > 0.5 ? 1 : -1;
-                        let offsetX = side * (120 + Math.random() * 180); // min 120px away horizontally
-                        let offsetY = -(160 + Math.random() * 160);       // min 160px above
-                        this.x = Math.max(60, Math.min(540, player.x + offsetX));
-                        this.y = Math.max(50, Math.min(400, player.y + offsetY));
+                        let offsetX = side * (120 + Math.random() * 180);
+                        let offsetY = -(160 + Math.random() * 160);
+                        this.futureX = Math.max(60, Math.min(540, player.x + offsetX));
+                        this.futureY = Math.max(50, Math.min(400, player.y + offsetY));
                     }
                 } else {
-                    this.x = 80 + Math.random() * 440;
-                    this.y = 60 + Math.random() * 180;
+                    this.futureX = 80 + Math.random() * 440;
+                    this.futureY = 60 + Math.random() * 180;
                 }
-                // Longer cooldown between teleports: 2.5–4 seconds
-                this.teleportTimer = 150 + Math.random() * 90;
-                // Longer flash delay so player has time to react
-                this.flashTimer = 40;
+                
+                // Safe Zone Y-Clamp: Never materialize in the bottom 180 pixels
+                this.futureY = Math.min(this.futureY, 800 - 180);
+                
+                // Move offscreen during telegraph
+                this.x = -1000;
+                this.y = -1000;
+            }
+            
+            if (this.teleportWarnTimer > 0) {
+                this.teleportWarnTimer -= ts;
+                if (this.teleportWarnTimer <= 0) {
+                    this.teleportWarnTimer = 0;
+                    this.intangible = false;
+                    this.x = this.futureX;
+                    this.y = this.futureY;
+                    this.teleportTimer = 150 + Math.random() * 90;
+                    this.flashTimer = 40;
+                    
+                    if (this.phase2 && typeof enemies !== 'undefined') {
+                        enemies.push({ x: this.x - 50, y: this.y, vx: -1.5, vy: 1.5, speed: 2, type: 'blue', nextShot: Date.now() + 1000, hp: 5, repeatsShot: true });
+                        enemies.push({ x: this.x + 50, y: this.y, vx: 1.5, vy: 1.5, speed: 2, type: 'blue', nextShot: Date.now() + 1000, hp: 5, repeatsShot: true });
+                    }
+                }
             } else {
                 let cx = 300, cy = 100;
                 this.x += (cx - this.x) * 0.003 * ts;
