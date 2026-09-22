@@ -30,12 +30,21 @@ The network has physical boundaries. Staying outside triggers the **STALLING PEN
 - **BOSS 3: SHOTGUN-KO (Green)** — *Bandwidth Enforcer*
   - **Style:** Rapid-fire High-velocity Fan Spreads
   - **Lore:** "You're a bottleneck! COMMAND: SERVER RESET!"
+- **BOSS 4: COSMIC CROW (Purple)** — *Stardust Weaver*
+  - **Style:** 5-Arm Spirals and Swooping Attacks
+  - **Lore:** "*Caw!* The packet winds are shifting... Adjust your scarf, little maiden!"
+- **BOSS 5: LIEF THE JUGGERNAUT (Amber)** — *Heavy Gatekeeper*
+  - **Style:** 36-Way Rings and Heavy Stomps
+  - **Lore:** "Halt, Packet-Maiden. You face the heavy gatekeeper of the network."
+- **BOSS 6: MADAME SATSUKI (Crimson)** — *Root System Administrator*
+  - **Style:** 180-Degree Firewalls, Root System Overrides, and Jumpscares
+  - **Lore:** "So, you are the anomaly running loose in my system. Terminate protocol initiated."
 
 ## 🔄 New Game+ (Link Iterations)
-Defeating SHOTGUN-KO triggers a **SERVER RESET**. The game loops back to Wave 1 with these OVERCLOCKED changes:
+Defeating MADAME SATSUKI triggers a **SERVER RESET**. The game loops back to Wave 1 with these OVERCLOCKED changes:
 - **Difficulty:** Bullet velocity +10% and HP +5% per iteration (Capped for stability).
 - **Flawless Uplink:** Earn +25,000 points if you clear a boss without breaking your shield.
-- **Full Buffer Bonus:** Clear all 3 bosses without using a Reconnect to earn the +50,000 point bonus.
+- **Full Buffer Bonus:** Clear all bosses without using a Reconnect to earn the +50,000 point bonus.
 - **Persistence:** High scores and iterations save to Local Storage and survive browser refreshes/F5.
 
 ## 🕹️ Controls & Settings
