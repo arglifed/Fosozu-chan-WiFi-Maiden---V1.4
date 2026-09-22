@@ -1,3 +1,59 @@
+class EnemyBullet {
+    constructor(x, y, vx, vy, shape = 'orb', colorBase = '#ff003c') {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.shape = shape;
+        this.colorBase = colorBase;
+        this.angle = Math.atan2(this.vy, this.vx);
+        this.grazed = false;
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.angle);
+
+        if (this.shape === 'orb') {
+            const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 6);
+            grad.addColorStop(0, '#ffffff');
+            grad.addColorStop(0.4, '#ffffff');
+            grad.addColorStop(1, this.colorBase);
+            
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.arc(0, 0, 6, 0, Math.PI * 2);
+            ctx.fill();
+            
+        } else if (this.shape === 'rice') {
+            const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 8);
+            grad.addColorStop(0, this.colorBase);
+            grad.addColorStop(1, this.colorBase);
+            
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 8, 4, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 4, 2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+        } else if (this.shape === 'amulet') {
+            ctx.fillStyle = this.colorBase;
+            ctx.fillRect(-8, -6, 16, 12);
+            
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(-5, -3, 10, 6);
+        }
+
+        ctx.restore();
+    }
+}
+
 class Boss {
     constructor(difficultyWave, linkIteration) {
         this.x = 300;
@@ -110,14 +166,14 @@ class PingKo extends Boss {
             if (cycle === 0) { 
                 if (this.attackTimer % 4 === 0) { 
                     let a = (this.attackTimer * 0.15); 
-                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a)*Math.min(5.0, 6*spd), vy:Math.sin(a)*Math.min(5.0, 6*spd), color:'#ff006e'}); 
-                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a + Math.PI)*Math.min(5.0, 6*spd), vy:Math.sin(a + Math.PI)*Math.min(5.0, 6*spd), color:'#ff006e'}); 
+                    bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a)*Math.min(5.0, 6*spd), Math.sin(a)*Math.min(5.0, 6*spd), 'orb', '#00ffff')); 
+                    bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a + Math.PI)*Math.min(5.0, 6*spd), Math.sin(a + Math.PI)*Math.min(5.0, 6*spd), 'orb', '#ff69b4')); 
                 } 
             } else { 
                 if (this.attackTimer % 12 === 0) { 
                     let a = Math.atan2(player.y - this.y, player.x - this.x); 
                     for(let i=-1; i<=1; i++) { 
-                        bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a + i*0.1)*Math.min(5.0, 8*spd), vy:Math.sin(a + i*0.1)*Math.min(5.0, 8*spd), color:'#ff006e'}); 
+                        bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a + i*0.1)*Math.min(5.0, 8*spd), Math.sin(a + i*0.1)*Math.min(5.0, 8*spd), 'rice', '#00ffff')); 
                     } 
                 } 
             }
@@ -129,13 +185,13 @@ class PingKo extends Boss {
                 let a = (this.attackTimer * 0.2); 
                 for (let i = 0; i < 4; i++) {
                     let off = i * Math.PI / 2;
-                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a + off)*Math.min(5.0, 7*p2Spd), vy:Math.sin(a + off)*Math.min(5.0, 7*p2Spd), color:'#ff006e'}); 
+                    bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a + off)*Math.min(5.0, 7*p2Spd), Math.sin(a + off)*Math.min(5.0, 7*p2Spd), 'orb', '#ff69b4')); 
                 }
             }
             if (this.attackTimer % 60 === 0) {
                 let a = Math.atan2(player.y - this.y, player.x - this.x); 
                 for(let i=-2; i<=2; i++) { 
-                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a + i*0.15)*Math.min(5.0, 9*p2Spd), vy:Math.sin(a + i*0.15)*Math.min(5.0, 9*p2Spd), color:'#ffffff'}); 
+                    bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a + i*0.15)*Math.min(5.0, 9*p2Spd), Math.sin(a + i*0.15)*Math.min(5.0, 9*p2Spd), 'rice', '#00ffff')); 
                 } 
             }
         }
@@ -180,7 +236,7 @@ class SpiralKo extends Boss {
             if (this.attackTimer % 20 === 0) { 
                 for(let i=0; i<16; i++) { 
                     let a = i * (Math.PI*2/16) + (this.attackTimer*0.05); 
-                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a)*Math.min(5.0, 4*spd), vy:Math.sin(a)*Math.min(5.0, 4*spd), color:'#00f2ff'}); 
+                    bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a)*Math.min(5.0, 4*spd), Math.sin(a)*Math.min(5.0, 4*spd), 'rice', '#ff1493')); 
                 } 
             }
         } else {
@@ -190,10 +246,10 @@ class SpiralKo extends Boss {
             if (this.attackTimer % 15 === 0) { 
                 for(let i=0; i<18; i++) { 
                     let a = i * (Math.PI*2/18) + (this.attackTimer*0.08); 
-                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a)*Math.min(5.0, 5*p2Spd), vy:Math.sin(a)*Math.min(5.0, 5*p2Spd), color:'#00f2ff'}); 
+                    bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a)*Math.min(5.0, 5*p2Spd), Math.sin(a)*Math.min(5.0, 5*p2Spd), 'rice', '#ff1493')); 
                     
                     let a2 = i * (Math.PI*2/18) - (this.attackTimer*0.08); 
-                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a2)*Math.min(5.0, 4*p2Spd), vy:Math.sin(a2)*Math.min(5.0, 4*p2Spd), color:'#ffffff'}); 
+                    bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a2)*Math.min(5.0, 4*p2Spd), Math.sin(a2)*Math.min(5.0, 4*p2Spd), 'rice', '#ffffff')); 
                 } 
             }
         }
@@ -257,7 +313,7 @@ class ShotgunKo extends Boss {
                 let a_b = Math.atan2(player.y-this.y, player.x-this.x); 
                 for(let j=-3; j<=3; j++) { 
                     let a = a_b + (j * 0.15); 
-                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a)*Math.min(5.0, 9*spd), vy:Math.sin(a)*Math.min(5.0, 9*spd), color:'#0f0'}); 
+                    bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a)*Math.min(5.0, 9*spd), Math.sin(a)*Math.min(5.0, 9*spd), 'orb', '#ff4500')); 
                 } 
             }
         } else {
@@ -269,12 +325,12 @@ class ShotgunKo extends Boss {
                 // Dense core
                 for(let j=-5; j<=5; j++) { 
                     let a = a_b + (j * 0.10); 
-                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a)*Math.min(5.0, 10*p2Spd), vy:Math.sin(a)*Math.min(5.0, 10*p2Spd), color:'#0f0'}); 
+                    bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a)*Math.min(5.0, 10*p2Spd), Math.sin(a)*Math.min(5.0, 10*p2Spd), 'orb', '#ff4500')); 
                 }
                 // Random scatter
                 for(let i=0; i<8; i++) {
                     let a = a_b + (Math.random() - 0.5) * 2.0;
-                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a)*Math.min(5.0, 8*p2Spd), vy:Math.sin(a)*Math.min(5.0, 8*p2Spd), color:'#ffffff'});
+                    bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a)*Math.min(5.0, 8*p2Spd), Math.sin(a)*Math.min(5.0, 8*p2Spd), 'orb', '#ffffff'));
                 }
             }
         }
@@ -352,14 +408,14 @@ class CosmicCrow extends Boss {
             if (this.attackTimer % 15 === 0) { 
                 for(let i=0; i<3; i++) {
                     let a = Math.PI / 2 + (i - 1) * 0.3 + Math.sin(this.attackTimer * 0.1) * 0.5;
-                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a)*Math.min(5.0, 7*spd), vy:Math.sin(a)*Math.min(5.0, 7*spd), color:'#b5179e'});
+                    bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a)*Math.min(5.0, 7*spd), Math.sin(a)*Math.min(5.0, 7*spd), 'rice', '#8a2be2'));
                 }
             }
             if (this.attackTimer % 90 === 0) {
                 let burstCenterA = Math.atan2(player.y - this.y, player.x - this.x);
                 for(let i=0; i<8; i++) {
                     let a = burstCenterA + (i * Math.PI * 2 / 8);
-                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a)*Math.min(5.0, 3*spd), vy:Math.sin(a)*Math.min(5.0, 3*spd), color:'#ffffff'});
+                    bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a)*Math.min(5.0, 3*spd), Math.sin(a)*Math.min(5.0, 3*spd), 'rice', '#ffffff'));
                 }
             }
         } else {
@@ -371,7 +427,7 @@ class CosmicCrow extends Boss {
                 let baseAngle = this.attackTimer * 0.1;
                 for(let i=0; i<5; i++) {
                     let a = baseAngle + (i * Math.PI * 2 / 5);
-                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a)*Math.min(5.0, 6*p2Spd), vy:Math.sin(a)*Math.min(5.0, 6*p2Spd), color:'#b5179e'});
+                    bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a)*Math.min(5.0, 6*p2Spd), Math.sin(a)*Math.min(5.0, 6*p2Spd), 'rice', '#8a2be2'));
                 }
             }
             
@@ -380,7 +436,7 @@ class CosmicCrow extends Boss {
                 let burstCenterA = Math.atan2(player.y - this.y, player.x - this.x);
                 for(let i=-2; i<=2; i++) {
                     let a = burstCenterA + (i * 0.15);
-                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a)*Math.min(5.0, 10*p2Spd), vy:Math.sin(a)*Math.min(5.0, 10*p2Spd), color:'#ffffff'});
+                    bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a)*Math.min(5.0, 10*p2Spd), Math.sin(a)*Math.min(5.0, 10*p2Spd), 'rice', '#ffffff'));
                 }
             }
         }
@@ -444,7 +500,7 @@ class Lief extends Boss {
                         const spd = Math.min(3.5, 1 + (this.linkIteration - 1) * 0.1);
                         for (let j = 0; j < 24; j++) {
                             let a = (j * Math.PI * 2) / 24;
-                            bossBullets.push({x: this.x, y: this.y + 100, vx: Math.cos(a)*Math.min(5.0, 6*spd), vy: Math.sin(a)*Math.min(5.0, 6*spd), color: '#f77f00'});
+                            bossBullets.push(new EnemyBullet(this.x, this.y + 100, Math.cos(a)*Math.min(5.0, 6*spd), Math.sin(a)*Math.min(5.0, 6*spd), 'amulet', '#32cd32'));
                         }
                         this.flashTimer = 10;
                     }
@@ -463,7 +519,7 @@ class Lief extends Boss {
                 const spd = Math.min(3.5, 1 + (this.linkIteration - 1) * 0.1);
                 for (let j = 0; j < (this.phase2 ? 20 : 12); j++) {
                     let a = (j * Math.PI * 2) / (this.phase2 ? 20 : 12);
-                    bossBullets.push({x: shell.x, y: shell.y, vx: Math.cos(a)*Math.min(5.0, 5*spd), vy: Math.sin(a)*Math.min(5.0, 5*spd), color: '#f77f00'});
+                    bossBullets.push(new EnemyBullet(shell.x, shell.y, Math.cos(a)*Math.min(5.0, 5*spd), Math.sin(a)*Math.min(5.0, 5*spd), 'rice', '#ffd700'));
                 }
                 this.clusterShells.splice(i, 1);
             }
@@ -480,13 +536,13 @@ class Lief extends Boss {
                 if (this.attackTimer % 60 === 0) {
                     for (let i=0; i<20; i++) {
                         let a = (i * Math.PI * 2) / 20;
-                        bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a)*Math.min(5.0, 4*spd), vy:Math.sin(a)*Math.min(5.0, 4*spd), color:'#f77f00'});
+                        bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a)*Math.min(5.0, 4*spd), Math.sin(a)*Math.min(5.0, 4*spd), 'amulet', '#32cd32'));
                     }
                 }
             } else if (cycle === 1) {
                 if (this.attackTimer % 5 === 0) {
                     let a = Math.PI / 2 + Math.sin(this.attackTimer * 0.2) * 1.5;
-                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a)*Math.min(5.0, 8*spd), vy:Math.sin(a)*Math.min(5.0, 8*spd), color:'#ffca3a'});
+                    bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a)*Math.min(5.0, 8*spd), Math.sin(a)*Math.min(5.0, 8*spd), 'rice', '#ffd700'));
                 }
             } else {
                 if (this.attackTimer % 90 === 0) {
@@ -502,7 +558,7 @@ class Lief extends Boss {
             if (this.attackTimer % 80 === 0) {
                 for (let i=0; i<36; i++) {
                     let a = (i * Math.PI * 2) / 36;
-                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a)*Math.min(5.0, 5*p2Spd), vy:Math.sin(a)*Math.min(5.0, 5*p2Spd), color:'#ffca3a'});
+                    bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a)*Math.min(5.0, 5*p2Spd), Math.sin(a)*Math.min(5.0, 5*p2Spd), 'amulet', '#32cd32'));
                 }
             }
             
@@ -510,8 +566,8 @@ class Lief extends Boss {
             if (this.attackTimer % 6 === 0) {
                 let a1 = this.attackTimer * 0.15; // Clockwise
                 let a2 = -this.attackTimer * 0.15; // Counter-clockwise
-                bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a1)*Math.min(5.0, 7*p2Spd), vy:Math.sin(a1)*Math.min(5.0, 7*p2Spd), color:'#f77f00'});
-                bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a2)*Math.min(5.0, 7*p2Spd), vy:Math.sin(a2)*Math.min(5.0, 7*p2Spd), color:'#f77f00'});
+                bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a1)*Math.min(5.0, 7*p2Spd), Math.sin(a1)*Math.min(5.0, 7*p2Spd), 'rice', '#ffd700'));
+                bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a2)*Math.min(5.0, 7*p2Spd), Math.sin(a2)*Math.min(5.0, 7*p2Spd), 'rice', '#ffd700'));
             }
             
             // Cluster Shells
@@ -635,8 +691,8 @@ class MadameSatsuki extends Boss {
                 let arms = 5;
                 for (let i = 0; i < arms; i++) {
                     let a = (this.attackTimer * 0.05) + (i * Math.PI * 2 / arms);
-                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a)*Math.min(4.5, 5*spd), vy:Math.sin(a)*Math.min(4.5, 5*spd), color:'#d90429'});
-                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(-a)*Math.min(4.5, 5*spd), vy:Math.sin(-a)*Math.min(4.5, 5*spd), color:'#ffb3c1'});
+                    bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a)*Math.min(4.5, 5*spd), Math.sin(a)*Math.min(4.5, 5*spd), 'rice', '#dc143c'));
+                    bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(-a)*Math.min(4.5, 5*spd), Math.sin(-a)*Math.min(4.5, 5*spd), 'orb', '#ffd700'));
                 }
             }
         } else {
@@ -648,7 +704,7 @@ class MadameSatsuki extends Boss {
                 let baseAngle = this.attackTimer * 0.10;  // slightly slower rotation
                 for(let i=0; i<8; i++) {
                     let a = baseAngle + (i * Math.PI * 2 / 8);
-                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a)*Math.min(4.5, 6*p2Spd), vy:Math.sin(a)*Math.min(4.5, 6*p2Spd), color:'#d90429'});
+                    bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a)*Math.min(4.5, 6*p2Spd), Math.sin(a)*Math.min(4.5, 6*p2Spd), 'rice', '#dc143c'));
                 }
             }
             
@@ -656,7 +712,7 @@ class MadameSatsuki extends Boss {
             if (this.attackTimer % 70 === 0) {
                 for (let i=0; i<=15; i++) {
                     let a = (i * Math.PI) / 15;
-                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a)*Math.min(4.5, 4*p2Spd), vy:Math.sin(a)*Math.min(4.5, 4*p2Spd), color:'#ffb3c1'});
+                    bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a)*Math.min(4.5, 4*p2Spd), Math.sin(a)*Math.min(4.5, 4*p2Spd), 'amulet', '#ffd700'));
                 }
             }
             
@@ -665,7 +721,7 @@ class MadameSatsuki extends Boss {
                 let burstCenterA = Math.atan2(player.y - this.y, player.x - this.x);
                 for(let i=-1; i<=1; i++) {
                     let a = burstCenterA + (i * 0.15);  // slightly wider spread so center beam is easier to dodge
-                    bossBullets.push({x:this.x, y:this.y, vx:Math.cos(a)*Math.min(4.5, 7*p2Spd), vy:Math.sin(a)*Math.min(4.5, 7*p2Spd), color:'#ffffff'});
+                    bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a)*Math.min(4.5, 7*p2Spd), Math.sin(a)*Math.min(4.5, 7*p2Spd), 'rice', '#ffd700'));
                 }
             }
         }

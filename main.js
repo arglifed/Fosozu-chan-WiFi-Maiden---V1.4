@@ -1513,12 +1513,24 @@ function updateEnemies(ts) {
                 let r = (Date.now() / 150); 
                 for (let j = 0; j < 8; j++) { 
                     let a = r + (j * Math.PI / 4); 
-                    enemyBullets.push({ x: e.x, y: e.y, vx: Math.cos(a) * 4 * eSpd, vy: Math.sin(a) * 4 * eSpd, grazed: false, color: '#ffca3a' }); 
+                    enemyBullets.push(new EnemyBullet(e.x, e.y, Math.cos(a) * 4 * eSpd, Math.sin(a) * 4 * eSpd, 'orb', '#ffca3a')); 
                 }
                 e.nextShot = Date.now() + 250; // fast fire rate
             }
-            else if (e.type === 'blue') { let r = (Date.now() / 400); for (let j = 0; j < 4; j++) { let a = r + (j * Math.PI / 2); enemyBullets.push({ x: e.x, y: e.y, vx: Math.cos(a) * 3 * eSpd, vy: Math.sin(a) * 3 * eSpd, grazed: false }); } }
-            else { let a_b = Math.atan2(player.y - e.y, player.x - e.x); for (let j = -2; j <= 2; j++) { let a = a_b + (j * 0.25); enemyBullets.push({ x: e.x, y: e.y, vx: Math.cos(a) * 3.5 * eSpd, vy: Math.sin(a) * 3.5 * eSpd, grazed: false }); } }
+            else if (e.type === 'blue') { 
+                let r = (Date.now() / 400); 
+                for (let j = 0; j < 4; j++) { 
+                    let a = r + (j * Math.PI / 2); 
+                    enemyBullets.push(new EnemyBullet(e.x, e.y, Math.cos(a) * 3 * eSpd, Math.sin(a) * 3 * eSpd, 'orb', '#ff003c')); 
+                } 
+            }
+            else { 
+                let a_b = Math.atan2(player.y - e.y, player.x - e.x); 
+                for (let j = -2; j <= 2; j++) { 
+                    let a = a_b + (j * 0.25); 
+                    enemyBullets.push(new EnemyBullet(e.x, e.y, Math.cos(a) * 3.5 * eSpd, Math.sin(a) * 3.5 * eSpd, 'orb', '#ff003c')); 
+                } 
+            }
             
             if (e.repeatsShot) {
                 e.nextShot = e.isMidBoss ? Date.now() + 250 : Date.now() + 1500;
@@ -2213,9 +2225,15 @@ function drawSatellites(pObj) {
             ctx.restore();
         }
     });
-    bossBullets.forEach(b => { ctx.fillStyle = b.color; ctx.beginPath(); ctx.arc(b.x, b.y, 6, 0, 7); ctx.fill(); });
+    bossBullets.forEach(b => { 
+        if (b.draw) b.draw(ctx); 
+        else { ctx.fillStyle = b.color || '#ff006e'; ctx.beginPath(); ctx.arc(b.x, b.y, 6, 0, 7); ctx.fill(); }
+    });
 
-    ctx.fillStyle = '#0f0'; enemyBullets.forEach(b => { ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, 7); ctx.fill(); });
+    enemyBullets.forEach(b => { 
+        if (b.draw) b.draw(ctx); 
+        else { ctx.fillStyle = '#0f0'; ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, 7); ctx.fill(); }
+    });
     const isFocused1 = (inputMode === 'keyboard' && keys[keyMap.focus]) || (inputMode === 'gamepad' && gamepadState.focus);
     if (isFocused1) { ctx.fillStyle = 'red'; ctx.beginPath(); ctx.arc(player.x, player.y, player.hitboxSize, 0, 7); ctx.fill(); }
     const isFocused2 = (inputModeP2 === 'keyboard' && keys[keyMapP2.focus]) || (inputModeP2 === 'gamepad' && gamepadState2.focus);
