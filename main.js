@@ -1550,7 +1550,8 @@ function drawSatellites(pObj) {
             
             // Base Circle: Rotating Hexagram
             ctx.save();
-            ctx.rotate(Date.now() * 0.005);
+            // Prevent float precision loss by using modulo on Date.now()
+            ctx.rotate((Date.now() % 10000) * 0.005);
             ctx.beginPath();
             ctx.arc(0, 0, 40, 0, Math.PI * 2);
             ctx.stroke();
@@ -1580,8 +1581,8 @@ function drawSatellites(pObj) {
             ctx.stroke();
             ctx.restore(); // Restore rotation
             
-            // The Collapsing Ring
-            let collapseRadius = (boss.teleportWarnTimer / 25) * 80;
+            // The Collapsing Ring (using 15 frames max)
+            let collapseRadius = (boss.teleportWarnTimer / 15) * 80;
             ctx.beginPath();
             ctx.arc(0, 0, Math.max(0, collapseRadius), 0, Math.PI * 2);
             ctx.stroke();
