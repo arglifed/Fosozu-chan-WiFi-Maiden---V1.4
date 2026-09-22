@@ -896,7 +896,7 @@ function closeSummary() {
     shieldBrokenInWave = false; 
     updateHighScore(); 
     if (audio && difficultyWave <= 6) {
-        audio.fadeTransition('stage' + difficultyWave);
+        audio.hardCut('stage' + difficultyWave);
     }
 }
 function processContinue() {

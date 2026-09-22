@@ -113,17 +113,20 @@ class AudioManager {
         if (!this.bgm[trackKey]) return;
         if (this.currentBGMKey === trackKey) return; // Already playing
 
+        // Stop and fully reset the outgoing track
         if (this.currentBGMKey && this.bgm[this.currentBGMKey]) {
             this.bgm[this.currentBGMKey].pause();
             this.bgm[this.currentBGMKey].currentTime = 0;
         }
 
+        // Kill any in-progress fade so its setInterval can't interfere
         if (this.fadeInterval) {
             clearInterval(this.fadeInterval);
             this.fadeInterval = null;
         }
 
         this.currentBGMKey = trackKey;
+        this.bgm[trackKey].currentTime = 0;
         this.bgm[trackKey].volume = this.masterVolume * this.bgmVolume;
         this.bgm[trackKey].play().catch(e => console.warn('BGM Autoplay prevented:', e));
     }
