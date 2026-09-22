@@ -575,10 +575,6 @@ class MadameSatsuki extends Boss {
                 
                 // Safe Zone Y-Clamp: Never materialize in the bottom 180 pixels
                 this.futureY = Math.min(this.futureY, 800 - 180);
-                
-                // Move offscreen during telegraph
-                this.x = -1000;
-                this.y = -1000;
             }
             
             if (this.teleportWarnTimer > 0) {
