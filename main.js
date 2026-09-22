@@ -749,16 +749,21 @@ function useBomb() {
         bombs--; bombsEl.innerText = bombs; bombEffectTimer = 60; shakeTimer = 35;
         bossBullets.length = 0; enemyBullets.length = 0;
 
-        enemies.forEach(e => {
-            score += 100;
-            medals.push({ x: e.x, y: e.y });
-            if (bombsSpawnedInWave < 1 && Math.random() < 0.05) {
-                bombItems.push({ x: e.x, y: e.y });
-                bombsSpawnedInWave++;
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            let e = enemies[i];
+            if (e.isMidBoss) {
+                e.hp -= 300;
+            } else {
+                score += 100;
+                medals.push({ x: e.x, y: e.y });
+                if (bombsSpawnedInWave < 1 && Math.random() < 0.05) {
+                    bombItems.push({ x: e.x, y: e.y });
+                    bombsSpawnedInWave++;
+                }
+                if (Math.random() < 0.45) powerItems.push({ x: e.x, y: e.y });
+                enemies.splice(i, 1);
             }
-            if (Math.random() < 0.45) powerItems.push({ x: e.x, y: e.y });
-        });
-        enemies.length = 0;
+        }
         scoreEl.innerText = score;
 
         if (boss) boss.hp -= 300;
@@ -1334,35 +1339,35 @@ function updateEnemies(ts) {
                 if (e.hp === undefined) e.hp = 1;
                 e.hp -= (bullets[bi].damage || 1);
                 bullets.splice(bi, 1);
-                
-                if (e.hp <= 0) {
-                    comboChain++; comboTimer = COMBO_MAX_TIME; enemies.splice(i, 1); score += (e.isMidBoss ? 5000 : 100) * comboChain; scoreEl.innerText = score;
-                    if (audio) audio.playEnemyHit();
-                    if (e.isMidBoss) {
-                        for(let k=0; k<60; k++) { 
-                            let angle = Math.random() * Math.PI * 2;
-                            let spd = Math.random() * 5 + 2;
-                            powerItems.push({ x: e.x, y: e.y, vx: Math.cos(angle) * spd, vy: Math.sin(angle) * spd - 3, spawnTime: Date.now() }); 
-                        }
-                        for(let k=0; k<3; k++) { 
-                            let angle = Math.random() * Math.PI * 2;
-                            let spd = Math.random() * 4 + 2;
-                            bombItems.push({ x: e.x, y: e.y, vx: Math.cos(angle) * spd, vy: Math.sin(angle) * spd - 4, spawnTime: Date.now() }); 
-                        }
-                        lifeItems.push({ x: e.x, y: e.y, vx: 0, vy: -5, spawnTime: Date.now() });
-                        for(let k=0; k<10; k++) { medals.push({ x: e.x + (Math.random()-0.5)*40, y: e.y + (Math.random()-0.5)*40 }); }
-                    } else {
-                        medals.push({ x: e.x, y: e.y });
-                        if (bombsSpawnedInWave < 1 && Math.random() < 0.05) {
-                            bombItems.push({ x: e.x, y: e.y });
-                            bombsSpawnedInWave++;
-                        }
-                        if (Math.random() < 0.45) powerItems.push({ x: e.x, y: e.y });
-                    }
-                    died = true;
-                    break;
-                }
+                if (e.hp <= 0) break;
             }
+        }
+        
+        if (e.hp !== undefined && e.hp <= 0) {
+            comboChain++; comboTimer = COMBO_MAX_TIME; enemies.splice(i, 1); score += (e.isMidBoss ? 5000 : 100) * comboChain; scoreEl.innerText = score;
+            if (audio) audio.playEnemyHit();
+            if (e.isMidBoss) {
+                for(let k=0; k<60; k++) { 
+                    let angle = Math.random() * Math.PI * 2;
+                    let spd = Math.random() * 5 + 2;
+                    powerItems.push({ x: e.x, y: e.y, vx: Math.cos(angle) * spd, vy: Math.sin(angle) * spd - 3, spawnTime: Date.now() }); 
+                }
+                for(let k=0; k<3; k++) { 
+                    let angle = Math.random() * Math.PI * 2;
+                    let spd = Math.random() * 4 + 2;
+                    bombItems.push({ x: e.x, y: e.y, vx: Math.cos(angle) * spd, vy: Math.sin(angle) * spd - 4, spawnTime: Date.now() }); 
+                }
+                lifeItems.push({ x: e.x, y: e.y, vx: 0, vy: -5, spawnTime: Date.now() });
+                for(let k=0; k<10; k++) { medals.push({ x: e.x + (Math.random()-0.5)*40, y: e.y + (Math.random()-0.5)*40 }); }
+            } else {
+                medals.push({ x: e.x, y: e.y });
+                if (bombsSpawnedInWave < 1 && Math.random() < 0.05) {
+                    bombItems.push({ x: e.x, y: e.y });
+                    bombsSpawnedInWave++;
+                }
+                if (Math.random() < 0.45) powerItems.push({ x: e.x, y: e.y });
+            }
+            died = true;
         }
         if (!died && (e.y > 900 || (e.isMidBoss && e.fleeTimer <= 0 && e.y < -100) || e.x < -100 || e.x > 700)) enemies.splice(i, 1);
     }
