@@ -141,7 +141,7 @@ let sessionHiScore = parseInt(localStorage.getItem('fosozu_hiScore')) || 0;
 
 let score = 0, graze = 0, lives = 3, bombs = 3, power = 0, gameOver = false, gameStarted = false, isPaused = false;
 let bossMode = false, boss = null, difficultyWave = 1, scoreAtLastBoss = 0, continueUsed = false;
-let waveClearTimer = 0, bombEffectTimer = 0, invulnTimer = 0, shakeTimer = 0, stallingTimer = 0, continueCountdown = 0;
+let waveClearTimer = 0, p1BombTimer = 0, p2BombTimer = 0, invulnTimer = 0, shakeTimer = 0, stallingTimer = 0, continueCountdown = 0;
 let satsukiSummonTimer = 0; // 10-second tension delay before Satsuki spawns
 let slowMoTimer = 0, flashTimer = 0, grazeStreak = 0, streakTimer = 0, hasShield = false, waveGraze = 0, dialogueIndex = 0, resetAnimTimer = 0, linkIteration = 1, shieldBrokenInWave = false;
 
@@ -867,8 +867,12 @@ function progressDialogue() { dialogueIndex++; if (dialogueIndex < boss.intro.le
 
 function useBomb(sourcePlayer, isP1 = true) {
     sourcePlayer = sourcePlayer || player;
-    if (bombs > 0 && bombEffectTimer === 0) {
-        bombs--; bombsEl.innerText = bombs; bombEffectTimer = 60; shakeTimer = 35;
+    // Per-player cooldown — both players can bomb independently in the same frame
+    const bombTimer = isP1 ? p1BombTimer : p2BombTimer;
+    if (bombs > 0 && bombTimer === 0) {
+        bombs--; bombsEl.innerText = bombs;
+        if (isP1) { p1BombTimer = 60; } else { p2BombTimer = 60; }
+        shakeTimer = 35;
         bossBullets.length = 0; enemyBullets.length = 0;
 
         for (let i = enemies.length - 1; i >= 0; i--) {
@@ -892,18 +896,28 @@ function useBomb(sourcePlayer, isP1 = true) {
         if (boss) boss.hp -= 300 * 0.4;
         if (audio) audio.playExplosion();
 
-        // Spawn EMP shockwave originating from the bombing player
+        // Build fizzle particles for the shockwave
+        const fizzleParticles = [];
         const rgbBase = isP1 ? '170, 0, 255' : '255, 105, 180';
+        for (let f = 0; f < 14; f++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = Math.random() * 4 + 1.5;
+            fizzleParticles.push({
+                x: sourcePlayer.x, y: sourcePlayer.y,
+                vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+                life: 1.0, decay: Math.random() * 0.02 + 0.012
+            });
+        }
+
+        // Spawn EMP shockwave originating from the bombing player
         const glowColor = isP1 ? '#aa00ff' : '#ff69b4';
         activeEMPs.push({
-            x: sourcePlayer.x,
-            y: sourcePlayer.y,
-            radius: 0,
-            opacity: 1.0,
-            rgbBase,
-            glowColor,
-            isP1,
-            arcaneAngle: 0  // for P2 spinning arcane rings
+            x: sourcePlayer.x, y: sourcePlayer.y,
+            radius: 0, opacity: 1.0,
+            dashOffset: 0,
+            rgbBase, glowColor, isP1,
+            arcaneAngle: 0,
+            particles: fizzleParticles
         });
     }
 }
@@ -1137,10 +1151,24 @@ function updateProjectiles(ts) {
     // Update EMP shockwaves
     for (let i = activeEMPs.length - 1; i >= 0; i--) {
         const emp = activeEMPs[i];
-        emp.radius += 30;
-        emp.arcaneAngle += 0.04; // spin the arcane rings (only used for P2)
-        emp.opacity = Math.max(0, 1.0 - (emp.radius / EMP_MAX_RADIUS));
-        if (emp.opacity <= 0) activeEMPs.splice(i, 1);
+        // Decelerating expansion: bursts fast then lingers
+        emp.radius += (EMP_MAX_RADIUS - emp.radius) * 0.045 + 1.5;
+        emp.arcaneAngle += 0.025;
+        emp.dashOffset = (emp.dashOffset || 0) + 1.2; // spinning dashes
+        // Quadratic fade so it lingers much longer before vanishing
+        const t = emp.radius / EMP_MAX_RADIUS;
+        emp.opacity = Math.max(0, 1.0 - (t * t));
+        // Update fizzle particles
+        if (emp.particles) {
+            for (let p = emp.particles.length - 1; p >= 0; p--) {
+                const fp = emp.particles[p];
+                fp.x += fp.vx; fp.y += fp.vy;
+                fp.vx *= 0.96; fp.vy *= 0.96;
+                fp.life -= fp.decay;
+                if (fp.life <= 0) emp.particles.splice(p, 1);
+            }
+        }
+        if (emp.opacity <= 0 && (!emp.particles || emp.particles.length === 0)) activeEMPs.splice(i, 1);
     }
     
     for (let i = bowlSteam.length - 1; i >= 0; i--) {
@@ -1152,7 +1180,7 @@ function updateProjectiles(ts) {
 }
 
 function playerTakeDamage() {
-    if (invulnTimer > 0 || bombEffectTimer > 0) return;
+    if (invulnTimer > 0 || p1BombTimer > 0 || p2BombTimer > 0) return;
 
     let powerLost = Math.min(power, 16);
     power = Math.max(0, power - 16); powerEl.innerText = power;
@@ -1205,12 +1233,12 @@ function handleCollisions(ts) {
             let hit = false;
             let checkP = (pObj, pIsFoc) => {
                 let d = Math.hypot(pObj.x - b.x, pObj.y - b.y);
-                if (pIsFoc && !b.grazed && d < pObj.grazeSize && d > pObj.hitboxSize + 4 && invulnTimer === 0 && bombEffectTimer === 0) {
+                if (pIsFoc && !b.grazed && d < pObj.grazeSize && d > pObj.hitboxSize + 4 && invulnTimer === 0 && p1BombTimer === 0 && p2BombTimer === 0) {
                     b.grazed = true; graze++; waveGraze++; score += 50; scoreEl.innerText = score; document.getElementById('grazeVal').innerText = graze; slowMoTimer = 15;
                     if (audio) audio.playGraze();
                     if (!hasShield) { grazeStreak++; streakTimer = 90; document.getElementById('shieldStreak').innerText = grazeStreak; if (grazeStreak >= 10) { hasShield = true; document.getElementById('shieldStat').style.display = 'inline'; } }
                 }
-                if (d < pObj.hitboxSize + 4 && invulnTimer === 0 && bombEffectTimer === 0) {
+                if (d < pObj.hitboxSize + 4 && invulnTimer === 0 && p1BombTimer === 0 && p2BombTimer === 0) {
                     playerTakeDamage();
                     hit = true;
                 }
@@ -1229,13 +1257,13 @@ function handleCollisions(ts) {
         let e = enemies[i];
         let hit = false;
         let d1 = Math.hypot(player.x - e.x, player.y - e.y);
-        if (d1 < player.hitboxSize + 15 && invulnTimer === 0 && bombEffectTimer === 0) {
+        if (d1 < player.hitboxSize + 15 && invulnTimer === 0 && p1BombTimer === 0) {
             playerTakeDamage();
             hit = true;
         }
         if (is2PMode && !hit) {
             let d2 = Math.hypot(player2.x - e.x, player2.y - e.y);
-            if (d2 < player2.hitboxSize + 15 && invulnTimer === 0 && bombEffectTimer === 0) {
+            if (d2 < player2.hitboxSize + 15 && invulnTimer === 0 && p2BombTimer === 0) {
                 playerTakeDamage();
                 hit = true;
             }
@@ -1244,10 +1272,10 @@ function handleCollisions(ts) {
     }
 
     if (boss && !boss.intangible) {
-        if (Math.hypot(player.x - boss.x, player.y - boss.y) < player.hitboxSize + 50 && invulnTimer === 0 && bombEffectTimer === 0) {
+        if (Math.hypot(player.x - boss.x, player.y - boss.y) < player.hitboxSize + 50 && invulnTimer === 0 && p1BombTimer === 0) {
             playerTakeDamage();
         }
-        if (is2PMode && Math.hypot(player2.x - boss.x, player2.y - boss.y) < player2.hitboxSize + 50 && invulnTimer === 0 && bombEffectTimer === 0) {
+        if (is2PMode && Math.hypot(player2.x - boss.x, player2.y - boss.y) < player2.hitboxSize + 50 && invulnTimer === 0 && p2BombTimer === 0) {
             playerTakeDamage();
         }
 
@@ -1616,7 +1644,7 @@ function update() {
     }
 
     if (slowMoTimer > 0) slowMoTimer--; if (flashTimer > 0) flashTimer--; if (invulnTimer > 0) invulnTimer--;
-    if (waveClearTimer > 0) waveClearTimer--; if (bombEffectTimer > 0) bombEffectTimer--; if (shakeTimer > 0) shakeTimer--;
+    if (waveClearTimer > 0) waveClearTimer--; if (p1BombTimer > 0) p1BombTimer--; if (p2BombTimer > 0) p2BombTimer--; if (shakeTimer > 0) shakeTimer--;
     if (streakTimer > 0) streakTimer--; else if (grazeStreak > 0 && !hasShield) { grazeStreak = 0; document.getElementById('shieldStreak').innerText = 0; }
 
     stars.forEach(s => { s.y += s.speed * ts; if (s.y > 800) s.y = 0; });
@@ -2052,37 +2080,77 @@ function drawSatellites(pObj) {
         ctx.save();
         ctx.globalCompositeOperation = 'lighter';
         ctx.shadowColor = emp.glowColor;
-        ctx.shadowBlur = 30;
+        ctx.shadowBlur = 35;
 
         if (emp.isP1) {
-            // ── P1 Fosozu: Purple radial shockwave ──────────────────────────
-            // Outer hard ring
+            // ── P1 Fosozu: Purple Y2K radial shockwave ───────────────────────
+
+            // Layer 1: Base energy ring (solid, semi-transparent)
             ctx.beginPath();
             ctx.arc(emp.x, emp.y, emp.radius, 0, Math.PI * 2);
             ctx.lineWidth = 14;
-            ctx.strokeStyle = `rgba(${emp.rgbBase}, ${emp.opacity})`;
+            ctx.strokeStyle = `rgba(${emp.rgbBase}, ${emp.opacity * 0.85})`;
             ctx.stroke();
-            // Inner softer halo ring
-            if (emp.radius > 20) {
+
+            // Layer 2: Digital data ring — spinning dashed segments outside the main ring
+            ctx.save();
+            ctx.translate(emp.x, emp.y);
+            ctx.rotate(emp.arcaneAngle * 1.8);
+            ctx.setLineDash([18, 22]);
+            ctx.lineDashOffset = -(emp.dashOffset || 0);
+            ctx.beginPath();
+            ctx.arc(0, 0, emp.radius + 10, 0, Math.PI * 2);
+            ctx.lineWidth = 5;
+            ctx.strokeStyle = `rgba(${emp.rgbBase}, ${emp.opacity * 0.6})`;
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+
+            // Layer 3: Inner soft halo trail
+            if (emp.radius > 25) {
                 ctx.beginPath();
-                ctx.arc(emp.x, emp.y, emp.radius - 18, 0, Math.PI * 2);
-                ctx.lineWidth = 6;
-                ctx.strokeStyle = `rgba(${emp.rgbBase}, ${emp.opacity * 0.4})`;
+                ctx.arc(emp.x, emp.y, emp.radius - 20, 0, Math.PI * 2);
+                ctx.lineWidth = 7;
+                ctx.strokeStyle = `rgba(${emp.rgbBase}, ${emp.opacity * 0.35})`;
                 ctx.stroke();
             }
+
+            // Layer 4: Core flash — bright tight ring that fades out faster
+            const coreOpacity = Math.max(0, emp.opacity * 1.4 - 0.4);
+            if (emp.radius < 180 && coreOpacity > 0) {
+                ctx.beginPath();
+                ctx.arc(emp.x, emp.y, emp.radius * 0.3, 0, Math.PI * 2);
+                ctx.lineWidth = 10;
+                ctx.strokeStyle = `rgba(200, 120, 255, ${coreOpacity})`;
+                ctx.stroke();
+            }
+
         } else {
             // ── P2 PingKo: Pink arcane summoning circle shockwave ────────────
             ctx.translate(emp.x, emp.y);
             ctx.rotate(emp.arcaneAngle);
 
-            // Outer expanding ring
+            // Layer 1: Outer expanding ring
             ctx.beginPath();
             ctx.arc(0, 0, emp.radius, 0, Math.PI * 2);
             ctx.lineWidth = 12;
-            ctx.strokeStyle = `rgba(${emp.rgbBase}, ${emp.opacity})`;
+            ctx.strokeStyle = `rgba(${emp.rgbBase}, ${emp.opacity * 0.85})`;
             ctx.stroke();
 
-            // Rotating hexagram (two interlocked triangles) at ring edge scale
+            // Layer 2: Spinning dashed data ring (counter-rotates for contrast)
+            ctx.save();
+            ctx.rotate(-emp.arcaneAngle * 2.5);
+            ctx.setLineDash([14, 18]);
+            ctx.lineDashOffset = (emp.dashOffset || 0);
+            ctx.beginPath();
+            ctx.arc(0, 0, emp.radius + 9, 0, Math.PI * 2);
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = `rgba(${emp.rgbBase}, ${emp.opacity * 0.55})`;
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+
+            // Layer 3: Rotating hexagram
             const triR = emp.radius * 0.55;
             if (triR > 10) {
                 for (let tri = 0; tri < 2; tri++) {
@@ -2094,32 +2162,56 @@ function drawSatellites(pObj) {
                     }
                     ctx.closePath();
                     ctx.lineWidth = 3;
-                    ctx.strokeStyle = `rgba(${emp.rgbBase}, ${emp.opacity * 0.7})`;
+                    ctx.strokeStyle = `rgba(${emp.rgbBase}, ${emp.opacity * 0.65})`;
                     ctx.stroke();
                 }
             }
 
-            // 6 glowing rune dots on the outer ring
+            // Layer 4: 6 glowing rune dots on the outer ring
             for (let d = 0; d < 6; d++) {
                 const a = (d / 6) * Math.PI * 2;
                 ctx.beginPath();
-                ctx.arc(Math.cos(a) * emp.radius, Math.sin(a) * emp.radius, 4 * emp.opacity, 0, Math.PI * 2);
+                ctx.arc(Math.cos(a) * emp.radius, Math.sin(a) * emp.radius, Math.max(1, 4.5 * emp.opacity), 0, Math.PI * 2);
                 ctx.fillStyle = `rgba(${emp.rgbBase}, ${emp.opacity})`;
+                ctx.shadowBlur = 15;
                 ctx.fill();
             }
 
-            // Inner concentric ring counter-rotating
+            // Layer 5: Inner concentric ring counter-rotating + core flash
             ctx.rotate(-emp.arcaneAngle * 2);
             if (emp.radius > 30) {
                 ctx.beginPath();
                 ctx.arc(0, 0, emp.radius * 0.6, 0, Math.PI * 2);
                 ctx.lineWidth = 4;
-                ctx.strokeStyle = `rgba(${emp.rgbBase}, ${emp.opacity * 0.5})`;
+                ctx.strokeStyle = `rgba(${emp.rgbBase}, ${emp.opacity * 0.45})`;
+                ctx.stroke();
+            }
+            const coreOpacityP2 = Math.max(0, emp.opacity * 1.4 - 0.4);
+            if (emp.radius < 160 && coreOpacityP2 > 0) {
+                ctx.beginPath();
+                ctx.arc(0, 0, emp.radius * 0.25, 0, Math.PI * 2);
+                ctx.lineWidth = 8;
+                ctx.strokeStyle = `rgba(255, 180, 220, ${coreOpacityP2})`;
                 ctx.stroke();
             }
         }
 
         ctx.restore();
+
+        // Fizzle particles (rendered outside translate so they use world coords)
+        if (emp.particles && emp.particles.length > 0) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.shadowColor = emp.glowColor;
+            ctx.shadowBlur = 12;
+            emp.particles.forEach(fp => {
+                ctx.beginPath();
+                ctx.arc(fp.x, fp.y, Math.max(0.5, 2.5 * fp.life), 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${emp.rgbBase}, ${fp.life})`;
+                ctx.fill();
+            });
+            ctx.restore();
+        }
     });
     bossBullets.forEach(b => { ctx.fillStyle = b.color; ctx.beginPath(); ctx.arc(b.x, b.y, 6, 0, 7); ctx.fill(); });
 
