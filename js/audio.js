@@ -61,6 +61,7 @@ class AudioManager {
 
     pauseForContinue() {
         if (!this.currentBGMKey) return;
+        if (this.currentBGMKey === 'gameover') return; // Prevent overwriting pausedTrackKey on double-calls
         
         if (this.fadeInterval) {
             clearInterval(this.fadeInterval);
