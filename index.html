@@ -87,6 +87,24 @@
             </p>
         </div>
         <hr style="border-color:#9d4edd;">
+        <div style="margin-bottom:20px; text-align:left; font-size:18px;">
+            <h3 style="color:#ffca3a; text-align:left; margin-bottom:10px; font-size:16px;">AUDIO VOLUMES</h3>
+            <div style="display:flex; justify-content:space-between; gap:20px;">
+                <label style="color:#00f2ff; display:flex; flex-direction:column; flex:1;">
+                    MASTER: <span id="val-master">100%</span>
+                    <input type="range" id="vol-master" class="vol-slider-master" min="0" max="1" step="0.05" value="1" style="width:100%; margin-top:5px;">
+                </label>
+                <label style="color:#00f2ff; display:flex; flex-direction:column; flex:1;">
+                    BGM: <span id="val-bgm">100%</span>
+                    <input type="range" id="vol-bgm" class="vol-slider-bgm" min="0" max="1" step="0.05" value="1" style="width:100%; margin-top:5px;">
+                </label>
+                <label style="color:#00f2ff; display:flex; flex-direction:column; flex:1;">
+                    SFX: <span id="val-se">100%</span>
+                    <input type="range" id="vol-se" class="vol-slider-se" min="0" max="1" step="0.05" value="1" style="width:100%; margin-top:5px;">
+                </label>
+            </div>
+        </div>
+        <hr style="border-color:#9d4edd;">
         <div style="display:flex; justify-content:space-between; gap:30px;">
             <div style="flex:1;">
                 <h3 style="color:#ffca3a; text-align:left; margin-bottom:10px; font-size:16px;">PLAYER 1</h3>
@@ -151,6 +169,31 @@
         </div>
         <br>
         <button id="btn-close-settings" class="menu-btn" style="background:#ff006e;">CLOSE</button>
+    </div>
+
+    <!-- PAUSE UI -->
+    <div id="pause-ui" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:400px; background:rgba(20,0,40,0.95); border:4px solid #ffca3a; padding:25px; z-index:300; box-shadow:0 0 50px #ffca3a; text-align:center; font-family: 'DotGothic16', sans-serif;">
+        <h2 style="color:#ffca3a; margin-top:0;">PAUSED</h2>
+        
+        <div style="margin-bottom:20px; text-align:left; font-size:18px;">
+            <h3 style="color:#00f2ff; text-align:left; margin-bottom:10px; font-size:16px;">AUDIO VOLUMES</h3>
+            <div style="display:flex; flex-direction:column; gap:15px;">
+                <label style="color:#ffca3a; display:flex; flex-direction:column;">
+                    MASTER: <span id="val-master-p">100%</span>
+                    <input type="range" id="vol-master-p" class="vol-slider-master" min="0" max="1" step="0.05" value="1" style="width:100%; margin-top:5px;">
+                </label>
+                <label style="color:#ffca3a; display:flex; flex-direction:column;">
+                    BGM: <span id="val-bgm-p">100%</span>
+                    <input type="range" id="vol-bgm-p" class="vol-slider-bgm" min="0" max="1" step="0.05" value="1" style="width:100%; margin-top:5px;">
+                </label>
+                <label style="color:#ffca3a; display:flex; flex-direction:column;">
+                    SFX: <span id="val-se-p">100%</span>
+                    <input type="range" id="vol-se-p" class="vol-slider-se" min="0" max="1" step="0.05" value="1" style="width:100%; margin-top:5px;">
+                </label>
+            </div>
+        </div>
+        <br>
+        <button id="btn-resume-game" class="menu-btn" style="background:#00f2ff; color:#000; width: 100%;">RESUME</button>
     </div>
     <div id="fps-ui">FPS: <span id="fpsCounter">0</span></div>
     <div id="boss-ui"><span id="bossName">BOSS</span><div id="hp-bar-bg"><div id="hp-bar-fill"></div></div></div>

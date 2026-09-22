@@ -11,6 +11,14 @@ class AudioManager {
             output[i] = Math.random() * 2 - 1;
         }
 
+        // Volume State
+        this.masterVolume = parseFloat(localStorage.getItem('fosozu_vol_master')) ?? 1.0;
+        if (isNaN(this.masterVolume)) this.masterVolume = 1.0;
+        this.bgmVolume = parseFloat(localStorage.getItem('fosozu_vol_bgm')) ?? 1.0;
+        if (isNaN(this.bgmVolume)) this.bgmVolume = 1.0;
+        this.seVolume = parseFloat(localStorage.getItem('fosozu_vol_se')) ?? 1.0;
+        if (isNaN(this.seVolume)) this.seVolume = 1.0;
+
         // BGM Setup
         const bgmFiles = {
             'title': 'audio/bgm_title.wav',
@@ -42,7 +50,7 @@ class AudioManager {
         for (let key in bgmFiles) {
             let audioEl = new Audio(bgmFiles[key]);
             audioEl.loop = !noLoopTracks.includes(key);
-            audioEl.volume = 1.0; // Default BGM volume
+            audioEl.volume = this.masterVolume * this.bgmVolume;
             this.bgm[key] = audioEl;
         }
         
@@ -65,7 +73,7 @@ class AudioManager {
         }
 
         this.currentBGMKey = trackKey;
-        this.bgm[trackKey].volume = 1.0;
+        this.bgm[trackKey].volume = this.masterVolume * this.bgmVolume;
         this.bgm[trackKey].play().catch(e => console.warn('BGM Autoplay prevented:', e));
     }
 
@@ -80,10 +88,12 @@ class AudioManager {
         let prevTrack = this.currentBGMKey ? this.bgm[this.currentBGMKey] : null;
         let nextTrack = this.bgm[nextTrackKey];
 
+        let targetVol = this.masterVolume * this.bgmVolume;
+
         if (this.fadeInterval) {
             clearInterval(this.fadeInterval);
             this.fadeInterval = null;
-            if (prevTrack) prevTrack.volume = 1.0;
+            if (prevTrack) prevTrack.volume = targetVol;
         }
 
         this.currentBGMKey = nextTrackKey;
@@ -93,7 +103,7 @@ class AudioManager {
 
         const steps = 20;
         const intervalTime = (duration * 1000) / steps;
-        const volumeStep = 1.0 / steps;
+        const volumeStep = targetVol / steps;
         let currentStep = 0;
 
         this.fadeInterval = setInterval(() => {
@@ -102,7 +112,7 @@ class AudioManager {
             if (prevTrack && prevTrack.volume >= volumeStep) {
                 prevTrack.volume -= volumeStep;
             }
-            if (nextTrack.volume <= 1.0 - volumeStep) {
+            if (nextTrack.volume <= targetVol - volumeStep) {
                 nextTrack.volume += volumeStep;
             }
 
@@ -112,11 +122,27 @@ class AudioManager {
                 if (prevTrack) {
                     prevTrack.pause();
                     prevTrack.currentTime = 0;
-                    prevTrack.volume = 1.0;
+                    prevTrack.volume = targetVol;
                 }
-                nextTrack.volume = 1.0;
+                nextTrack.volume = targetVol;
             }
         }, intervalTime);
+    }
+
+    updateVolumes(master, bgm, se) {
+        this.masterVolume = master;
+        this.bgmVolume = bgm;
+        this.seVolume = se;
+
+        localStorage.setItem('fosozu_vol_master', master);
+        localStorage.setItem('fosozu_vol_bgm', bgm);
+        localStorage.setItem('fosozu_vol_se', se);
+
+        if (this.currentBGMKey && this.bgm[this.currentBGMKey]) {
+            if (!this.fadeInterval) {
+                this.bgm[this.currentBGMKey].volume = this.masterVolume * this.bgmVolume;
+            }
+        }
     }
 
     resume() {
@@ -145,7 +171,8 @@ class AudioManager {
         filter.frequency.setValueAtTime(1200, this.ctx.currentTime);
         filter.frequency.exponentialRampToValueAtTime(400, this.ctx.currentTime + 0.05);
 
-        gain.gain.setValueAtTime(0.05, this.ctx.currentTime);
+        let vol = 0.05 * this.masterVolume * this.seVolume;
+        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
         
         mainOsc.connect(filter);
@@ -177,7 +204,8 @@ class AudioManager {
         filter.frequency.setValueAtTime(2000, this.ctx.currentTime);
         filter.frequency.exponentialRampToValueAtTime(200, this.ctx.currentTime + 0.1);
         
-        gain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+        let vol = 0.04 * this.masterVolume * this.seVolume;
+        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.1);
         
         mainOsc.connect(filter);
@@ -199,8 +227,9 @@ class AudioManager {
         filter.frequency.setValueAtTime(800, this.ctx.currentTime);
         filter.frequency.exponentialRampToValueAtTime(50, this.ctx.currentTime + 1.0); // Sweep to 50Hz
 
+        let vol = 0.4 * this.masterVolume * this.seVolume;
         const gain = this.ctx.createGain();
-        gain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 1.5); // Extended to 1.5s
         
         noiseSource.connect(filter);
@@ -213,8 +242,9 @@ class AudioManager {
 
     playShieldBreak() {
         if (!this.ctx) return;
+        let vol = 0.15 * this.masterVolume * this.seVolume;
         const gain = this.ctx.createGain();
-        gain.gain.setValueAtTime(0.15, this.ctx.currentTime);
+        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
         gain.connect(this.ctx.destination);
 
@@ -237,7 +267,8 @@ class AudioManager {
         osc.frequency.setValueAtTime(150, this.ctx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(50, this.ctx.currentTime + 0.05);
         
-        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+        let vol = 0.1 * this.masterVolume * this.seVolume;
+        gain.gain.setValueAtTime(vol, this.ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.05);
         
         osc.connect(gain);
@@ -263,8 +294,9 @@ class AudioManager {
         subOsc.frequency.setValueAtTime(880, this.ctx.currentTime); 
         subOsc.frequency.exponentialRampToValueAtTime(1760, this.ctx.currentTime + 0.6);
         
+        let vol = 0.15 * this.masterVolume * this.seVolume;
         gain.gain.setValueAtTime(0, this.ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.15, this.ctx.currentTime + 0.1);
+        gain.gain.linearRampToValueAtTime(vol, this.ctx.currentTime + 0.1);
         gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 1.5);
         
         mainOsc.connect(gain);

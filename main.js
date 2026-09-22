@@ -262,6 +262,14 @@ player2.image.src = 'pink_girl.png';
 
 let audio = new AudioManager();
 
+volMaster.value = audio.masterVolume;
+volBgm.value = audio.bgmVolume;
+volSe.value = audio.seVolume;
+volMasterP.value = audio.masterVolume;
+volBgmP.value = audio.bgmVolume;
+volSeP.value = audio.seVolume;
+updateAudioVolumes();
+
 let gamepadState = { up: false, down: false, left: false, right: false, shoot: false, bomb: false, focus: false, start: false, select: false };
 let prevGamepadState = Object.assign({}, gamepadState);
 let gamepadState2 = { up: false, down: false, left: false, right: false, shoot: false, bomb: false, focus: false, start: false, select: false };
@@ -390,7 +398,7 @@ function handleGamepadButtons() {
         } else if (continueCountdown > 0) {
             processContinue();
         } else if (!gameOver && dialogueBox.style.display !== 'block' && summaryBox.style.display !== 'block' && resetAnimTimer <= 0) {
-            isPaused = !isPaused;
+            togglePauseMenu();
         }
     }
 
@@ -465,6 +473,60 @@ document.getElementById('btn-settings').addEventListener('click', () => {
 document.getElementById('btn-close-settings').addEventListener('click', () => {
     document.getElementById('settings-ui').style.display = 'none';
 });
+
+function togglePauseMenu() {
+    isPaused = !isPaused;
+    document.getElementById('pause-ui').style.display = isPaused ? 'block' : 'none';
+}
+
+document.getElementById('btn-resume-game').addEventListener('click', () => {
+    isPaused = false;
+    document.getElementById('pause-ui').style.display = 'none';
+});
+
+// Audio Volume Sliders
+const volMaster = document.getElementById('vol-master');
+const volBgm = document.getElementById('vol-bgm');
+const volSe = document.getElementById('vol-se');
+const valMaster = document.getElementById('val-master');
+const valBgm = document.getElementById('val-bgm');
+const valSe = document.getElementById('val-se');
+
+const volMasterP = document.getElementById('vol-master-p');
+const volBgmP = document.getElementById('vol-bgm-p');
+const volSeP = document.getElementById('vol-se-p');
+const valMasterP = document.getElementById('val-master-p');
+const valBgmP = document.getElementById('val-bgm-p');
+const valSeP = document.getElementById('val-se-p');
+
+function updateAudioVolumes() {
+    if (!audio) return;
+    let m = parseFloat(volMaster.value);
+    let b = parseFloat(volBgm.value);
+    let s = parseFloat(volSe.value);
+    
+    volMasterP.value = m; volBgmP.value = b; volSeP.value = s;
+    valMaster.innerText = Math.round(m * 100) + '%'; valBgm.innerText = Math.round(b * 100) + '%'; valSe.innerText = Math.round(s * 100) + '%';
+    valMasterP.innerText = Math.round(m * 100) + '%'; valBgmP.innerText = Math.round(b * 100) + '%'; valSeP.innerText = Math.round(s * 100) + '%';
+    
+    audio.updateVolumes(m, b, s);
+}
+
+function updateAudioVolumesP() {
+    if (!audio) return;
+    let m = parseFloat(volMasterP.value);
+    let b = parseFloat(volBgmP.value);
+    let s = parseFloat(volSeP.value);
+    
+    volMaster.value = m; volBgm.value = b; volSe.value = s;
+    valMaster.innerText = Math.round(m * 100) + '%'; valBgm.innerText = Math.round(b * 100) + '%'; valSe.innerText = Math.round(s * 100) + '%';
+    valMasterP.innerText = Math.round(m * 100) + '%'; valBgmP.innerText = Math.round(b * 100) + '%'; valSeP.innerText = Math.round(s * 100) + '%';
+    
+    audio.updateVolumes(m, b, s);
+}
+
+[volMaster, volBgm, volSe].forEach(el => el.addEventListener('input', updateAudioVolumes));
+[volMasterP, volBgmP, volSeP].forEach(el => el.addEventListener('input', updateAudioVolumesP));
 
 const devToggle = document.getElementById('dev-mode-toggle');
 devToggle.checked = isDevMode;
@@ -666,7 +728,7 @@ window.addEventListener('keydown', e => {
         let p2Pause = (is2PMode && inputModeP2 === 'keyboard' && k === keyMapP2.start);
         if (p1Pause || p2Pause) {
             if (!gameOver && dialogueBox.style.display !== 'block' && summaryBox.style.display !== 'block' && continueCountdown <= 0 && resetAnimTimer <= 0) {
-                isPaused = !isPaused;
+                togglePauseMenu();
             }
         }
     }
@@ -1831,8 +1893,6 @@ function drawSatellites(pObj) {
 
     if (isPaused && dialogueBox.style.display !== 'block' && summaryBox.style.display !== 'block' && resetAnimTimer <= 0) {
         ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0, 0, 600, 800);
-        ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '30px Courier';
-        ctx.fillText("PAUSED", 300, 400);
     }
 
     if (gameOver) { ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(0, 0, 600, 800); ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText("SIGNAL LOST", 300, 400); }
