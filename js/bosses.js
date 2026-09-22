@@ -555,6 +555,11 @@ class MadameSatsuki extends Boss {
                 this.teleportWarnTimer = 25;
                 this.intangible = true;
                 
+                if (typeof audio !== 'undefined' && audio && !this.introMusicPlayed) {
+                    audio.hardCut('boss6');
+                    this.introMusicPlayed = true;
+                }
+                
                 if (player) {
                     if (Math.random() < 0.25) {
                         // 25% Jumpscare: Teleport BELOW the player

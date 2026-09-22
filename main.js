@@ -419,9 +419,24 @@ function toggleFullscreen() {
     }
 }
 
-// UI Menu Logic
+let titleMusicStarted = false;
+function startTitleMusic() {
+    if (titleMusicStarted || !audio) return;
+    titleMusicStarted = true;
+    audio.resume();
+    let titleTrack = (gameCleared && is2PMode) ? 'alt_title' : 'title';
+    audio.playBGM(titleTrack);
+}
+document.addEventListener('click', startTitleMusic, {once: true});
+document.addEventListener('keydown', startTitleMusic, {once: true});
+document.addEventListener('gamepadconnected', startTitleMusic, {once: true});
+
 // UI Menu Logic
 function startGameCommon() {
+    if (audio) {
+        audio.resume();
+        audio.fadeTransition('stage1');
+    }
     const menu = document.getElementById('main-menu-ui');
     menu.classList.add('menu-dismiss');
     setTimeout(() => {
@@ -688,6 +703,7 @@ function finalizeScoreSubmission(name) {
     continueCountdown = 10;
     continueUI.style.display = 'flex';
     document.getElementById('continue-timer').innerText = 10;
+    if (audio) audio.fadeTransition('gameover');
 }
 
 function handleArcadeInput(action) {
@@ -743,7 +759,17 @@ function useBomb() {
     }
 }
 
-function closeSummary() { summaryBox.style.display = 'none'; isPaused = false; waveGraze = 0; scoreAtLastBoss = score; shieldBrokenInWave = false; updateHighScore(); }
+function closeSummary() { 
+    summaryBox.style.display = 'none'; 
+    isPaused = false; 
+    waveGraze = 0; 
+    scoreAtLastBoss = score; 
+    shieldBrokenInWave = false; 
+    updateHighScore(); 
+    if (audio && difficultyWave <= 6) {
+        audio.fadeTransition('stage' + difficultyWave);
+    }
+}
 function processContinue() {
     updateHighScore();
     continueCountdown = 0;
@@ -755,6 +781,9 @@ function processContinue() {
     power = 0; powerEl.innerText = power;
     score = 0; scoreEl.innerText = score;
     scoreAtLastBoss = 0;
+    if (audio && difficultyWave <= 6) {
+        audio.fadeTransition('stage' + difficultyWave);
+    }
     invulnTimer = 180;
     
     // Always clear bullets so player doesn't spawn into danger
@@ -988,6 +1017,7 @@ function playerTakeDamage() {
         lives--; livesEl.innerText = lives;
         if (lives <= 0) {
             updateHighScore();
+            if (audio) audio.fadeTransition('gameover');
             if (isDevMode) {
                 // Skip the prompt entirely in dev mode
                 continueCountdown = 10;
@@ -1070,7 +1100,10 @@ function handleCollisions(ts) {
                 let isPhase2 = boss.hp <= boss.maxHP / 2;
                 if (wasPhase1 && isPhase2 && boss.hp > 0) {
                     boss.enterPhase2();
-                    if (audio) audio.playBossPhaseChange();
+                    if (audio) {
+                        audio.playBossPhaseChange();
+                        if (difficultyWave === 6) audio.hardCut('boss6_phase2');
+                    }
                 }
             }
         }
@@ -1097,6 +1130,7 @@ function handleCollisions(ts) {
                 gameCleared = true;
                 localStorage.setItem('fosozu_gameCleared', 'true');
                 update2PButton();
+                if (audio) audio.fadeTransition('ending');
             }
 
             let bonusAmt = Math.floor(waveGraze * 1.5 * difficultyWave);
@@ -1131,6 +1165,10 @@ function updateBoss(ts) {
         let tIdx = (difficultyWave - 1) % BossRoster.length;
         let BossClass = BossRoster[tIdx];
         boss = new BossClass(difficultyWave, linkIteration);
+        
+        if (audio && difficultyWave !== 6) {
+            audio.hardCut('boss' + difficultyWave);
+        }
 
         bossNameEl.innerText = boss.name;
         startBossDialogue();

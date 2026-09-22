@@ -10,6 +10,111 @@ class AudioManager {
         for (let i = 0; i < bufferSize; i++) {
             output[i] = Math.random() * 2 - 1;
         }
+
+        // BGM Setup
+        const bgmFiles = {
+            'title': 'audio/bgm_title.wav',
+            'alt_title': 'audio/bgm_alt_title.wav',
+            'stage1': 'audio/bgm_stage1.wav',
+            'boss1': 'audio/bgm_boss1.wav',
+            'stage2': 'audio/bgm_stage2.wav',
+            'boss2': 'audio/bgm_boss2.wav',
+            'stage3': 'audio/bgm_stage3.wav',
+            'boss3': 'audio/bgm_boss3.wav',
+            'stage4': 'audio/bgm_stage4.wav',
+            'boss4': 'audio/bgm_boss4.wav',
+            'stage5': 'audio/bgm_stage5.wav',
+            'boss5': 'audio/bgm_boss5.wav',
+            'stage6': 'audio/bgm_stage6.wav',
+            'boss6': 'audio/bgm_boss6.wav',
+            'boss6_phase2': 'audio/bgm_boss6_phase2.wav',
+            'ending': 'audio/bgm_ending.wav',
+            'credits': 'audio/bgm_credits.wav',
+            'gameover': 'audio/bgm_gameover.wav',
+            'extra_stage': 'audio/bgm_extra_stage.wav',
+            'extra_boss': 'audio/bgm_extra_boss.wav',
+            'extra_ending': 'audio/bgm_extra_ending.wav'
+        };
+
+        const noLoopTracks = ['gameover', 'ending', 'credits', 'extra_ending'];
+
+        this.bgm = {};
+        for (let key in bgmFiles) {
+            let audioEl = new Audio(bgmFiles[key]);
+            audioEl.loop = !noLoopTracks.includes(key);
+            audioEl.volume = 0.5; // Default BGM volume
+            this.bgm[key] = audioEl;
+        }
+        
+        this.currentBGMKey = null;
+        this.fadeInterval = null;
+    }
+
+    playBGM(trackKey) {
+        if (!this.bgm[trackKey]) return;
+        if (this.currentBGMKey === trackKey) return; // Already playing
+
+        if (this.currentBGMKey && this.bgm[this.currentBGMKey]) {
+            this.bgm[this.currentBGMKey].pause();
+            this.bgm[this.currentBGMKey].currentTime = 0;
+        }
+
+        if (this.fadeInterval) {
+            clearInterval(this.fadeInterval);
+            this.fadeInterval = null;
+        }
+
+        this.currentBGMKey = trackKey;
+        this.bgm[trackKey].volume = 0.5;
+        this.bgm[trackKey].play().catch(e => console.warn('BGM Autoplay prevented:', e));
+    }
+
+    hardCut(trackKey) {
+        this.playBGM(trackKey);
+    }
+
+    fadeTransition(nextTrackKey, duration = 1.0) {
+        if (!this.bgm[nextTrackKey]) return;
+        if (this.currentBGMKey === nextTrackKey) return;
+
+        let prevTrack = this.currentBGMKey ? this.bgm[this.currentBGMKey] : null;
+        let nextTrack = this.bgm[nextTrackKey];
+
+        if (this.fadeInterval) {
+            clearInterval(this.fadeInterval);
+        }
+
+        this.currentBGMKey = nextTrackKey;
+        nextTrack.volume = 0;
+        nextTrack.currentTime = 0;
+        nextTrack.play().catch(e => console.warn('BGM Autoplay prevented:', e));
+
+        const steps = 20;
+        const intervalTime = (duration * 1000) / steps;
+        const volumeStep = 0.5 / steps;
+        let currentStep = 0;
+
+        this.fadeInterval = setInterval(() => {
+            currentStep++;
+            
+            if (prevTrack && prevTrack.volume >= volumeStep) {
+                prevTrack.volume -= volumeStep;
+            }
+            if (nextTrack.volume <= 0.5 - volumeStep) {
+                nextTrack.volume += volumeStep;
+            }
+
+            if (currentStep >= steps) {
+                clearInterval(this.fadeInterval);
+                this.fadeInterval = null;
+                if (prevTrack) {
+                    prevTrack.pause();
+                    prevTrack.currentTime = 0;
+                    prevTrack.volume = 0.5;
+                }
+                nextTrack.volume = 0.5;
+            }
+        }, intervalTime);
     }
 
     resume() {
