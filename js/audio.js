@@ -49,6 +49,7 @@ class AudioManager {
         this.bgm = {};
         for (let key in bgmFiles) {
             let audioEl = new Audio(bgmFiles[key]);
+            audioEl.preload = "auto"; // Explicitly request full download to prevent streaming aborts
             audioEl.loop = !noLoopTracks.includes(key);
             audioEl.addEventListener('ended', function() {
                 if (!noLoopTracks.includes(key)) {
