@@ -309,6 +309,8 @@ let flankerWarning = { timer: 0, side: null, y: 0 };
 const COMBO_MAX_TIME = 120;
 
 const keys = {}, bullets = [], bossBullets = [], enemyBullets = [], enemies = [], bombItems = [], powerItems = [], lifeItems = [], medals = [], effects = [], bowlSteam = [];
+const activeEMPs = [];
+const EMP_MAX_RADIUS = 600 * 1.5; // canvas.width * 1.5
 const stars = Array.from({ length: 80 }, () => ({ x: Math.random() * 600, y: Math.random() * 800, size: Math.random() * 2, speed: Math.random() * 2 + 1 }));
 const player = { x: 300, y: 700, speed: 4.5, focusSpeed: 2.5, hitboxSize: 4, grazeSize: 25, satellites: [{ x: 300, y: 700 }, { x: 300, y: 700 }, { x: 300, y: 700 }, { x: 300, y: 700 }] };
 const player2 = { x: 350, y: 700, speed: 5.3, focusSpeed: 3.0, hitboxSize: 4, grazeSize: 25, satellites: [{ x: 350, y: 700 }, { x: 350, y: 700 }, { x: 350, y: 700 }, { x: 350, y: 700 }], image: new Image() };
@@ -451,7 +453,8 @@ function handleGamepadButtons() {
     }
 
     if (gameStarted && !gameOver && !isPaused && ((gamepadState.bomb && !prevGamepadState.bomb) || (gamepadState2.bomb && !prevGamepadState2.bomb))) {
-        useBomb();
+        const p2Bombed = is2PMode && gamepadState2.bomb && !prevGamepadState2.bomb && !(gamepadState.bomb && !prevGamepadState.bomb);
+        useBomb(p2Bombed ? player2 : player, !p2Bombed);
     }
 
     let p1Shoot = (inputMode === 'gamepad' && gamepadState.shoot && !prevGamepadState.shoot);
@@ -799,7 +802,7 @@ window.addEventListener('keydown', e => {
         else if (dialogueBox.style.display === 'block' && (p1Shoot || p2Shoot)) progressDialogue(); 
     }
     if (continueCountdown > 0 && (p1Continue || p2Continue)) processContinue();
-    if (gameStarted && !gameOver && !isPaused && (k === keyMap.bomb || (is2PMode && k === keyMapP2.bomb))) useBomb();
+    if (gameStarted && !gameOver && !isPaused && (k === keyMap.bomb || (is2PMode && k === keyMapP2.bomb))) useBomb(k === keyMapP2.bomb ? player2 : player, k !== keyMapP2.bomb);
 });
 window.addEventListener('keyup', e => { 
     let k = e.key.toLowerCase();
@@ -862,7 +865,8 @@ function updateHighScore() { if (score > sessionHiScore) { sessionHiScore = scor
 function startBossDialogue() { isPaused = true; dialogueIndex = 0; document.getElementById('dialogue-text').innerText = boss.intro[0]; dialogueBox.style.display = 'block'; }
 function progressDialogue() { dialogueIndex++; if (dialogueIndex < boss.intro.length) { document.getElementById('dialogue-text').innerText = boss.intro[dialogueIndex]; } else { dialogueBox.style.display = 'none'; isPaused = false; } }
 
-function useBomb() {
+function useBomb(sourcePlayer, isP1 = true) {
+    sourcePlayer = sourcePlayer || player;
     if (bombs > 0 && bombEffectTimer === 0) {
         bombs--; bombsEl.innerText = bombs; bombEffectTimer = 60; shakeTimer = 35;
         bossBullets.length = 0; enemyBullets.length = 0;
@@ -887,6 +891,20 @@ function useBomb() {
         // Bosses resist bomb damage (40% of normal) — takes 5-6 bombs to kill early bosses
         if (boss) boss.hp -= 300 * 0.4;
         if (audio) audio.playExplosion();
+
+        // Spawn EMP shockwave originating from the bombing player
+        const rgbBase = isP1 ? '170, 0, 255' : '255, 105, 180';
+        const glowColor = isP1 ? '#aa00ff' : '#ff69b4';
+        activeEMPs.push({
+            x: sourcePlayer.x,
+            y: sourcePlayer.y,
+            radius: 0,
+            opacity: 1.0,
+            rgbBase,
+            glowColor,
+            isP1,
+            arcaneAngle: 0  // for P2 spinning arcane rings
+        });
     }
 }
 
@@ -1115,6 +1133,15 @@ function updateProjectiles(ts) {
         if (b.y < -50 || b.x < -50 || b.x > 650) bullets.splice(i, 1);
     });
     effects.forEach((eff, i) => { eff.r += 6; eff.opacity -= 0.05; if (eff.opacity <= 0) effects.splice(i, 1); });
+
+    // Update EMP shockwaves
+    for (let i = activeEMPs.length - 1; i >= 0; i--) {
+        const emp = activeEMPs[i];
+        emp.radius += 30;
+        emp.arcaneAngle += 0.04; // spin the arcane rings (only used for P2)
+        emp.opacity = Math.max(0, 1.0 - (emp.radius / EMP_MAX_RADIUS));
+        if (emp.opacity <= 0) activeEMPs.splice(i, 1);
+    }
     
     for (let i = bowlSteam.length - 1; i >= 0; i--) {
         let p = bowlSteam[i];
@@ -2019,6 +2046,81 @@ function drawSatellites(pObj) {
         }
     });
     effects.forEach(eff => { ctx.strokeStyle = `rgba(0, 242, 255, ${eff.opacity})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(eff.x, eff.y, eff.r, 0, Math.PI * 2); ctx.stroke(); });
+
+    // EMP Shockwave Render
+    activeEMPs.forEach(emp => {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.shadowColor = emp.glowColor;
+        ctx.shadowBlur = 30;
+
+        if (emp.isP1) {
+            // ── P1 Fosozu: Purple radial shockwave ──────────────────────────
+            // Outer hard ring
+            ctx.beginPath();
+            ctx.arc(emp.x, emp.y, emp.radius, 0, Math.PI * 2);
+            ctx.lineWidth = 14;
+            ctx.strokeStyle = `rgba(${emp.rgbBase}, ${emp.opacity})`;
+            ctx.stroke();
+            // Inner softer halo ring
+            if (emp.radius > 20) {
+                ctx.beginPath();
+                ctx.arc(emp.x, emp.y, emp.radius - 18, 0, Math.PI * 2);
+                ctx.lineWidth = 6;
+                ctx.strokeStyle = `rgba(${emp.rgbBase}, ${emp.opacity * 0.4})`;
+                ctx.stroke();
+            }
+        } else {
+            // ── P2 PingKo: Pink arcane summoning circle shockwave ────────────
+            ctx.translate(emp.x, emp.y);
+            ctx.rotate(emp.arcaneAngle);
+
+            // Outer expanding ring
+            ctx.beginPath();
+            ctx.arc(0, 0, emp.radius, 0, Math.PI * 2);
+            ctx.lineWidth = 12;
+            ctx.strokeStyle = `rgba(${emp.rgbBase}, ${emp.opacity})`;
+            ctx.stroke();
+
+            // Rotating hexagram (two interlocked triangles) at ring edge scale
+            const triR = emp.radius * 0.55;
+            if (triR > 10) {
+                for (let tri = 0; tri < 2; tri++) {
+                    ctx.beginPath();
+                    for (let v = 0; v < 3; v++) {
+                        const a = (v * Math.PI * 2 / 3) + (tri * Math.PI / 3);
+                        v === 0 ? ctx.moveTo(Math.cos(a) * triR, Math.sin(a) * triR)
+                                : ctx.lineTo(Math.cos(a) * triR, Math.sin(a) * triR);
+                    }
+                    ctx.closePath();
+                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = `rgba(${emp.rgbBase}, ${emp.opacity * 0.7})`;
+                    ctx.stroke();
+                }
+            }
+
+            // 6 glowing rune dots on the outer ring
+            for (let d = 0; d < 6; d++) {
+                const a = (d / 6) * Math.PI * 2;
+                ctx.beginPath();
+                ctx.arc(Math.cos(a) * emp.radius, Math.sin(a) * emp.radius, 4 * emp.opacity, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${emp.rgbBase}, ${emp.opacity})`;
+                ctx.fill();
+            }
+
+            // Inner concentric ring counter-rotating
+            ctx.rotate(-emp.arcaneAngle * 2);
+            if (emp.radius > 30) {
+                ctx.beginPath();
+                ctx.arc(0, 0, emp.radius * 0.6, 0, Math.PI * 2);
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = `rgba(${emp.rgbBase}, ${emp.opacity * 0.5})`;
+                ctx.stroke();
+            }
+        }
+
+        ctx.restore();
+    });
     bossBullets.forEach(b => { ctx.fillStyle = b.color; ctx.beginPath(); ctx.arc(b.x, b.y, 6, 0, 7); ctx.fill(); });
 
     ctx.fillStyle = '#0f0'; enemyBullets.forEach(b => { ctx.beginPath(); ctx.arc(b.x, b.y, 4, 0, 7); ctx.fill(); });
