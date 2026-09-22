@@ -884,7 +884,8 @@ function useBomb() {
         }
         scoreEl.innerText = score;
 
-        if (boss) boss.hp -= 300;
+        // Bosses resist bomb damage (40% of normal) — takes 5-6 bombs to kill early bosses
+        if (boss) boss.hp -= 300 * 0.4;
         if (audio) audio.playExplosion();
     }
 }
@@ -981,6 +982,8 @@ function shoot(pObj) {
             let minDist = Infinity;
             if (boss && boss.hp > 0) { lockTarget = boss; minDist = Math.hypot(boss.x - pObj.x, boss.y - pObj.y); }
             enemies.forEach(e => {
+                // Only lock onto enemies fully inside the visible play area
+                if (e.y < 30 || e.y > 800 || e.x < 0 || e.x > 600) return;
                 let d = Math.hypot(e.x - pObj.x, e.y - pObj.y);
                 if (d < minDist) { minDist = d; lockTarget = e; }
             });
@@ -1087,6 +1090,8 @@ function updateProjectiles(ts) {
                     if (d < minDist) { minDist = d; closest = boss; }
                 }
                 enemies.forEach(e => {
+                    // Only re-acquire enemies fully inside the visible play area
+                    if (e.y < 30 || e.y > 800 || e.x < 0 || e.x > 600) return;
                     let d = Math.hypot(e.x - b.x, e.y - b.y);
                     if (d < minDist) { minDist = d; closest = e; }
                 });
