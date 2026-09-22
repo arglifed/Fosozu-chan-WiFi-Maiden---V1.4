@@ -50,6 +50,12 @@ class AudioManager {
         for (let key in bgmFiles) {
             let audioEl = new Audio(bgmFiles[key]);
             audioEl.loop = !noLoopTracks.includes(key);
+            audioEl.addEventListener('ended', function() {
+                if (!noLoopTracks.includes(key)) {
+                    this.currentTime = 0;
+                    this.play().catch(e => console.warn('BGM Loop fallback prevented:', e));
+                }
+            });
             audioEl.volume = this.masterVolume * this.bgmVolume;
             this.bgm[key] = audioEl;
         }
