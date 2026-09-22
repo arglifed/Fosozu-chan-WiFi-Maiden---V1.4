@@ -1167,20 +1167,17 @@ function handleCollisions(ts) {
 
         for (let i = bullets.length - 1; i >= 0; i--) {
             if (Math.hypot(bullets[i].x - boss.x, bullets[i].y - boss.y) < 65) {
-                let wasPhase1 = boss.hp > boss.maxHP / 2;
                 boss.hp -= (bullets[i].damage || 1);
                 bullets.splice(i, 1);
-
                 if (audio && Math.random() < 0.3) audio.playEnemyHit();
+            }
+        }
 
-                let isPhase2 = boss.hp <= boss.maxHP / 2;
-                if (wasPhase1 && isPhase2 && boss.hp > 0) {
-                    boss.enterPhase2();
-                    if (audio) {
-                        audio.playBossPhaseChange();
-                        if (difficultyWave === 6) audio.hardCut('boss6_phase2');
-                    }
-                }
+        if (!boss.phase2 && boss.hp <= boss.maxHP / 2 && boss.hp > 0) {
+            boss.enterPhase2();
+            if (audio) {
+                audio.playBossPhaseChange();
+                if (difficultyWave === 6) audio.hardCut('boss6_phase2');
             }
         }
 
