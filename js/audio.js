@@ -113,14 +113,8 @@ class AudioManager {
         if (!this.bgm[trackKey]) return;
         if (this.currentBGMKey === trackKey) return; // Already playing
 
-        // Stop and fully reset the outgoing track
-        if (this.currentBGMKey && this.bgm[this.currentBGMKey]) {
-            this.bgm[this.currentBGMKey].pause();
-            this.bgm[this.currentBGMKey].currentTime = 0;
-        }
-
-        // Kill any in-progress fade so its setInterval can't interfere
-        this._clearFade();
+        // Stop every other track in the dictionary before starting the new one
+        this.forceStopAllFadesAndTracks(trackKey);
 
         this.currentBGMKey = trackKey;
         const track = this.bgm[trackKey];
@@ -141,8 +135,29 @@ class AudioManager {
         }
     }
 
+    // ── Nuclear cleanup: pause & silence every track except the one we want ──
+    // This is the only reliable way to prevent overlapping when currentBGMKey
+    // goes stale (e.g. rapid dev skips during an in-progress fadeTransition).
+    forceStopAllFadesAndTracks(exceptKey = null) {
+        this._clearFade();
+        const targetVol = Math.max(0, Math.min(this.masterVolume * this.bgmVolume, 1));
+        for (const key in this.bgm) {
+            if (key === exceptKey) continue;        // leave the incoming track alone
+            if (key === this.pausedTrackKey) continue; // never stomp a paused-for-continue track
+            const track = this.bgm[key];
+            if (!track.paused) {
+                track.pause();
+            }
+            track.volume = 0;           // hard-silence before reset so no pop
+            track.currentTime = 0;
+            track.volume = targetVol;   // restore full volume so next play() sounds correct
+        }
+    }
+
     hardCut(trackKey) {
-        this._clearFade(); // Kill any in-flight fade before switching
+        // forceStopAllFadesAndTracks is called inside playBGM, but call _clearFade
+        // here first so the interval is dead before we even read currentBGMKey
+        this._clearFade();
         this.playBGM(trackKey);
     }
 
@@ -150,8 +165,8 @@ class AudioManager {
         if (!this.bgm[nextTrackKey]) return;
         if (this.currentBGMKey === nextTrackKey) return;
 
-        // ── Strict fade lock: kill any previous interval FIRST ───────────────
-        this._clearFade();
+        // Stop all other tracks before starting the crossfade
+        this.forceStopAllFadesAndTracks(nextTrackKey);
 
         const targetVol = Math.max(0, Math.min(this.masterVolume * this.bgmVolume, 1));
         let prevTrack = this.currentBGMKey ? this.bgm[this.currentBGMKey] : null;
