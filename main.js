@@ -1580,9 +1580,8 @@ function drawSatellites(pObj) {
             ctx.closePath();
             ctx.stroke();
             ctx.restore(); // Restore rotation
-            
-            // The Collapsing Ring (using 15 frames max)
-            let collapseRadius = (boss.teleportWarnTimer / 15) * 80;
+            // The Collapsing Ring (using 25 frames max)
+            let collapseRadius = (boss.teleportWarnTimer / 25) * 80;
             ctx.beginPath();
             ctx.arc(0, 0, Math.max(0, collapseRadius), 0, Math.PI * 2);
             ctx.stroke();
