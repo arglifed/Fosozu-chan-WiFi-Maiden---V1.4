@@ -148,97 +148,150 @@ let slowMoTimer = 0, flashTimer = 0, grazeStreak = 0, streakTimer = 0, hasShield
 let stageTimer = 0;
 
 const waveTimelines = {
-    1: [
-        { time: 0, type: 'WALL', spawned: false },
-        { time: 240, type: 'SWEEP_LEFT', spawned: false },
-        { time: 240, type: 'SWEEP_RIGHT', spawned: false },
-        { time: 540, type: 'CIRCLE', spawned: false },
-        { time: 720, type: 'FLANK_LEFT', y: 300, spawned: false },
-        { time: 960, type: 'WALL', spawned: false },
-        { time: 1080, type: 'V_SHAPE', spawned: false },
-        { time: 1320, type: 'FLANK_RIGHT', y: 400, spawned: false },
-        { time: 1500, type: 'DIVER_SWOOP', spawned: false }
+    1: [ // 3600 frames (60s) — gentle intro, formations every ~20-30s
+        { time: 0,    type: 'WALL',        spawned: false },
+        { time: 300,  type: 'SWEEP_LEFT',  spawned: false },
+        { time: 300,  type: 'SWEEP_RIGHT', spawned: false },
+        { time: 750,  type: 'CIRCLE',      spawned: false },
+        { time: 1050, type: 'FLANK_LEFT',  y: 300, spawned: false },
+        { time: 1350, type: 'WALL',        spawned: false },
+        { time: 1650, type: 'V_SHAPE',     spawned: false },
+        { time: 1950, type: 'FLANK_RIGHT', y: 400, spawned: false },
+        { time: 2400, type: 'DIVER_SWOOP', spawned: false },
+        { time: 3000, type: 'SWEEP_LEFT',  spawned: false },
+        { time: 3000, type: 'SWEEP_RIGHT', spawned: false }
     ],
-    2: [
-        { time: 0, type: 'SLOW_CIRCLE', spawned: false },
-        { time: 120, type: 'V_SHAPE', spawned: false },
-        { time: 300, type: 'WALL', spawned: false },
-        { time: 500, type: 'FLANK_LEFT', y: 250, spawned: false },
-        { time: 500, type: 'FLANK_RIGHT', y: 250, spawned: false },
-        { time: 750, type: 'SHIELD_WALL', spawned: false },
-        { time: 900, type: 'DIVER_SWOOP', spawned: false },
-        { time: 1100, type: 'SWEEP_LEFT', spawned: false },
-        { time: 1100, type: 'SWEEP_RIGHT', spawned: false },
-        { time: 1300, type: 'CIRCLE', spawned: false },
-        { time: 1500, type: 'V_SHAPE', spawned: false }
+    2: [ // 4500 frames (75s) — steady escalation, formations every ~18-20s
+        { time: 0,    type: 'SLOW_CIRCLE', spawned: false },
+        { time: 240,  type: 'V_SHAPE',     spawned: false },
+        { time: 600,  type: 'WALL',        spawned: false },
+        { time: 900,  type: 'FLANK_LEFT',  y: 250, spawned: false },
+        { time: 900,  type: 'FLANK_RIGHT', y: 250, spawned: false },
+        { time: 1200, type: 'SHIELD_WALL', spawned: false },
+        { time: 1500, type: 'DIVER_SWOOP', spawned: false },
+        { time: 1800, type: 'SWEEP_LEFT',  spawned: false },
+        { time: 1800, type: 'SWEEP_RIGHT', spawned: false },
+        { time: 2200, type: 'CIRCLE',      spawned: false },
+        { time: 2600, type: 'V_SHAPE',     spawned: false },
+        { time: 3000, type: 'SHIELD_WALL', spawned: false },
+        { time: 3400, type: 'SWEEP_LEFT',  spawned: false },
+        { time: 3400, type: 'SWEEP_RIGHT', spawned: false },
+        { time: 3900, type: 'SLOW_CIRCLE', spawned: false }
     ],
-    3: [
-        { time: 0, type: 'SHIELD_WALL', spawned: false },
-        { time: 100, type: 'V_SHAPE', spawned: false },
-        { time: 250, type: 'WALL', spawned: false },
-        { time: 400, type: 'DIVER_SWOOP', spawned: false },
-        { time: 550, type: 'CIRCLE', spawned: false },
-        { time: 700, type: 'FLANK_LEFT', y: 150, spawned: false },
-        { time: 750, type: 'FLANK_RIGHT', y: 350, spawned: false },
-        { time: 900, type: 'MID_BOSS_PINGKO', spawned: false },
-        // Gap of 15s (900 frames) for the duel.
-        { time: 1800, type: 'DIVER_SWOOP', spawned: false }
+    3: [ // 4500 frames (75s) — PingKo at 30s, return action 10s after he flees
+        { time: 0,    type: 'SHIELD_WALL',     spawned: false },
+        { time: 200,  type: 'V_SHAPE',         spawned: false },
+        { time: 500,  type: 'WALL',            spawned: false },
+        { time: 800,  type: 'DIVER_SWOOP',     spawned: false },
+        { time: 1100, type: 'CIRCLE',          spawned: false },
+        { time: 1400, type: 'FLANK_LEFT',      y: 150, spawned: false },
+        { time: 1400, type: 'FLANK_RIGHT',     y: 350, spawned: false },
+        { time: 1800, type: 'MID_BOSS_PINGKO', spawned: false },
+        // PingKo flees after ~900 frames; 600-frame gap (10s) then action resumes
+        { time: 2400, type: 'DIVER_SWOOP',     spawned: false },
+        { time: 2800, type: 'WALL',            spawned: false },
+        { time: 3200, type: 'FLANK_LEFT',      y: 300, spawned: false },
+        { time: 3200, type: 'FLANK_RIGHT',     y: 300, spawned: false },
+        { time: 3700, type: 'SWEEP_LEFT',      spawned: false },
+        { time: 3700, type: 'SWEEP_RIGHT',     spawned: false }
     ],
-    4: [ // Escalate for Wave 4
-        { time: 0, type: 'SHIELD_WALL', spawned: false },
-        { time: 150, type: 'DIVER_SWOOP', spawned: false },
-        { time: 200, type: 'DIVER_SWOOP', spawned: false },
-        { time: 350, type: 'CIRCLE', spawned: false },
-        { time: 350, type: 'SLOW_CIRCLE', spawned: false },
-        { time: 600, type: 'FLANK_LEFT', y: 200, spawned: false },
-        { time: 600, type: 'FLANK_RIGHT', y: 400, spawned: false },
-        { time: 700, type: 'WALL', spawned: false },
-        { time: 850, type: 'V_SHAPE', spawned: false },
-        { time: 1000, type: 'DIVER_SWOOP', spawned: false },
-        { time: 1150, type: 'SWEEP_LEFT', spawned: false },
-        { time: 1150, type: 'SWEEP_RIGHT', spawned: false },
-        { time: 1300, type: 'SHIELD_WALL', spawned: false },
-        { time: 1450, type: 'CIRCLE', spawned: false },
-        { time: 1600, type: 'DIVER_SWOOP', spawned: false }
+    4: [ // 5400 frames (90s) — sustained pressure, one overlapping pair every ~14s
+        { time: 0,    type: 'SHIELD_WALL', spawned: false },
+        { time: 200,  type: 'DIVER_SWOOP', spawned: false },
+        { time: 350,  type: 'DIVER_SWOOP', spawned: false },
+        { time: 600,  type: 'CIRCLE',      spawned: false },
+        { time: 600,  type: 'SLOW_CIRCLE', spawned: false },
+        { time: 900,  type: 'FLANK_LEFT',  y: 200, spawned: false },
+        { time: 900,  type: 'FLANK_RIGHT', y: 400, spawned: false },
+        { time: 1150, type: 'WALL',        spawned: false },
+        { time: 1350, type: 'V_SHAPE',     spawned: false },
+        { time: 1600, type: 'DIVER_SWOOP', spawned: false },
+        { time: 1850, type: 'SWEEP_LEFT',  spawned: false },
+        { time: 1850, type: 'SWEEP_RIGHT', spawned: false },
+        { time: 2100, type: 'SHIELD_WALL', spawned: false },
+        { time: 2350, type: 'CIRCLE',      spawned: false },
+        { time: 2600, type: 'DIVER_SWOOP', spawned: false },
+        { time: 2600, type: 'DIVER_SWOOP', spawned: false },
+        { time: 2900, type: 'FLANK_LEFT',  y: 150, spawned: false },
+        { time: 2900, type: 'FLANK_RIGHT', y: 350, spawned: false },
+        { time: 3200, type: 'WALL',        spawned: false },
+        { time: 3500, type: 'V_SHAPE',     spawned: false },
+        { time: 3800, type: 'SWEEP_LEFT',  spawned: false },
+        { time: 3800, type: 'SWEEP_RIGHT', spawned: false },
+        { time: 4200, type: 'SHIELD_WALL', spawned: false },
+        { time: 4700, type: 'SLOW_CIRCLE', spawned: false },
+        { time: 4700, type: 'DIVER_SWOOP', spawned: false }
     ],
-    5: [ // Highly aggressive Wave 5
-        { time: 0, type: 'SWEEP_LEFT', spawned: false },
-        { time: 50, type: 'SWEEP_RIGHT', spawned: false },
-        { time: 200, type: 'DIVER_SWOOP', spawned: false },
-        { time: 300, type: 'DIVER_SWOOP', spawned: false },
-        { time: 400, type: 'DIVER_SWOOP', spawned: false },
-        { time: 550, type: 'FLANK_LEFT', y: 150, spawned: false },
-        { time: 550, type: 'FLANK_RIGHT', y: 300, spawned: false },
-        { time: 750, type: 'SWEEP_LEFT', spawned: false },
-        { time: 800, type: 'SWEEP_RIGHT', spawned: false },
-        { time: 950, type: 'V_SHAPE', spawned: false },
-        { time: 1050, type: 'DIVER_SWOOP', spawned: false },
-        { time: 1150, type: 'DIVER_SWOOP', spawned: false },
-        { time: 1300, type: 'FLANK_LEFT', y: 100, spawned: false },
-        { time: 1300, type: 'FLANK_RIGHT', y: 200, spawned: false },
-        { time: 1450, type: 'SWEEP_LEFT', spawned: false },
-        { time: 1500, type: 'SWEEP_RIGHT', spawned: false },
-        { time: 1650, type: 'DIVER_SWOOP', spawned: false }
+    5: [ // 5400 frames (90s) — highly aggressive throughout
+        { time: 0,    type: 'SWEEP_LEFT',  spawned: false },
+        { time: 0,    type: 'SWEEP_RIGHT', spawned: false },
+        { time: 200,  type: 'DIVER_SWOOP', spawned: false },
+        { time: 350,  type: 'DIVER_SWOOP', spawned: false },
+        { time: 500,  type: 'DIVER_SWOOP', spawned: false },
+        { time: 700,  type: 'FLANK_LEFT',  y: 150, spawned: false },
+        { time: 700,  type: 'FLANK_RIGHT', y: 300, spawned: false },
+        { time: 950,  type: 'SWEEP_LEFT',  spawned: false },
+        { time: 950,  type: 'SWEEP_RIGHT', spawned: false },
+        { time: 1150, type: 'V_SHAPE',     spawned: false },
+        { time: 1350, type: 'DIVER_SWOOP', spawned: false },
+        { time: 1350, type: 'DIVER_SWOOP', spawned: false },
+        { time: 1600, type: 'FLANK_LEFT',  y: 100, spawned: false },
+        { time: 1600, type: 'FLANK_RIGHT', y: 200, spawned: false },
+        { time: 1900, type: 'SWEEP_LEFT',  spawned: false },
+        { time: 1900, type: 'SWEEP_RIGHT', spawned: false },
+        { time: 2150, type: 'DIVER_SWOOP', spawned: false },
+        { time: 2350, type: 'DIVER_SWOOP', spawned: false },
+        { time: 2550, type: 'V_SHAPE',     spawned: false },
+        { time: 2800, type: 'FLANK_LEFT',  y: 150, spawned: false },
+        { time: 2800, type: 'FLANK_RIGHT', y: 350, spawned: false },
+        { time: 3100, type: 'SWEEP_LEFT',  spawned: false },
+        { time: 3100, type: 'SWEEP_RIGHT', spawned: false },
+        { time: 3350, type: 'DIVER_SWOOP', spawned: false },
+        { time: 3350, type: 'DIVER_SWOOP', spawned: false },
+        { time: 3600, type: 'FLANK_LEFT',  y: 200, spawned: false },
+        { time: 3600, type: 'FLANK_RIGHT', y: 400, spawned: false },
+        { time: 3900, type: 'DIVER_SWOOP', spawned: false },
+        { time: 4100, type: 'SWEEP_LEFT',  spawned: false },
+        { time: 4100, type: 'SWEEP_RIGHT', spawned: false },
+        { time: 4400, type: 'V_SHAPE',     spawned: false },
+        { time: 4800, type: 'DIVER_SWOOP', spawned: false },
+        { time: 4800, type: 'DIVER_SWOOP', spawned: false }
     ],
-    6: [ // Madame Satsuki Prelude Wave 6
-        { time: 0, type: 'SHIELD_WALL', spawned: false },
-        { time: 0, type: 'SHIELD_WALL', spawned: false },
-        { time: 150, type: 'SLOW_CIRCLE', spawned: false },
-        { time: 300, type: 'FLANK_LEFT', y: 100, spawned: false },
-        { time: 300, type: 'FLANK_RIGHT', y: 400, spawned: false },
-        { time: 450, type: 'SHIELD_WALL', spawned: false },
-        { time: 550, type: 'SLOW_CIRCLE', spawned: false },
-        { time: 550, type: 'SLOW_CIRCLE', spawned: false },
-        { time: 700, type: 'FLANK_LEFT', y: 200, spawned: false },
-        { time: 700, type: 'FLANK_RIGHT', y: 300, spawned: false },
-        { time: 850, type: 'SHIELD_WALL', spawned: false },
+    6: [ // 6300 frames (105s) — Satsuki prelude, slow oppressive layered spam
+        { time: 0,    type: 'SHIELD_WALL', spawned: false },
+        { time: 0,    type: 'SHIELD_WALL', spawned: false },
+        { time: 250,  type: 'SLOW_CIRCLE', spawned: false },
+        { time: 500,  type: 'FLANK_LEFT',  y: 100, spawned: false },
+        { time: 500,  type: 'FLANK_RIGHT', y: 400, spawned: false },
+        { time: 750,  type: 'SHIELD_WALL', spawned: false },
         { time: 1000, type: 'SLOW_CIRCLE', spawned: false },
-        { time: 1150, type: 'FLANK_LEFT', y: 150, spawned: false },
-        { time: 1150, type: 'FLANK_RIGHT', y: 350, spawned: false },
-        { time: 1300, type: 'SHIELD_WALL', spawned: false },
-        { time: 1450, type: 'SLOW_CIRCLE', spawned: false },
-        { time: 1600, type: 'FLANK_LEFT', y: 250, spawned: false },
-        { time: 1600, type: 'FLANK_RIGHT', y: 250, spawned: false }
+        { time: 1000, type: 'SLOW_CIRCLE', spawned: false },
+        { time: 1250, type: 'FLANK_LEFT',  y: 200, spawned: false },
+        { time: 1250, type: 'FLANK_RIGHT', y: 300, spawned: false },
+        { time: 1500, type: 'SHIELD_WALL', spawned: false },
+        { time: 1800, type: 'SLOW_CIRCLE', spawned: false },
+        { time: 2100, type: 'FLANK_LEFT',  y: 150, spawned: false },
+        { time: 2100, type: 'FLANK_RIGHT', y: 350, spawned: false },
+        { time: 2400, type: 'SHIELD_WALL', spawned: false },
+        { time: 2700, type: 'SLOW_CIRCLE', spawned: false },
+        { time: 2700, type: 'SLOW_CIRCLE', spawned: false },
+        { time: 3000, type: 'FLANK_LEFT',  y: 250, spawned: false },
+        { time: 3000, type: 'FLANK_RIGHT', y: 250, spawned: false },
+        { time: 3300, type: 'SHIELD_WALL', spawned: false },
+        { time: 3600, type: 'SLOW_CIRCLE', spawned: false },
+        { time: 3900, type: 'FLANK_LEFT',  y: 100, spawned: false },
+        { time: 3900, type: 'FLANK_RIGHT', y: 400, spawned: false },
+        { time: 4200, type: 'SHIELD_WALL', spawned: false },
+        { time: 4200, type: 'SHIELD_WALL', spawned: false },
+        { time: 4500, type: 'SLOW_CIRCLE', spawned: false },
+        { time: 4500, type: 'SLOW_CIRCLE', spawned: false },
+        { time: 4800, type: 'FLANK_LEFT',  y: 200, spawned: false },
+        { time: 4800, type: 'FLANK_RIGHT', y: 300, spawned: false },
+        { time: 5100, type: 'SHIELD_WALL', spawned: false },
+        { time: 5400, type: 'SLOW_CIRCLE', spawned: false },
+        { time: 5700, type: 'FLANK_LEFT',  y: 150, spawned: false },
+        { time: 5700, type: 'FLANK_RIGHT', y: 350, spawned: false },
+        { time: 6000, type: 'SHIELD_WALL', spawned: false }
     ]
 };
 
@@ -248,7 +301,7 @@ function resetTimelines() {
     }
 }
 
-const WAVE_DURATION = 1800;
+const WAVE_DURATIONS = { 1: 3600, 2: 4500, 3: 4500, 4: 5400, 5: 5400, 6: 6300 };
 let bombsSpawnedInWave = 0;
 let comboChain = 0, comboTimer = 0;
 let flankerWarning = { timer: 0, side: null, y: 0 };
@@ -703,7 +756,7 @@ window.addEventListener('keydown', e => {
         if (k === '2') { bombs = 9; bombsEl.innerText = bombs; power = 64; powerEl.innerText = power; }
         if (k === '3') {
             if (boss) { boss.hp = 0; }
-            else { stageTimer = WAVE_DURATION; enemies.length = 0; waveClearTimer = 0; }
+            else { stageTimer = WAVE_DURATIONS[difficultyWave] || 3600; enemies.length = 0; waveClearTimer = 0; }
         }
     }
 
@@ -1236,7 +1289,7 @@ function updateBoss(ts) {
         }
     }
     // Spawn Boss when wave timer concludes
-    if (!bossMode && waveClearTimer <= 0 && stageTimer >= WAVE_DURATION && enemies.length === 0) {
+    if (!bossMode && waveClearTimer <= 0 && stageTimer >= (WAVE_DURATIONS[difficultyWave] || 3600) && enemies.length === 0) {
         bossMode = true;
         document.getElementById('boss-ui').style.display = 'block';
 
@@ -1333,7 +1386,7 @@ function spawnFormation(type, spawnY) {
 }
 
 function updateEnemies(ts) {
-    if (!bossMode && waveClearTimer <= 0 && stageTimer < WAVE_DURATION) {
+    if (!bossMode && waveClearTimer <= 0 && stageTimer < (WAVE_DURATIONS[difficultyWave] || 3600)) {
         let waveIndex = ((difficultyWave - 1) % 6) + 1;
         let currentTimeline = waveTimelines[waveIndex];
         
