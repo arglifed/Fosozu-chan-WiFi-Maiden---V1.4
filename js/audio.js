@@ -120,18 +120,29 @@ class AudioManager {
         }
 
         // Kill any in-progress fade so its setInterval can't interfere
+        this._clearFade();
+
+        this.currentBGMKey = trackKey;
+        const track = this.bgm[trackKey];
+        track.currentTime = 0;
+        track.volume = Math.max(0, Math.min(this.masterVolume * this.bgmVolume, 1));
+        // Re-assert loop in case the browser reset it after an ended event
+        if (!['gameover', 'ending', 'credits', 'extra_ending'].includes(trackKey)) {
+            track.loop = true;
+        }
+        track.play().catch(e => console.warn('BGM Autoplay prevented:', e));
+    }
+
+    // ── Internal helper: kill any active fade interval immediately ──────────
+    _clearFade() {
         if (this.fadeInterval) {
             clearInterval(this.fadeInterval);
             this.fadeInterval = null;
         }
-
-        this.currentBGMKey = trackKey;
-        this.bgm[trackKey].currentTime = 0;
-        this.bgm[trackKey].volume = this.masterVolume * this.bgmVolume;
-        this.bgm[trackKey].play().catch(e => console.warn('BGM Autoplay prevented:', e));
     }
 
     hardCut(trackKey) {
+        this._clearFade(); // Kill any in-flight fade before switching
         this.playBGM(trackKey);
     }
 
@@ -139,20 +150,19 @@ class AudioManager {
         if (!this.bgm[nextTrackKey]) return;
         if (this.currentBGMKey === nextTrackKey) return;
 
+        // ── Strict fade lock: kill any previous interval FIRST ───────────────
+        this._clearFade();
+
+        const targetVol = Math.max(0, Math.min(this.masterVolume * this.bgmVolume, 1));
         let prevTrack = this.currentBGMKey ? this.bgm[this.currentBGMKey] : null;
         let nextTrack = this.bgm[nextTrackKey];
 
-        let targetVol = this.masterVolume * this.bgmVolume;
-
-        if (this.fadeInterval) {
-            clearInterval(this.fadeInterval);
-            this.fadeInterval = null;
-            if (prevTrack) prevTrack.volume = targetVol;
-        }
+        // Snap previous track to full volume before fading it out
+        if (prevTrack) prevTrack.volume = targetVol;
 
         this.currentBGMKey = nextTrackKey;
-        nextTrack.volume = 0;
         nextTrack.currentTime = 0;
+        nextTrack.volume = 0;
         nextTrack.play().catch(e => console.warn('BGM Autoplay prevented:', e));
 
         const steps = 20;
@@ -162,21 +172,19 @@ class AudioManager {
 
         this.fadeInterval = setInterval(() => {
             currentStep++;
-            
-            if (prevTrack && prevTrack.volume >= volumeStep) {
-                prevTrack.volume -= volumeStep;
+
+            // ── Clamped volume math: prevents -0.01 / 1.05 exceptions ────────
+            if (prevTrack) {
+                prevTrack.volume = Math.max(0, Math.min(prevTrack.volume - volumeStep, 1));
             }
-            if (nextTrack.volume <= targetVol - volumeStep) {
-                nextTrack.volume += volumeStep;
-            }
+            nextTrack.volume = Math.max(0, Math.min(nextTrack.volume + volumeStep, targetVol));
 
             if (currentStep >= steps) {
-                clearInterval(this.fadeInterval);
-                this.fadeInterval = null;
+                this._clearFade();
                 if (prevTrack) {
                     prevTrack.pause();
                     prevTrack.currentTime = 0;
-                    prevTrack.volume = targetVol;
+                    prevTrack.volume = targetVol; // reset for future use
                 }
                 nextTrack.volume = targetVol;
             }
