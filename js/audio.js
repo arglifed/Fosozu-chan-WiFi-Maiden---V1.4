@@ -21,27 +21,27 @@ class AudioManager {
 
         // BGM Setup
         const bgmFiles = {
-            'title': 'audio/bgm_title.wav',
-            'alt_title': 'audio/bgm_alt_title.wav',
-            'stage1': 'audio/bgm_stage1.wav',
-            'boss1': 'audio/bgm_boss1.wav',
-            'stage2': 'audio/bgm_stage2.wav',
-            'boss2': 'audio/bgm_boss2.wav',
-            'stage3': 'audio/bgm_stage3.wav',
-            'boss3': 'audio/bgm_boss3.wav',
-            'stage4': 'audio/bgm_stage4.wav',
-            'boss4': 'audio/bgm_boss4.wav',
-            'stage5': 'audio/bgm_stage5.wav',
-            'boss5': 'audio/bgm_boss5.wav',
-            'stage6': 'audio/bgm_stage6.wav',
-            'boss6': 'audio/bgm_boss6.wav',
-            'boss6_phase2': 'audio/bgm_boss6_phase2.wav',
-            'ending': 'audio/bgm_ending.wav',
-            'credits': 'audio/bgm_credits.wav',
-            'gameover': 'audio/bgm_gameover.wav',
-            'extra_stage': 'audio/bgm_extra_stage.wav',
-            'extra_boss': 'audio/bgm_extra_boss.wav',
-            'extra_ending': 'audio/bgm_extra_ending.wav'
+            'title': 'audio/bgm_title.ogg',
+            'alt_title': 'audio/bgm_alt_title.ogg',
+            'stage1': 'audio/bgm_stage1.ogg',
+            'boss1': 'audio/bgm_boss1.ogg',
+            'stage2': 'audio/bgm_stage2.ogg',
+            'boss2': 'audio/bgm_boss2.ogg',
+            'stage3': 'audio/bgm_stage3.ogg',
+            'boss3': 'audio/bgm_boss3.ogg',
+            'stage4': 'audio/bgm_stage4.ogg',
+            'boss4': 'audio/bgm_boss4.ogg',
+            'stage5': 'audio/bgm_stage5.ogg',
+            'boss5': 'audio/bgm_boss5.ogg',
+            'stage6': 'audio/bgm_stage6.ogg',
+            'boss6': 'audio/bgm_boss6.ogg',
+            'boss6_phase2': 'audio/bgm_boss6_phase2.ogg',
+            'ending': 'audio/bgm_ending.ogg',
+            'credits': 'audio/bgm_credits.ogg',
+            'gameover': 'audio/bgm_gameover.ogg',
+            'extra_stage': 'audio/bgm_extra_stage.ogg',
+            'extra_boss': 'audio/bgm_extra_boss.ogg',
+            'extra_ending': 'audio/bgm_extra_ending.ogg'
         };
 
         const noLoopTracks = ['gameover', 'ending', 'credits', 'extra_ending'];
