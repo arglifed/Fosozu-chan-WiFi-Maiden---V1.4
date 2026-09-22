@@ -260,7 +260,7 @@ const player = { x: 300, y: 700, speed: 4.5, focusSpeed: 2.5, hitboxSize: 4, gra
 const player2 = { x: 350, y: 700, speed: 5.3, focusSpeed: 3.0, hitboxSize: 4, grazeSize: 25, satellites: [{ x: 350, y: 700 }, { x: 350, y: 700 }, { x: 350, y: 700 }, { x: 350, y: 700 }], image: new Image() };
 player2.image.src = 'pink_girl.png';
 
-let audio = null;
+let audio = new AudioManager();
 
 let gamepadState = { up: false, down: false, left: false, right: false, shoot: false, bomb: false, focus: false, start: false, select: false };
 let prevGamepadState = Object.assign({}, gamepadState);
@@ -382,7 +382,7 @@ function handleGamepadButtons() {
                 if (document.getElementById('main-menu-ui').style.display === 'flex') {
                     document.getElementById('btn-start-game').click();
                 } else {
-                    if (!audio) { audio = new AudioManager(); audio.resume(); }
+                    if (audio) audio.resume();
                     gameStarted = true;
                     resetTimelines();
                 }
@@ -650,7 +650,7 @@ window.addEventListener('keydown', e => {
         let p2Start = (is2PMode && inputModeP2 === 'keyboard' && (k === keyMapP2.start || k === keyMapP2.shoot));
 
         if (p1Start || p2Start) {
-            if (!audio) { audio = new AudioManager(); audio.resume(); }
+            if (audio) audio.resume();
             gameStarted = true;
             resetTimelines();
         }
