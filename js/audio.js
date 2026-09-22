@@ -42,7 +42,7 @@ class AudioManager {
         for (let key in bgmFiles) {
             let audioEl = new Audio(bgmFiles[key]);
             audioEl.loop = !noLoopTracks.includes(key);
-            audioEl.volume = 0.5; // Default BGM volume
+            audioEl.volume = 1.0; // Default BGM volume
             this.bgm[key] = audioEl;
         }
         
@@ -65,7 +65,7 @@ class AudioManager {
         }
 
         this.currentBGMKey = trackKey;
-        this.bgm[trackKey].volume = 0.5;
+        this.bgm[trackKey].volume = 1.0;
         this.bgm[trackKey].play().catch(e => console.warn('BGM Autoplay prevented:', e));
     }
 
@@ -82,6 +82,8 @@ class AudioManager {
 
         if (this.fadeInterval) {
             clearInterval(this.fadeInterval);
+            this.fadeInterval = null;
+            if (prevTrack) prevTrack.volume = 1.0;
         }
 
         this.currentBGMKey = nextTrackKey;
@@ -91,7 +93,7 @@ class AudioManager {
 
         const steps = 20;
         const intervalTime = (duration * 1000) / steps;
-        const volumeStep = 0.5 / steps;
+        const volumeStep = 1.0 / steps;
         let currentStep = 0;
 
         this.fadeInterval = setInterval(() => {
@@ -100,7 +102,7 @@ class AudioManager {
             if (prevTrack && prevTrack.volume >= volumeStep) {
                 prevTrack.volume -= volumeStep;
             }
-            if (nextTrack.volume <= 0.5 - volumeStep) {
+            if (nextTrack.volume <= 1.0 - volumeStep) {
                 nextTrack.volume += volumeStep;
             }
 
@@ -110,9 +112,9 @@ class AudioManager {
                 if (prevTrack) {
                     prevTrack.pause();
                     prevTrack.currentTime = 0;
-                    prevTrack.volume = 0.5;
+                    prevTrack.volume = 1.0;
                 }
-                nextTrack.volume = 0.5;
+                nextTrack.volume = 1.0;
             }
         }, intervalTime);
     }

@@ -1122,7 +1122,12 @@ function handleCollisions(ts) {
 
         if (boss.hp <= 0) {
             score += 5000; difficultyWave++; waveClearTimer = 150; bossMode = false; stageTimer = 0; resetTimelines(); bombsSpawnedInWave = 0; flankerWarning = { timer: 0, side: null, y: 0 };
-            if (audio) audio.playExplosion();
+            if (audio) {
+                audio.playExplosion();
+                if (difficultyWave <= 6) {
+                    audio.fadeTransition('stage' + difficultyWave);
+                }
+            }
             let b_name = boss.name;
             let b_defeat = boss.defeat;
             let isLastBoss = (boss.constructor === BossRoster[BossRoster.length - 1]);
