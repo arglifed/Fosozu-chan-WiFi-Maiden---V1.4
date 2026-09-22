@@ -552,7 +552,7 @@ class MadameSatsuki extends Boss {
             }
             
             if (this.teleportTimer <= 0 && !this.teleportWarnTimer) {
-                this.teleportWarnTimer = 45;
+                this.teleportWarnTimer = 25;
                 this.intangible = true;
                 
                 if (player) {

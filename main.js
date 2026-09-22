@@ -1541,26 +1541,52 @@ function drawSatellites(pObj) {
     if (boss) {
         if (boss.teleportWarnTimer > 0) {
             ctx.save();
+            ctx.translate(boss.futureX, boss.futureY);
+            
             ctx.strokeStyle = '#ff006e';
-            ctx.lineWidth = 3;
+            ctx.lineWidth = 2;
             ctx.shadowBlur = 15;
             ctx.shadowColor = '#ff006e';
             
-            // Pulsing target circle
+            // Base Circle: Rotating Hexagram
+            ctx.save();
+            ctx.rotate(Date.now() * 0.005);
             ctx.beginPath();
-            let reticlePulse = 60 + Math.sin(Date.now() * 0.02) * 10;
-            ctx.arc(boss.futureX, boss.futureY, reticlePulse, 0, Math.PI * 2);
+            ctx.arc(0, 0, 40, 0, Math.PI * 2);
             ctx.stroke();
             
-            // Target crosshairs
+            // First Triangle
             ctx.beginPath();
-            ctx.moveTo(boss.futureX - 80, boss.futureY); ctx.lineTo(boss.futureX - 20, boss.futureY);
-            ctx.moveTo(boss.futureX + 20, boss.futureY); ctx.lineTo(boss.futureX + 80, boss.futureY);
-            ctx.moveTo(boss.futureX, boss.futureY - 80); ctx.lineTo(boss.futureX, boss.futureY - 20);
-            ctx.moveTo(boss.futureX, boss.futureY + 20); ctx.lineTo(boss.futureX, boss.futureY + 80);
+            for (let i = 0; i < 3; i++) {
+                let a = i * Math.PI * 2 / 3;
+                let px = Math.cos(a) * 40;
+                let py = Math.sin(a) * 40;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
             ctx.stroke();
             
-            ctx.restore();
+            // Second Triangle (Offset by PI/3)
+            ctx.beginPath();
+            for (let i = 0; i < 3; i++) {
+                let a = i * Math.PI * 2 / 3 + Math.PI / 3;
+                let px = Math.cos(a) * 40;
+                let py = Math.sin(a) * 40;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            ctx.stroke();
+            ctx.restore(); // Restore rotation
+            
+            // The Collapsing Ring
+            let collapseRadius = (boss.teleportWarnTimer / 25) * 80;
+            ctx.beginPath();
+            ctx.arc(0, 0, Math.max(0, collapseRadius), 0, Math.PI * 2);
+            ctx.stroke();
+            
+            ctx.restore(); // Restore translation, shadow, line width
         } else {
             let renderType = (is2PMode && boss.type === 'pink') ? 'bowl' : boss.type;
             if (assets[renderType] && assets[renderType].loaded) {
