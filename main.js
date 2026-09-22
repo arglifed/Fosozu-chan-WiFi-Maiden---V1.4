@@ -142,6 +142,7 @@ let sessionHiScore = parseInt(localStorage.getItem('fosozu_hiScore')) || 0;
 let score = 0, graze = 0, lives = 3, bombs = 3, power = 0, gameOver = false, gameStarted = false, isPaused = false;
 let bossMode = false, boss = null, difficultyWave = 1, scoreAtLastBoss = 0, continueUsed = false;
 let waveClearTimer = 0, bombEffectTimer = 0, invulnTimer = 0, shakeTimer = 0, stallingTimer = 0, continueCountdown = 0;
+let satsukiSummonTimer = 0; // 10-second tension delay before Satsuki spawns
 let slowMoTimer = 0, flashTimer = 0, grazeStreak = 0, streakTimer = 0, hasShield = false, waveGraze = 0, dialogueIndex = 0, resetAnimTimer = 0, linkIteration = 1, shieldBrokenInWave = false;
 
 // WAVE-BASED MECHANICS
@@ -1290,19 +1291,33 @@ function updateBoss(ts) {
     }
     // Spawn Boss when wave timer concludes
     if (!bossMode && waveClearTimer <= 0 && stageTimer >= (WAVE_DURATIONS[difficultyWave] || 3600) && enemies.length === 0) {
+        if (difficultyWave === 6) {
+            // 10-second eerie silence before Satsuki — stage6 BGM keeps playing
+            if (satsukiSummonTimer === 0) {
+                satsukiSummonTimer = 600; // start the countdown once
+            }
+            satsukiSummonTimer -= ts;
+            if (satsukiSummonTimer > 0) return; // wait out the tension gap
+        }
+
         bossMode = true;
+        satsukiSummonTimer = 0;
         document.getElementById('boss-ui').style.display = 'block';
 
         let tIdx = (difficultyWave - 1) % BossRoster.length;
         let BossClass = BossRoster[tIdx];
         boss = new BossClass(difficultyWave, linkIteration);
         
+        // boss6 music is triggered inside MadameSatsuki constructor
         if (audio && difficultyWave !== 6) {
             audio.hardCut('boss' + difficultyWave);
         }
 
         bossNameEl.innerText = boss.name;
-        startBossDialogue();
+        // Satsuki triggers dialogue herself after summoning; others go straight to dialogue
+        if (difficultyWave !== 6) {
+            startBossDialogue();
+        }
     }
 }
 
@@ -1708,6 +1723,70 @@ function drawSatellites(pObj) {
     if (is2PMode) drawPlayer(player2, false);
 
     if (boss) {
+        // --- Satsuki Summoning Circle ---
+        if (boss.introState === 'summon') {
+            const SUMMON_MAX = 180;
+            let progress = Math.max(0, Math.min(1, 1 - (boss.introTimer / SUMMON_MAX)));
+            let alpha = progress;
+            let radius = 30 + progress * 80;
+            let outerRadius = 20 + progress * 110;
+            let rotation = progress * Math.PI * 4; // two full rotations over the summon
+
+            ctx.save();
+            ctx.translate(boss.x, boss.y);
+            ctx.globalAlpha = alpha;
+            ctx.strokeStyle = '#d90429';
+            ctx.shadowBlur = 20 + progress * 30;
+            ctx.shadowColor = '#d90429';
+            ctx.lineWidth = 1.5;
+
+            // Outer ring
+            ctx.beginPath();
+            ctx.arc(0, 0, outerRadius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Inner ring
+            ctx.beginPath();
+            ctx.arc(0, 0, radius * 0.45, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Rotating hexagram
+            ctx.save();
+            ctx.rotate(rotation);
+            for (let tri = 0; tri < 2; tri++) {
+                ctx.beginPath();
+                for (let i = 0; i < 3; i++) {
+                    let a = i * Math.PI * 2 / 3 + (tri * Math.PI / 3);
+                    let px = Math.cos(a) * radius;
+                    let py = Math.sin(a) * radius;
+                    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.stroke();
+            }
+            ctx.restore();
+
+            // 6 rune points on outer ring
+            for (let i = 0; i < 6; i++) {
+                let a = (i / 6) * Math.PI * 2 + rotation * 0.5;
+                let rx = Math.cos(a) * outerRadius;
+                let ry = Math.sin(a) * outerRadius;
+                ctx.beginPath();
+                ctx.arc(rx, ry, 3, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffb3c1';
+                ctx.fill();
+            }
+
+            // Glow pulse in centre
+            let pulse = 0.3 + Math.sin(Date.now() * 0.008) * 0.2;
+            ctx.beginPath();
+            ctx.arc(0, 0, 12 * progress, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(217, 4, 41, ${pulse * progress})`;
+            ctx.fill();
+
+            ctx.globalAlpha = 1.0;
+            ctx.restore();
+        } else
         if (boss.teleportWarnTimer > 0) {
             ctx.save();
             ctx.translate(boss.futureX, boss.futureY);

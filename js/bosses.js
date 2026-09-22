@@ -537,72 +537,92 @@ class MadameSatsuki extends Boss {
             "Madame Satsuki: Terminate protocol initiated."
         ];
         this.defeat = "Madame Satsuki: Impossible... my root security... compromised! SYSTEM REBOOT!";
+
+        // Pin her directly to combat position — no fly-in
+        this.x = 300;
+        this.y = 130;
+        this.targetY = 130;
+
+        // Intro summoning state
+        this.introState = 'summon'; // 'summon' -> null (combat)
+        this.introTimer = 180;      // 3 seconds at 60fps
+
+        // Drop the boss music immediately on spawn
+        if (typeof audio !== 'undefined' && audio) {
+            audio.hardCut('boss6');
+        }
     }
 
     update(ts, player, bossBullets) {
         if (this.flashTimer > 0) this.flashTimer -= ts;
-        if (this.y < this.targetY) {
-            this.y += 2.5 * ts;
-        } else {
-            this.timer += ts;
-            if (this.teleportTimer === undefined) this.teleportTimer = 150;
-            
-            if (!this.teleportWarnTimer && this.teleportTimer > 0) {
-                this.teleportTimer -= ts;
-            }
-            
-            if (this.teleportTimer <= 0 && !this.teleportWarnTimer) {
-                this.teleportWarnTimer = 25;
-                this.intangible = true;
-                
-                if (typeof audio !== 'undefined' && audio && !this.introMusicPlayed) {
-                    audio.hardCut('boss6');
-                    this.introMusicPlayed = true;
+
+        // --- Summoning Intro Phase ---
+        if (this.introState === 'summon') {
+            this.introTimer -= ts;
+            if (this.introTimer <= 0) {
+                this.introState = null;
+                // Trigger dialogue now that she is fully materialised
+                if (typeof startBossDialogue !== 'undefined') {
+                    startBossDialogue();
                 }
-                
-                if (player) {
-                    if (Math.random() < 0.25) {
-                        // 25% Jumpscare: Teleport BELOW the player
-                        this.futureX = Math.max(80, Math.min(520, player.x + (Math.random() * 160 - 80)));
-                        this.futureY = Math.max(100, Math.min(650, player.y + 220 + Math.random() * 120));
-                    } else {
-                        // 75% Normal: Teleport above/sides
-                        let side = Math.random() > 0.5 ? 1 : -1;
-                        let offsetX = side * (120 + Math.random() * 180);
-                        let offsetY = -(160 + Math.random() * 160);
-                        this.futureX = Math.max(60, Math.min(540, player.x + offsetX));
-                        this.futureY = Math.max(50, Math.min(400, player.y + offsetY));
-                    }
+            }
+            return; // No shooting or movement during summon
+        }
+
+        // --- Combat Phase (unchanged from before) ---
+        this.timer += ts;
+        if (this.teleportTimer === undefined) this.teleportTimer = 150;
+        
+        if (!this.teleportWarnTimer && this.teleportTimer > 0) {
+            this.teleportTimer -= ts;
+        }
+        
+        if (this.teleportTimer <= 0 && !this.teleportWarnTimer) {
+            this.teleportWarnTimer = 25;
+            this.intangible = true;
+            
+            if (player) {
+                if (Math.random() < 0.25) {
+                    // 25% Jumpscare: Teleport BELOW the player
+                    this.futureX = Math.max(80, Math.min(520, player.x + (Math.random() * 160 - 80)));
+                    this.futureY = Math.max(100, Math.min(650, player.y + 220 + Math.random() * 120));
                 } else {
-                    this.futureX = 80 + Math.random() * 440;
-                    this.futureY = 60 + Math.random() * 180;
-                }
-                
-                // Safe Zone Y-Clamp: Never materialize in the bottom 180 pixels
-                this.futureY = Math.min(this.futureY, 800 - 180);
-            }
-            
-            if (this.teleportWarnTimer > 0) {
-                this.teleportWarnTimer -= ts;
-                if (this.teleportWarnTimer <= 0) {
-                    this.teleportWarnTimer = 0;
-                    this.intangible = false;
-                    this.x = this.futureX;
-                    this.y = this.futureY;
-                    this.teleportTimer = 150 + Math.random() * 90;
-                    this.flashTimer = 40;
-                    
-                    if (this.phase2 && typeof enemies !== 'undefined') {
-                        enemies.push({ x: this.x - 50, y: this.y, vx: -1.5, vy: 1.5, speed: 2, type: 'blue', nextShot: Date.now() + 1000, hp: 5, repeatsShot: true });
-                        enemies.push({ x: this.x + 50, y: this.y, vx: 1.5, vy: 1.5, speed: 2, type: 'blue', nextShot: Date.now() + 1000, hp: 5, repeatsShot: true });
-                    }
+                    // 75% Normal: Teleport above/sides
+                    let side = Math.random() > 0.5 ? 1 : -1;
+                    let offsetX = side * (120 + Math.random() * 180);
+                    let offsetY = -(160 + Math.random() * 160);
+                    this.futureX = Math.max(60, Math.min(540, player.x + offsetX));
+                    this.futureY = Math.max(50, Math.min(400, player.y + offsetY));
                 }
             } else {
-                let cx = 300, cy = 100;
-                this.x += (cx - this.x) * 0.003 * ts;
-                this.y += (cy - this.y) * 0.003 * ts;
-                if (this.flashTimer <= 0) this.shoot(player, bossBullets);
+                this.futureX = 80 + Math.random() * 440;
+                this.futureY = 60 + Math.random() * 180;
             }
+            
+            // Safe Zone Y-Clamp: Never materialize in the bottom 180 pixels
+            this.futureY = Math.min(this.futureY, 800 - 180);
+        }
+        
+        if (this.teleportWarnTimer > 0) {
+            this.teleportWarnTimer -= ts;
+            if (this.teleportWarnTimer <= 0) {
+                this.teleportWarnTimer = 0;
+                this.intangible = false;
+                this.x = this.futureX;
+                this.y = this.futureY;
+                this.teleportTimer = 150 + Math.random() * 90;
+                this.flashTimer = 40;
+                
+                if (this.phase2 && typeof enemies !== 'undefined') {
+                    enemies.push({ x: this.x - 50, y: this.y, vx: -1.5, vy: 1.5, speed: 2, type: 'blue', nextShot: Date.now() + 1000, hp: 5, repeatsShot: true });
+                    enemies.push({ x: this.x + 50, y: this.y, vx: 1.5, vy: 1.5, speed: 2, type: 'blue', nextShot: Date.now() + 1000, hp: 5, repeatsShot: true });
+                }
+            }
+        } else {
+            let cx = 300, cy = 100;
+            this.x += (cx - this.x) * 0.003 * ts;
+            this.y += (cy - this.y) * 0.003 * ts;
+            if (this.flashTimer <= 0) this.shoot(player, bossBullets);
         }
     }
 
