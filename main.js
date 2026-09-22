@@ -262,13 +262,7 @@ player2.image.src = 'pink_girl.png';
 
 let audio = new AudioManager();
 
-volMaster.value = audio.masterVolume;
-volBgm.value = audio.bgmVolume;
-volSe.value = audio.seVolume;
-volMasterP.value = audio.masterVolume;
-volBgmP.value = audio.bgmVolume;
-volSeP.value = audio.seVolume;
-updateAudioVolumes();
+
 
 let gamepadState = { up: false, down: false, left: false, right: false, shoot: false, bomb: false, focus: false, start: false, select: false };
 let prevGamepadState = Object.assign({}, gamepadState);
@@ -527,6 +521,14 @@ function updateAudioVolumesP() {
 
 [volMaster, volBgm, volSe].forEach(el => el.addEventListener('input', updateAudioVolumes));
 [volMasterP, volBgmP, volSeP].forEach(el => el.addEventListener('input', updateAudioVolumesP));
+
+volMaster.value = audio.masterVolume;
+volBgm.value = audio.bgmVolume;
+volSe.value = audio.seVolume;
+volMasterP.value = audio.masterVolume;
+volBgmP.value = audio.bgmVolume;
+volSeP.value = audio.seVolume;
+updateAudioVolumes();
 
 const devToggle = document.getElementById('dev-mode-toggle');
 devToggle.checked = isDevMode;
