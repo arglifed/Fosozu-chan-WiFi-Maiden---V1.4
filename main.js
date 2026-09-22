@@ -974,7 +974,14 @@ function processContinue() {
         flankerWarning = { timer: 0, side: null, y: 0 };
         bossMode = false;
         boss = null;
+        satsukiSummonTimer = 0;
         document.getElementById('boss-ui').style.display = 'none';
+        // Restart the correct stage BGM for the wave we're resetting to
+        if (audio) {
+            audio.forceStopAllFadesAndTracks();
+            const waveTrack = 'stage' + Math.min(difficultyWave, 6);
+            audio.hardCut(waveTrack);
+        }
     }
 }
 
@@ -1366,6 +1373,12 @@ function updateBoss(ts) {
 
         let tIdx = (difficultyWave - 1) % BossRoster.length;
         let BossClass = BossRoster[tIdx];
+
+        // For boss6, nuke any lingering stage6 BGM cleanly before the constructor fires hardCut('boss6')
+        if (audio && difficultyWave === 6) {
+            audio.forceStopAllFadesAndTracks();
+        }
+
         boss = new BossClass(difficultyWave, linkIteration);
         
         // boss6 music is triggered inside MadameSatsuki constructor
