@@ -2069,21 +2069,45 @@ function drawSatellites(pObj) {
     if (is2PMode) drawSatellites(player2);
 
     bullets.forEach(b => {
-        if (b.isP2Bullet || b.isP2Homing) {
-            // PingKo: draw as a glowing elongated beam
-            ctx.save();
-            ctx.shadowColor = b.color || '#ff69b4';
-            ctx.shadowBlur = 8;
-            ctx.fillStyle = b.color || '#ff69b4';
-            ctx.fillRect(b.x - (b.w || 4) / 2, b.y - (b.h || 10), (b.w || 4), (b.h || 10));
-            // Bright core
-            ctx.fillStyle = 'rgba(255,255,255,0.6)';
-            ctx.fillRect(b.x - 1, b.y - (b.h || 10), 2, (b.h || 10));
-            ctx.restore();
+        let isP2 = b.isP2Bullet || b.isP2Homing;
+        let isHoming = b.isHoming || b.isP2Homing;
+        let colorBase = isP2 ? '#ff69b4' : '#00ffff';
+        let shape = isHoming ? 'amulet' : 'rice';
+
+        ctx.save();
+        ctx.translate(b.x, b.y);
+
+        if (isHoming) {
+            ctx.rotate(Date.now() * 0.01);
         } else {
-            ctx.fillStyle = b.color || (hasShield ? '#00f2ff' : (grazeStreak >= 5 ? '#ffca3a' : '#00f2ff'));
-            ctx.fillRect(b.x - (b.w || 4) / 2, b.y - (b.h || 10), (b.w || 4), (b.h || 10));
+            let angle = Math.atan2(b.vy || -1, b.vx || 0);
+            ctx.rotate(angle);
         }
+
+        if (shape === 'rice') {
+            const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, 8);
+            grad.addColorStop(0, colorBase);
+            grad.addColorStop(1, colorBase);
+            
+            ctx.fillStyle = grad;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 10, 5, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 5, 2, 0, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (shape === 'amulet') {
+            ctx.fillStyle = colorBase;
+            ctx.fillRect(-8, -6, 16, 12);
+            
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(-5, -3, 10, 6);
+        }
+
+        ctx.restore();
     });
     effects.forEach(eff => { ctx.strokeStyle = `rgba(0, 242, 255, ${eff.opacity})`; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(eff.x, eff.y, eff.r, 0, Math.PI * 2); ctx.stroke(); });
 
