@@ -424,7 +424,7 @@ function startTitleMusic() {
     if (titleMusicStarted || !audio) return;
     titleMusicStarted = true;
     audio.resume();
-    let titleTrack = (gameCleared && is2PMode) ? 'alt_title' : 'title';
+    let titleTrack = (gameCleared || isDevMode) ? 'alt_title' : 'title';
     audio.playBGM(titleTrack);
 }
 document.addEventListener('click', startTitleMusic, {once: true});
@@ -478,6 +478,13 @@ devToggle.addEventListener('change', (e) => {
     isDevMode = e.target.checked;
     localStorage.setItem('fosozu_devMode', isDevMode);
     update2PButton();
+    if (audio) {
+        if (isDevMode || gameCleared) {
+            audio.fadeTransition('alt_title');
+        } else {
+            audio.fadeTransition('title');
+        }
+    }
 });
 
 
