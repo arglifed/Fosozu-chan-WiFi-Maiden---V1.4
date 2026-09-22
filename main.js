@@ -1599,9 +1599,94 @@ function drawSatellites(pObj) {
                 ctx.restore();
             }
         } else {
-            ctx.fillStyle = '#444'; ctx.fillRect(e.x - 15, e.y - 15, 30, 30); 
-            ctx.strokeStyle = (e.type === 'blue' ? '#00f2ff' : (e.type === 'pink' ? '#ff006e' : '#0f0')); 
-            ctx.strokeRect(e.x - 15, e.y - 15, 30, 30); 
+            ctx.save();
+            ctx.translate(e.x, e.y);
+            ctx.lineWidth = 2;
+            ctx.fillStyle = '#111'; // To obscure background objects behind them
+
+            if (e.type === 'blue') {
+                // Glitch Faerie - Cyan Crystal
+                ctx.strokeStyle = '#00f2ff';
+                ctx.shadowColor = '#00f2ff';
+                ctx.shadowBlur = 12;
+                
+                ctx.beginPath();
+                ctx.moveTo(0, -22);
+                ctx.lineTo(14, 0);
+                ctx.lineTo(0, 22);
+                ctx.lineTo(-14, 0);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                
+                // Inner geometric detail
+                ctx.beginPath();
+                ctx.moveTo(0, -12);
+                ctx.lineTo(6, 0);
+                ctx.lineTo(0, 12);
+                ctx.lineTo(-6, 0);
+                ctx.closePath();
+                ctx.stroke();
+
+            } else if (e.type === 'green') {
+                // Rogue Packet - Swept origami dart
+                ctx.strokeStyle = '#0f0';
+                ctx.shadowColor = '#0f0';
+                ctx.shadowBlur = 12;
+                
+                ctx.beginPath();
+                ctx.moveTo(0, 22);      // Pointing down
+                ctx.lineTo(18, -18);    // Right wing tip
+                ctx.lineTo(0, -6);      // Inner notch
+                ctx.lineTo(-18, -18);   // Left wing tip
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                
+                // Center ridge line
+                ctx.beginPath();
+                ctx.moveTo(0, -6);
+                ctx.lineTo(0, 22);
+                ctx.stroke();
+
+            } else if (e.type === 'pink') {
+                // Firewall Golem - Interlocking rotating tank
+                ctx.strokeStyle = '#ff006e';
+                ctx.shadowColor = '#ff006e';
+                ctx.shadowBlur = 12;
+                
+                // Slow rotation
+                ctx.rotate(Date.now() * 0.0015);
+                
+                // Outer Hexagon
+                ctx.beginPath();
+                for (let i = 0; i < 6; i++) {
+                    let a = i * Math.PI / 3;
+                    let px = Math.cos(a) * 22;
+                    let py = Math.sin(a) * 22;
+                    if (i === 0) ctx.moveTo(px, py);
+                    else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                
+                // Inner overlapping triangles (Star of David) for icosahedron illusion
+                ctx.beginPath();
+                ctx.moveTo(-12, -7); ctx.lineTo(12, -7); ctx.lineTo(0, 14); ctx.closePath();
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(-12, 7); ctx.lineTo(12, 7); ctx.lineTo(0, -14); ctx.closePath();
+                ctx.stroke();
+            } else {
+                // Fallback for any other type
+                ctx.fillStyle = '#444'; 
+                ctx.fillRect(-15, -15, 30, 30); 
+                ctx.strokeStyle = '#fff';
+                ctx.strokeRect(-15, -15, 30, 30); 
+            }
+            ctx.restore();
         }
     });
 
