@@ -60,6 +60,14 @@ Controls can be fully remapped in the **Settings Menu**. Default controls are:
 
 *Note: The Settings Menu also contains fully featured Volume Sliders for Master, BGM, and SFX, which are saved across sessions.*
 
+## 🛠️ Dev Controls
+If **Dev Controls** are enabled in the Settings Menu (which disables leaderboard submissions), you gain access to QA overrides via the keyboard:
+- **`1`**: Instantly increase the NG+ Link Iteration.
+- **`2`**: Maximize Power and set Bombs to 9.
+- **`3`**: Instantly skip the current wave or instantly kill the active boss.
+- **`8`**: QA Warp. Instantly transition to Wave 6 (Madame Satsuki) while forcing a flawless 1CC state to test the endgame transition.
+- **`9`**: God Mode Toggle. Ignore all damage and life loss (though audio/visual hit effects still play).
+
 ## 🎵 Disclaimer: Audio & Music
 **Please Note:** The music and audio tracks used in this game were downloaded for free from itch.io and are intended for testing purposes only. I do not own the rights to the music, and I am currently in the process of asking for permission from the original creators to use it.
 

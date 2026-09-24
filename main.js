@@ -98,14 +98,14 @@ async function fetchLeaderboard() {
     }
 }
 
-async function submitScore(name, score, wave) {
+async function submitScore(name, score, wave, continues = 0) {
     if (isDevMode) { console.log("Dev mode active: Score blocked."); return; }
     try {
         let endpoint = is2PMode ? 'coop_leaderboard' : 'leaderboard';
         await fetch(`${SUPABASE_URL}/rest/v1/${endpoint}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY },
-            body: JSON.stringify({ name: name.toUpperCase(), score: score, wave: wave })
+            body: JSON.stringify({ name: name.toUpperCase(), score: score, wave: wave, continues: continues })
         });
         fetchLeaderboard();
     } catch (e) {
@@ -140,7 +140,7 @@ Object.values(assets).forEach(a => {
 let sessionHiScore = parseInt(localStorage.getItem('fosozu_hiScore')) || 0;
 
 let score = 0, graze = 0, lives = 3, bombs = 3, power = 0, gameOver = false, gameStarted = false, isPaused = false;
-let bossMode = false, boss = null, difficultyWave = 1, scoreAtLastBoss = 0, continueUsed = false;
+let bossMode = false, boss = null, difficultyWave = 1, scoreAtLastBoss = 0, continueUsed = false, continuesUsed = 0;
 let waveClearTimer = 0, p1BombTimer = 0, p2BombTimer = 0, invulnTimer = 0, shakeTimer = 0, stallingTimer = 0, continueCountdown = 0;
 let satsukiSummonTimer = 0; // 10-second tension delay before Satsuki spawns
 let slowMoTimer = 0, flashTimer = 0, grazeStreak = 0, streakTimer = 0, hasShield = false, waveGraze = 0, dialogueIndex = 0, resetAnimTimer = 0, linkIteration = 1, shieldBrokenInWave = false;
@@ -438,6 +438,45 @@ const waveTimelines = {
         { time: 12900, type: 'FLANK_RIGHT',y: 250, spawned: false },
         { time: 13200, type: 'SHIELD_WALL',spawned: false },
         { time: 13500, type: 'SLOW_CIRCLE',spawned: false }
+    ],
+    7: [ // 9000 frames (150s) — Extra Stage Gauntlet
+        { time: 0,    type: 'CIRCLE', spawned: false },
+        { time: 300,  type: 'SWEEP_LEFT',  spawned: false },
+        { time: 300,  type: 'SWEEP_RIGHT', spawned: false },
+        { time: 600,  type: 'WALL',  spawned: false },
+        { time: 1000, type: 'CIRCLE', spawned: false },
+        { time: 1200, type: 'FLANK_LEFT', y: 300, spawned: false },
+        { time: 1200, type: 'FLANK_RIGHT',y: 300, spawned: false },
+        { time: 1500, type: 'SWEEP_LEFT',  spawned: false },
+        { time: 1500, type: 'SWEEP_RIGHT', spawned: false },
+        { time: 1800, type: 'V_SHAPE',  spawned: false },
+        { time: 2400, type: 'SLOW_CIRCLE', spawned: false },
+        { time: 2400, type: 'CIRCLE', spawned: false },
+        { time: 2800, type: 'DIVER_SWOOP',  spawned: false },
+        { time: 2800, type: 'DIVER_SWOOP', spawned: false },
+        { time: 3200, type: 'SHIELD_WALL',  spawned: false },
+        { time: 3600, type: 'SLOW_CIRCLE', spawned: false },
+        { time: 3600, type: 'SWEEP_LEFT',  spawned: false },
+        { time: 3600, type: 'SWEEP_RIGHT', spawned: false },
+        { time: 4200, type: 'WALL',  spawned: false },
+        { time: 4200, type: 'V_SHAPE',  spawned: false },
+        { time: 4800, type: 'CIRCLE', spawned: false },
+        { time: 5100, type: 'FLANK_LEFT', y: 200,  spawned: false },
+        { time: 5100, type: 'FLANK_RIGHT',y: 200, spawned: false },
+        { time: 5400, type: 'FLANK_LEFT', y: 400, spawned: false },
+        { time: 5400, type: 'FLANK_RIGHT',y: 400, spawned: false },
+        { time: 6000, type: 'SHIELD_WALL',  spawned: false },
+        { time: 6600, type: 'SLOW_CIRCLE', spawned: false },
+        { time: 6600, type: 'DIVER_SWOOP',  spawned: false },
+        { time: 6600, type: 'DIVER_SWOOP', spawned: false },
+        { time: 7200, type: 'WALL',  spawned: false },
+        { time: 7800, type: 'CIRCLE', spawned: false },
+        { time: 7800, type: 'SWEEP_LEFT',  spawned: false },
+        { time: 7800, type: 'SWEEP_RIGHT', spawned: false },
+        { time: 8400, type: 'V_SHAPE',  spawned: false },
+        { time: 8400, type: 'SHIELD_WALL', spawned: false },
+        { time: 8800, type: 'DIVER_SWOOP',  spawned: false },
+        { time: 8800, type: 'DIVER_SWOOP', spawned: false }
     ]
 };
 
@@ -447,7 +486,7 @@ function resetTimelines() {
     }
 }
 
-const WAVE_DURATIONS = { 1: 8100, 2: 10000, 3: 10000, 4: 12000, 5: 12000, 6: 14000 };
+const WAVE_DURATIONS = { 1: 8100, 2: 10000, 3: 10000, 4: 12000, 5: 12000, 6: 14000, 7: 9000 };
 let bombsSpawnedInWave = 0;
 let comboChain = 0, comboTimer = 0;
 let flankerWarning = { timer: 0, side: null, y: 0 };
@@ -457,8 +496,8 @@ const keys = {}, bullets = [], bossBullets = [], enemyBullets = [], enemies = []
 const activeEMPs = [];
 const EMP_MAX_RADIUS = 600 * 1.5; // canvas.width * 1.5
 const stars = Array.from({ length: 80 }, () => ({ x: Math.random() * 600, y: Math.random() * 800, size: Math.random() * 2, speed: Math.random() * 2 + 1 }));
-const player = { x: 300, y: 700, speed: 4.5, focusSpeed: 2.5, hitboxSize: 4, grazeSize: 25, satellites: [{ x: 300, y: 700 }, { x: 300, y: 700 }, { x: 300, y: 700 }, { x: 300, y: 700 }] };
-const player2 = { x: 350, y: 700, speed: 5.3, focusSpeed: 3.0, hitboxSize: 4, grazeSize: 25, satellites: [{ x: 350, y: 700 }, { x: 350, y: 700 }, { x: 350, y: 700 }, { x: 350, y: 700 }], image: new Image() };
+const player = { x: 300, y: 700, speed: 4.5, focusSpeed: 2.5, hitboxSize: 4, grazeSize: 25, fireCooldown: 0, satellites: [{ x: 300, y: 700 }, { x: 300, y: 700 }, { x: 300, y: 700 }, { x: 300, y: 700 }] };
+const player2 = { x: 350, y: 700, speed: 5.3, focusSpeed: 3.0, hitboxSize: 4, grazeSize: 25, fireCooldown: 0, satellites: [{ x: 350, y: 700 }, { x: 350, y: 700 }, { x: 350, y: 700 }, { x: 350, y: 700 }], image: new Image() };
 player2.image.src = 'pink_girl.png';
 
 let audio = new AudioManager();
@@ -637,6 +676,8 @@ document.addEventListener('gamepadconnected', startTitleMusic, {once: true});
 
 // UI Menu Logic
 function startGameCommon() {
+    continuesUsed = 0;
+    window.devCheatsUsed = false;
     if (audio) {
         audio.resume();
         audio.fadeTransition('stage1');
@@ -901,11 +942,37 @@ window.addEventListener('keydown', e => {
 
     // STAFF MODE:
     if (isDevMode) {
-        if (k === '1') { linkIteration++; ngValEl.innerText = linkIteration; }
-        if (k === '2') { bombs = 9; bombsEl.innerText = bombs; power = 64; powerEl.innerText = power; }
+        if (k === '1') { window.devCheatsUsed = true; linkIteration++; ngValEl.innerText = linkIteration; }
+        if (k === '2') { window.devCheatsUsed = true; bombs = 9; bombsEl.innerText = bombs; power = 64; powerEl.innerText = power; }
         if (k === '3') {
-            if (boss) { boss.hp = 0; }
+            window.devCheatsUsed = true;
+            if (difficultyWave === 6) {
+                window.unlockExtraStage = true;
+                window.devCheatsUsed = false;
+            }
+            if (window.isEndingSequence) {
+                clearTimeout(window.victoryTimeout);
+                window.isEndingSequence = false;
+                triggerCreditsSequence(window.currentUnlockExtraStage);
+            } else if (boss) { boss.hp = 0; }
             else { stageTimer = WAVE_DURATIONS[difficultyWave] || 3600; enemies.length = 0; waveClearTimer = 0; }
+        }
+        if (k === '8') {
+            difficultyWave = 6;
+            bossMode = true;
+            boss = new MadameSatsuki(6, linkIteration);
+            stageTimer = WAVE_DURATIONS[6] || 3600;
+            enemies.length = 0;
+            enemyBullets.length = 0;
+            bossBullets.length = 0;
+            waveClearTimer = 0;
+            continuesUsed = 0;
+            window.devCheatsUsed = false;
+            document.getElementById('boss-ui').style.display = 'block';
+            bossNameEl.innerText = boss.name;
+        }
+        if (k === '9') {
+            window.godMode = !window.godMode;
         }
     }
 
@@ -971,7 +1038,7 @@ function updateArcadeNameEntry() {
 }
 
 function finalizeScoreSubmission(name) {
-    submitScore(name, score, difficultyWave);
+    submitScore(name, score, difficultyWave, continuesUsed);
     document.getElementById('submit-score-ui').style.display = 'none';
     continueCountdown = 10;
     continueUI.style.display = 'flex';
@@ -1067,6 +1134,93 @@ function useBomb(sourcePlayer, isP1 = true) {
     }
 }
 
+function triggerVictorySequence(unlockExtraStage) {
+    if (window.isEndingSequence) return;
+    
+    if (audio) audio.fadeTransition('ending');
+    
+    window.isEndingSequence = true;
+    window.currentUnlockExtraStage = unlockExtraStage;
+    
+    // Immediately increment iteration and update HUD for NG+ visually
+    linkIteration++; 
+    ngValEl.innerText = linkIteration;
+    iterText.innerText = "OVERCLOCKING TO ITERATION " + linkIteration + "...";
+
+    // Stop spawning enemies and pause game mechanics, but allow rendering
+    bossMode = false; 
+    enemies.length = 0;
+    enemyBullets.length = 0;
+    bossBullets.length = 0;
+    
+    window.victoryTimeout = setTimeout(() => {
+        triggerCreditsSequence(unlockExtraStage);
+        
+        // Initialize background gameplay underneath the credits (ALWAYS NG+)
+        difficultyWave = 1;
+        bossMode = false;
+        stageTimer = 0;
+        resetTimelines();
+        window.skipNextSummaryBox = true;
+        isPaused = false;
+    }, 5000);
+}
+
+let creditsScrollY = 800;
+
+function triggerCreditsSequence(unlockExtraStage) {
+    let creditsSkipped = false;
+    let creditsEnded = false;
+    
+    creditsScrollY = 800; // Reset scroll position for staff roll
+    if (audio) {
+        if (difficultyWave > 6) audio.playBGM('extra_ending');
+        else audio.playBGM('credits');
+    }
+    
+    function skipCredits(e) {
+        let k = e.key ? e.key.toLowerCase() : null;
+        let p1Shoot = (k === keyMap.shoot || k === keyMap.start);
+        if (p1Shoot && !creditsSkipped) {
+            creditsSkipped = true;
+            endCredits();
+        }
+    }
+    
+    let skipInterval = setInterval(() => {
+        let gp = navigator.getGamepads()[0];
+        if (gp && (gp.buttons[0].pressed || gp.buttons[9].pressed)) {
+            if (!creditsSkipped) {
+                creditsSkipped = true;
+                endCredits();
+            }
+        }
+    }, 100);
+
+    document.addEventListener('keydown', skipCredits);
+
+    let creditsTimeout = setTimeout(() => {
+        if (!creditsSkipped) {
+            creditsSkipped = true;
+            endCredits();
+        }
+    }, 10000);
+
+    function endCredits() {
+        if (creditsEnded) return;
+        creditsEnded = true;
+        window.isEndingSequence = false;
+        clearInterval(skipInterval);
+        clearTimeout(creditsTimeout);
+        document.removeEventListener('keydown', skipCredits);
+        
+        if (audio) {
+            audio.forceStopAllFadesAndTracks();
+            audio.fadeTransition('stage1');
+        }
+    }
+}
+
 function closeSummary() { 
     summaryBox.style.display = 'none'; 
     isPaused = false; 
@@ -1074,7 +1228,32 @@ function closeSummary() {
     scoreAtLastBoss = score; 
     shieldBrokenInWave = false; 
     updateHighScore(); 
-    if (audio && difficultyWave <= 6) {
+    
+    if (difficultyWave === 7 || difficultyWave === 8) {
+        if (difficultyWave === 7 && linkIteration > 1) {
+            if (window.unlockExtraStage && !window.devCheatsUsed) {
+                difficultyWave = 7;
+                bossMode = false;
+                stageTimer = 0;
+                resetTimelines();
+                document.getElementById('boss-ui').style.display = 'none';
+            } else {
+                difficultyWave = 1;
+                linkIteration++; ngValEl.innerText = linkIteration;
+                iterText.innerText = "OVERCLOCKING TO ITERATION " + linkIteration + "...";
+                resetAnimTimer = 120; shakeTimer = 120; flashTimer = 50;
+                window.skipNextSummaryBox = true;
+            }
+        } else if (difficultyWave === 8) {
+            difficultyWave = 1;
+            linkIteration++; ngValEl.innerText = linkIteration;
+            iterText.innerText = "OVERCLOCKING TO ITERATION " + linkIteration + "...";
+            resetAnimTimer = 120; shakeTimer = 120; flashTimer = 50;
+            window.skipNextSummaryBox = true;
+        } else {
+            triggerVictorySequence(window.unlockExtraStage && !window.devCheatsUsed);
+        }
+    } else if (audio && difficultyWave <= 6) {
         audio.hardCut('stage' + difficultyWave);
     }
 }
@@ -1082,6 +1261,7 @@ function processContinue() {
     updateHighScore();
     continueCountdown = 0;
     continueUsed = true;
+    continuesUsed++;
     document.getElementById('submit-score-ui').style.display = 'none';
     continueUI.style.display = 'none';
     lives = 3; livesEl.innerText = lives;
@@ -1108,7 +1288,7 @@ function processContinue() {
     comboChain = 0; comboTimer = 0;
 
     // Wave 6 1CC Punishment
-    if (difficultyWave >= 6) {
+    if (difficultyWave === 6) {
         stageTimer = 0;
         resetTimelines();
         enemies.length = 0;
@@ -1236,7 +1416,18 @@ function updatePlayer(ts, pObj, gpState, kMap) {
         pObj.satellites[i].y += (targetY - pObj.satellites[i].y) * 0.3 * ts;
     }
 
-    if ((kMap && keys[kMap.shoot]) || (gpState && gpState.shoot)) { if (Date.now() % 60 < 10) shoot(pObj); }
+    if (pObj.fireCooldown === undefined) pObj.fireCooldown = 0;
+    if (pObj.fireCooldown > 0) pObj.fireCooldown--;
+
+    if ((kMap && keys[kMap.shoot]) || (gpState && gpState.shoot)) {
+        if (pObj.fireCooldown <= 0) {
+            shoot(pObj);
+            pObj.fireCooldown = 6;
+        }
+    } else {
+        // Instant response on fresh tap
+        pObj.fireCooldown = 0;
+    }
 
     const isOff = (pObj.x < 0 || pObj.x > 600 || pObj.y < 0 || pObj.y > 800);
     if (isOff) { stallingTimer++; warningBorder.style.display = 'block'; if (stallingTimer > 90) { shakeTimer = 40; pObj.x = 300; pObj.y = 600; stallingTimer = 0; score = Math.max(0, score - 500); scoreEl.innerText = score; } } else { stallingTimer = 0; document.getElementById('warning-border').style.display = 'none'; }
@@ -1249,7 +1440,7 @@ function updateProjectiles(ts) {
                 // PingKo: single-target lock — only track if the locked target is still alive
                 let target = b.lockedTarget;
                 let targetAlive = target && (
-                    (target === boss && boss && boss.hp > 0) ||
+                    (target === boss && boss && boss.hp > 0 && !boss.intangible) ||
                     enemies.includes(target)
                 );
                 if (targetAlive) {
@@ -1269,7 +1460,7 @@ function updateProjectiles(ts) {
                 // Fosozu: aggressive re-acquire on nearest target
                 let closest = null;
                 let minDist = Infinity;
-                if (boss && boss.hp > 0) {
+                if (boss && boss.hp > 0 && !boss.intangible) {
                     let d = Math.hypot(boss.x - b.x, boss.y - b.y);
                     if (d < minDist) { minDist = d; closest = boss; }
                 }
@@ -1334,6 +1525,13 @@ function updateProjectiles(ts) {
 function playerTakeDamage() {
     if (invulnTimer > 0 || p1BombTimer > 0 || p2BombTimer > 0) return;
 
+    if (window.godMode) {
+        invulnTimer = 120; shakeTimer = 25; 
+        if (audio) audio.playExplosion();
+        effects.push({ x: player.x, y: player.y, r: 40, opacity: 1 });
+        return;
+    }
+
     let powerLost = Math.min(power, 16);
     power = Math.max(0, power - 16); powerEl.innerText = power;
 
@@ -1381,7 +1579,25 @@ function handleCollisions(ts) {
     const isFocused = (inputMode === 'keyboard' && keys[keyMap.focus]) || (inputMode === 'gamepad' && gamepadState.focus);
     [bossBullets, enemyBullets].forEach(arr => {
         for (let i = arr.length - 1; i >= 0; i--) {
-            let b = arr[i]; b.x += b.vx * ts; b.y += b.vy * ts;
+            let b = arr[i];
+            if (b.homing) {
+                b.homingTimer -= ts;
+                if (b.homingTimer > 0) {
+                    let a = Math.atan2(player.y - b.y, player.x - b.x);
+                    let currentSpeed = Math.hypot(b.vx, b.vy);
+                    // Gradually steer instead of instant snap for fairness
+                    let currentA = Math.atan2(b.vy, b.vx);
+                    let diff = a - currentA;
+                    // Normalize difference
+                    while (diff < -Math.PI) diff += Math.PI * 2;
+                    while (diff > Math.PI) diff -= Math.PI * 2;
+                    let turn = Math.max(-0.04 * ts, Math.min(0.04 * ts, diff));
+                    b.vx = Math.cos(currentA + turn) * currentSpeed;
+                    b.vy = Math.sin(currentA + turn) * currentSpeed;
+                    b.angle = currentA + turn;
+                }
+            }
+            b.x += b.vx * ts; b.y += b.vy * ts;
             let hit = false;
             let checkP = (pObj, pIsFoc) => {
                 let d = Math.hypot(pObj.x - b.x, pObj.y - b.y);
@@ -1446,43 +1662,6 @@ function handleCollisions(ts) {
                 if (difficultyWave === 6) audio.hardCut('boss6_phase2');
             }
         }
-
-        if (boss.hp <= 0) {
-            score += 5000; difficultyWave++; waveClearTimer = 150; bossMode = false; stageTimer = 0; resetTimelines(); bombsSpawnedInWave = 0; flankerWarning = { timer: 0, side: null, y: 0 };
-            if (audio) {
-                audio.playExplosion();
-                if (difficultyWave <= 6) {
-                    audio.fadeTransition('stage' + difficultyWave);
-                }
-            }
-            let b_name = boss.name;
-            let b_defeat = boss.defeat;
-            let isLastBoss = (boss.constructor === BossRoster[BossRoster.length - 1]);
-
-            boss = null;
-            document.getElementById('boss-ui').style.display = 'none';
-
-            if (isLastBoss) {
-                linkIteration++; ngValEl.innerText = linkIteration;
-                iterText.innerText = "OVERCLOCKING TO ITERATION " + linkIteration + "...";
-                resetAnimTimer = 120; shakeTimer = 120; flashTimer = 50;
-            } else {
-                isPaused = true; summaryBox.style.display = 'block';
-            }
-
-            if (difficultyWave === 7) { // Since we incremented difficultyWave on line 835
-                gameCleared = true;
-                localStorage.setItem('fosozu_gameCleared', 'true');
-                update2PButton();
-                if (audio) audio.fadeTransition('ending');
-            }
-
-            let bonusAmt = Math.floor(waveGraze * 1.5 * difficultyWave);
-            let bonusMsg = `<p style="color:#ff006e; font-style:italic;">"${b_defeat}"</p><hr>WAVE ${difficultyWave - 1} COMPLETE<br>GRAZE BONUS: +${bonusAmt}`;
-            if (!shieldBrokenInWave) { bonusMsg += `<br>FLAWLESS UPLINK: +25,000!`; score += 25000; }
-            if (difficultyWave > 3 && !continueUsed) { bonusMsg += `<br>FULL BUFFER BONUS: +50,000!`; score += 50000; }
-            document.getElementById('summary-content').innerHTML = bonusMsg; score += bonusAmt; scoreEl.innerText = score; return;
-        }
     }
 }
 
@@ -1500,16 +1679,121 @@ function updateBoss(ts) {
                 bowlSteam.push({ x: boss.x + (Math.random() * 16 - 8), y: boss.y - 15, size: 2 + Math.random() * 5, life: 1.0 });
             }
         }
+
+        if (boss.state === 'portal_warp' && boss.warpTimer >= 240) {
+            enemies.length = 0; 
+            enemyBullets.length = 0; 
+            bossBullets.length = 0;
+            boss = null;
+            document.getElementById('boss-ui').style.display = 'none';
+            document.getElementById('dialogue-box').style.display = 'none';
+            document.getElementById('prompt-dialogue').style.display = 'block';
+            if (player) player.alpha = 1.0;
+            if (typeof player2 !== "undefined" && player2) player2.alpha = 1.0;
+            if (audio) audio.fadeTransition('extra_stage');
+            return;
+        }
+
+        if (boss.hp <= 0 && boss.state !== 'portal_warp') {
+            if (boss.type === 'satsuki' || boss.constructor.name === 'MadameSatsuki') {
+                if (window.unlockExtraStage) {
+                    boss.hp = 1; // Keep her alive for the cinematic
+                    boss.intangible = true;
+                    boss.state = 'portal_warp';
+                    boss.warpTimer = 0;
+                    if (audio) audio.forceStopAllFadesAndTracks(); // Cut music immediately
+                    
+                    // Award points
+                    score += 5000;
+                    let bonusAmt = Math.floor(waveGraze * 1.5 * 6);
+                    score += bonusAmt;
+                    if (!shieldBrokenInWave) score += 25000;
+                    if (difficultyWave > 3 && !continueUsed) score += 50000;
+                    if (typeof scoreEl !== 'undefined') scoreEl.innerText = score;
+
+                    localStorage.setItem('fosozu_extra_unlocked', 'true');
+                    window.gameCleared = true;
+                    localStorage.setItem('fosozu_gameCleared', 'true');
+                    if (typeof update2PButton !== 'undefined') update2PButton();
+                    return; // CRITICAL: Exit the block so the normal ending doesn't fire!
+                } else {
+                    score += 5000;
+                    let bonusAmt = Math.floor(waveGraze * 1.5 * difficultyWave);
+                    score += bonusAmt;
+                    if (!shieldBrokenInWave) score += 25000;
+                    if (difficultyWave > 3 && !continueUsed) score += 50000;
+                    if (typeof scoreEl !== 'undefined') scoreEl.innerText = score;
+
+                    boss = null;
+                    document.getElementById('boss-ui').style.display = 'none';
+
+                    triggerVictorySequence(false);
+                    return;
+                }
+            }
+
+            let currentWave = difficultyWave;
+
+            score += 5000; difficultyWave++; waveClearTimer = 150; bossMode = false; stageTimer = 0; resetTimelines(); bombsSpawnedInWave = 0; flankerWarning = { timer: 0, side: null, y: 0 };
+            if (audio) {
+                audio.playExplosion();
+                if (difficultyWave <= 6) {
+                    audio.fadeTransition('stage' + difficultyWave);
+                } else if (difficultyWave === 7) {
+                    audio.fadeTransition('extra_stage');
+                }
+            }
+            let b_name = boss.name;
+            let b_defeat = boss.defeat;
+            let isLastBoss = (boss.constructor === BossRoster[BossRoster.length - 1]);
+
+            boss = null;
+            document.getElementById('boss-ui').style.display = 'none';
+
+            if (isLastBoss) {
+                // Daemon defeated! Trigger True Ending immediately.
+                if (!window.isEndingSequence) {
+                    window.isEndingSequence = true;
+                    triggerVictorySequence(false);
+                }
+                return;
+            } else {
+                isPaused = true; summaryBox.style.display = 'block';
+            }
+
+            if (difficultyWave === 7) { // Since we incremented difficultyWave on line 835
+                const isSolo1CC = (!is2PMode && continuesUsed === 0);
+                const isCoopClear = is2PMode;
+                const unlockExtraStage = isSolo1CC || isCoopClear;
+                if (unlockExtraStage) localStorage.setItem('fosozu_extra_unlocked', 'true');
+                gameCleared = true;
+                localStorage.setItem('fosozu_gameCleared', 'true');
+                if (typeof update2PButton !== 'undefined') update2PButton();
+                window.unlockExtraStage = unlockExtraStage;
+            } else if (difficultyWave === 8) {
+                gameCleared = true;
+                localStorage.setItem('fosozu_gameCleared', 'true');
+                if (typeof update2PButton !== 'undefined') update2PButton();
+                window.unlockExtraStage = false;
+            }
+
+            let bonusAmt = Math.floor(waveGraze * 1.5 * difficultyWave);
+            let bonusMsg = `<p style="color:#ff006e; font-style:italic;">"${b_defeat}"</p><hr>WAVE ${difficultyWave - 1} COMPLETE<br>GRAZE BONUS: +${bonusAmt}`;
+            if (!shieldBrokenInWave) { bonusMsg += `<br>FLAWLESS UPLINK: +25,000!`; score += 25000; }
+            if (difficultyWave > 3 && !continueUsed) { bonusMsg += `<br>FULL BUFFER BONUS: +50,000!`; score += 50000; }
+            document.getElementById('summary-content').innerHTML = bonusMsg; score += bonusAmt; if (typeof scoreEl !== 'undefined') scoreEl.innerText = score; return;
+        }
     }
     // Spawn Boss when wave timer concludes
     if (!bossMode && waveClearTimer <= 0 && stageTimer >= (WAVE_DURATIONS[difficultyWave] || 3600) && enemies.length === 0) {
         if (difficultyWave === 6) {
-            // 10-second eerie silence before Satsuki — stage6 BGM keeps playing
+            // 10-second eerie silence before Satsuki
             if (satsukiSummonTimer === 0) {
-                satsukiSummonTimer = 600; // start the countdown once
+                satsukiSummonTimer = 600;
+                if (typeof audio !== 'undefined' && audio) audio.hardCut('boss6');
             }
             satsukiSummonTimer -= ts;
-            if (satsukiSummonTimer > 0) return; // wait out the tension gap
+            if (satsukiSummonTimer > 0) return;
         }
 
         bossMode = true;
@@ -1518,22 +1802,28 @@ function updateBoss(ts) {
 
         let tIdx = (difficultyWave - 1) % BossRoster.length;
         let BossClass = BossRoster[tIdx];
+        if (difficultyWave === 7) BossClass = DaemonBoss; // Override Wave 7
+        if (difficultyWave === 8) BossClass = TrueDaemonBoss; // Override Wave 8
 
-        // For boss6, nuke any lingering stage6 BGM cleanly before the constructor fires hardCut('boss6')
-        if (audio && difficultyWave === 6) {
+        if (typeof audio !== 'undefined' && audio) {
             audio.forceStopAllFadesAndTracks();
         }
 
         boss = new BossClass(difficultyWave, linkIteration);
         
-        // boss6 music is triggered inside MadameSatsuki constructor
+        // Music is triggered inside MadameSatsuki/DaemonBoss constructors,
+        // but we explicitly call Daemon's here as a fallback just in case.
         if (audio && difficultyWave !== 6) {
-            audio.hardCut('boss' + difficultyWave);
+            if (boss.type === 'daemon') {
+                audio.hardCut('extra_boss');
+            } else {
+                audio.hardCut('boss' + difficultyWave);
+            }
         }
 
         bossNameEl.innerText = boss.name;
         // Satsuki triggers dialogue herself after summoning; others go straight to dialogue
-        if (difficultyWave !== 6) {
+        if (difficultyWave !== 6 && boss.type !== 'daemon') {
             startBossDialogue();
         }
     }
@@ -1549,6 +1839,21 @@ function spawnFormation(type, spawnY) {
         hp = 150;
         shootDelay = 800; // Overridden by custom logic, but set baseline
         speedMult = 0; // Moves to fixed position
+        repeatsShot = true;
+    } else if (type === 'SPIRALKO_CENTER') {
+        hp = 150;
+        shootDelay = 10;
+        speedMult = 0;
+        repeatsShot = true;
+    } else if (type.startsWith('CROW_DIVE')) {
+        hp = 30;
+        shootDelay = 80;
+        speedMult = 2.0;
+        repeatsShot = true;
+    } else if (type === 'SHOTGUNKO_WALL') {
+        hp = 80;
+        shootDelay = 150;
+        speedMult = 0.6;
         repeatsShot = true;
     } else if (type === 'WALL' || type === 'CIRCLE' || type === 'SLOW_CIRCLE') {
         // Slow Fixture Archetype
@@ -1570,11 +1875,27 @@ function spawnFormation(type, spawnY) {
         repeatsShot = false;
     }
     
+    if (difficultyWave === 7) {
+        speedMult *= 1.3;
+        shootDelay = Math.max(120, shootDelay * 0.7); 
+        repeatsShot = true;
+    }
+
     let speed = baseSpeed * speedMult;
 
     if (type === 'MID_BOSS_PINGKO') {
         // PingKo drops down to y=150 and stays there.
         enemies.push({ x: 300, y: -50, vx: 0, vy: 2, speed: 0, type: 'midboss', nextShot: Date.now() + 2000, hp: hp, repeatsShot: true, isMidBoss: true, fleeTimer: 900, targetY: 150 });
+    } else if (type === 'SPIRALKO_CENTER') {
+        enemies.push({ x: 150 + Math.random() * 300, y: -50, vx: 0, vy: 1.5, speed: 0, type: 'spiralko', nextShot: Date.now() + shootDelay, hp: hp, repeatsShot: true, isMidBoss: true, fleeTimer: 600, targetY: 150 + Math.random() * 150, angle: 0 });
+    } else if (type === 'CROW_DIVE_LEFT') {
+        enemies.push({ x: 50, y: -50, vx: speed * 0.4, vy: speed, speed: speed, type: 'crow', nextShot: Date.now() + shootDelay, hp: hp, repeatsShot: true, diverState: 'DOWN' });
+    } else if (type === 'CROW_DIVE_RIGHT') {
+        enemies.push({ x: 550, y: -50, vx: -speed * 0.4, vy: speed, speed: speed, type: 'crow', nextShot: Date.now() + shootDelay, hp: hp, repeatsShot: true, diverState: 'DOWN' });
+    } else if (type === 'SHOTGUNKO_WALL') {
+        enemies.push({ x: 150, y: -50, vx: 0, vy: speed, speed: speed, type: 'shotgunko', nextShot: Date.now() + shootDelay, hp: hp, repeatsShot: true });
+        enemies.push({ x: 300, y: -100, vx: 0, vy: speed, speed: speed, type: 'shotgunko', nextShot: Date.now() + shootDelay, hp: hp, repeatsShot: true });
+        enemies.push({ x: 450, y: -50, vx: 0, vy: speed, speed: speed, type: 'shotgunko', nextShot: Date.now() + shootDelay, hp: hp, repeatsShot: true });
     } else if (type === 'V_SHAPE') {
         const xs = [300, 240, 360, 180, 420, 120, 480];
         const ys = [-50, -100, -100, -150, -150, -200, -200];
@@ -1620,7 +1941,7 @@ function spawnFormation(type, spawnY) {
 
 function updateEnemies(ts) {
     if (!bossMode && waveClearTimer <= 0 && stageTimer < (WAVE_DURATIONS[difficultyWave] || 3600)) {
-        let waveIndex = ((difficultyWave - 1) % 6) + 1;
+        let waveIndex = ((difficultyWave - 1) % 7) + 1;
         let currentTimeline = waveTimelines[waveIndex];
         
         currentTimeline.forEach(event => {
@@ -1666,34 +1987,85 @@ function updateEnemies(ts) {
         
         if (Date.now() >= (e.nextShot || e.lastShot + 1000) && (!e.isMidBoss || e.y >= e.targetY)) {
             let eSpd = Math.min(3.5, 1 + (linkIteration - 1) * 0.1);
-            if (e.isMidBoss && e.fleeTimer > 0) {
-                // Fast 8-way spiral for midboss
-                let r = (Date.now() / 150); 
-                for (let j = 0; j < 8; j++) { 
-                    let a = r + (j * Math.PI / 4); 
-                    enemyBullets.push(new EnemyBullet(e.x, e.y, Math.cos(a) * 4 * eSpd, Math.sin(a) * 4 * eSpd, 'orb', '#ffca3a')); 
-                }
-                e.nextShot = Date.now() + 250; // fast fire rate
-            }
-            else if (e.type === 'blue') { 
-                let r = (Date.now() / 400); 
-                for (let j = 0; j < 4; j++) { 
-                    let a = r + (j * Math.PI / 2); 
-                    enemyBullets.push(new EnemyBullet(e.x, e.y, Math.cos(a) * 3 * eSpd, Math.sin(a) * 3 * eSpd, 'orb', '#ff003c')); 
-                } 
-            }
-            else { 
-                let a_b = Math.atan2(player.y - e.y, player.x - e.x); 
-                for (let j = -2; j <= 2; j++) { 
-                    let a = a_b + (j * 0.25); 
-                    enemyBullets.push(new EnemyBullet(e.x, e.y, Math.cos(a) * 3.5 * eSpd, Math.sin(a) * 3.5 * eSpd, 'orb', '#ff003c')); 
-                } 
-            }
             
-            if (e.repeatsShot) {
-                e.nextShot = e.isMidBoss ? Date.now() + 250 : Date.now() + 1500;
+            if (difficultyWave === 7 && !e.isMidBoss) {
+                if (e.type === 'blue') {
+                    e.angle = (e.angle || 0) + 0.4;
+                    for (let j = 0; j < 3; j++) {
+                        let a = e.angle + (j * Math.PI * 2 / 3);
+                        enemyBullets.push(new EnemyBullet(e.x, e.y, Math.cos(a) * 3 * eSpd, Math.sin(a) * 3 * eSpd, 'rice', '#00f2ff'));
+                    }
+                    e.nextShot = Date.now() + 150;
+                } else if (e.type === 'pink') {
+                    let a_b = Math.atan2(player.y - e.y, player.x - e.x);
+                    for (let j = 0; j < 3; j++) {
+                        let a = a_b + (Math.random() - 0.5) * 0.6; 
+                        enemyBullets.push(new EnemyBullet(e.x, e.y, Math.cos(a) * (2 + Math.random() * 2) * eSpd, Math.sin(a) * (2 + Math.random() * 2) * eSpd, 'amulet', '#ff006e'));
+                    }
+                    e.nextShot = Date.now() + 600;
+                } else {
+                    let a_b = Math.atan2(player.y - e.y, player.x - e.x); 
+                    for (let j = -1; j <= 1; j++) {
+                        let a = a_b + (j * 0.15);
+                        enemyBullets.push(new EnemyBullet(e.x, e.y, Math.cos(a) * 4 * eSpd, Math.sin(a) * 4 * eSpd, 'rice', '#b5179e'));
+                    }
+                    e.nextShot = Date.now() + 400;
+                }
+                if (!e.nextShot) e.nextShot = Date.now() + 500;
             } else {
-                e.nextShot = Date.now() + 9999999;
+                if (e.type === 'spiralko') {
+                    e.angle += 0.4;
+                    for (let j = 0; j < 3; j++) {
+                        let a = e.angle + (j * Math.PI * 2 / 3);
+                        enemyBullets.push(new EnemyBullet(e.x, e.y, Math.cos(a) * 3 * eSpd, Math.sin(a) * 3 * eSpd, 'rice', '#00f2ff'));
+                    }
+                    e.nextShot = Date.now() + 50;
+                }
+                else if (e.isMidBoss && e.fleeTimer > 0) {
+                    // Fast 8-way spiral for midboss
+                    let r = (Date.now() / 150); 
+                    for (let j = 0; j < 8; j++) { 
+                        let a = r + (j * Math.PI / 4); 
+                        enemyBullets.push(new EnemyBullet(e.x, e.y, Math.cos(a) * 4 * eSpd, Math.sin(a) * 4 * eSpd, 'orb', '#ffca3a')); 
+                    }
+                    e.nextShot = Date.now() + 250; // fast fire rate
+                }
+                else if (e.type === 'blue') { 
+                    let r = (Date.now() / 400); 
+                    for (let j = 0; j < 4; j++) { 
+                        let a = r + (j * Math.PI / 2); 
+                        enemyBullets.push(new EnemyBullet(e.x, e.y, Math.cos(a) * 3 * eSpd, Math.sin(a) * 3 * eSpd, 'orb', '#ff003c')); 
+                    } 
+                }
+                else if (e.type === 'crow') {
+                    let a_b = Math.atan2(player.y - e.y, player.x - e.x); 
+                    for (let j = -1; j <= 1; j++) {
+                        let a = a_b + (j * 0.15);
+                        enemyBullets.push(new EnemyBullet(e.x, e.y, Math.cos(a) * 4 * eSpd, Math.sin(a) * 4 * eSpd, 'rice', '#b5179e'));
+                    }
+                    e.nextShot = Date.now() + 200;
+                }
+                else if (e.type === 'shotgunko') {
+                    let a_b = Math.atan2(player.y - e.y, player.x - e.x);
+                    for (let j = 0; j < 5; j++) {
+                        let a = a_b + (Math.random() - 0.5) * 1.0; 
+                        enemyBullets.push(new EnemyBullet(e.x, e.y, Math.cos(a) * (2 + Math.random() * 2) * eSpd, Math.sin(a) * (2 + Math.random() * 2) * eSpd, 'amulet', '#ff006e'));
+                    }
+                    e.nextShot = Date.now() + 400; 
+                }
+                else { 
+                    let a_b = Math.atan2(player.y - e.y, player.x - e.x); 
+                    for (let j = -2; j <= 2; j++) { 
+                        let a = a_b + (j * 0.25); 
+                        enemyBullets.push(new EnemyBullet(e.x, e.y, Math.cos(a) * 3.5 * eSpd, Math.sin(a) * 3.5 * eSpd, 'orb', '#ff003c')); 
+                    } 
+                }
+                
+                if (e.repeatsShot) {
+                    e.nextShot = e.isMidBoss ? Date.now() + 250 : Date.now() + 1500;
+                } else {
+                    e.nextShot = Date.now() + 9999999;
+                }
             }
         }
         
@@ -1804,7 +2176,7 @@ function updateEnemies(ts) {
 }
 
 function update() {
-    if (resetAnimTimer > 0) { resetAnimTimer--; resetOverlay.style.opacity = Math.min(1, resetAnimTimer / 30); resetText.style.display = (resetAnimTimer > 10) ? "block" : "none"; iterText.style.display = (resetAnimTimer > 10) ? "block" : "none"; if (resetAnimTimer === 0) { isPaused = true; summaryBox.style.display = 'block'; } return; }
+    if (resetAnimTimer > 0) { resetAnimTimer--; resetOverlay.style.opacity = Math.min(1, resetAnimTimer / 30); resetText.style.display = (resetAnimTimer > 10) ? "block" : "none"; iterText.style.display = (resetAnimTimer > 10) ? "block" : "none"; if (resetAnimTimer === 0) { if (window.skipNextSummaryBox) { window.skipNextSummaryBox = false; isPaused = false; } else { isPaused = true; summaryBox.style.display = 'block'; } } return; }
     if (!gameStarted || gameOver || isPaused) return;
 
     const ts = (slowMoTimer > 0) ? 0.4 : 1.0;
@@ -1871,13 +2243,15 @@ function draw() {
 
 function drawPlayer(pObj, isP1) {
     if (invulnTimer % 10 < 5) { 
+        ctx.save();
+        if (pObj.alpha !== undefined) ctx.globalAlpha = pObj.alpha;
         if (isP1) {
             if (assets.player.loaded) ctx.drawImage(assets.player.img, pObj.x - 50, pObj.y - 50, 100, 100); 
             else { ctx.fillStyle = 'purple'; ctx.beginPath(); ctx.arc(pObj.x, pObj.y, 25, 0, 7); ctx.fill(); }
         } else {
             if (pObj.image && pObj.image.complete && pObj.image.naturalWidth > 0) ctx.drawImage(pObj.image, pObj.x - 50, pObj.y - 50, 100, 100); 
-            else { ctx.fillStyle = 'pink'; ctx.beginPath(); ctx.arc(pObj.x, pObj.y, 25, 0, 7); ctx.fill(); }
         }
+        ctx.restore();
     }
 }
 
@@ -1949,12 +2323,107 @@ function drawSatellites(pObj) {
 }
 
     stars.forEach(s => { ctx.fillStyle = '#fff'; ctx.fillRect(s.x, s.y, s.size, s.size); });
+    if (boss && boss.constructor.name === 'MadameSatsuki' && boss.state === 'portal_warp') {
+        if (boss.warpTimer >= 60 && boss.warpTimer <= 240) {
+            let t = boss.warpTimer;
+            ctx.save();
+            ctx.globalAlpha = Math.min(1.0, (t - 60) / 30);
+            function drawArcaneCircle(px, py, rotation) {
+                ctx.save();
+                ctx.translate(px, py);
+                ctx.rotate(rotation);
+                ctx.strokeStyle = '#39ff14';
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.arc(0, 0, 80 + Math.sin(t*0.05)*10, 0, Math.PI*2);
+                ctx.stroke();
+                ctx.strokeStyle = '#dc143c';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(0, 0, 60 - Math.sin(t*0.05)*10, 0, Math.PI*2);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, -50);
+                ctx.lineTo(43, 25);
+                ctx.lineTo(-43, 25);
+                ctx.closePath();
+                ctx.stroke();
+                ctx.restore();
+            }
+            drawArcaneCircle(player.x, player.y, t * 0.02);
+            if (is2PMode) drawArcaneCircle(player2.x, player2.y, -t * 0.02);
+            ctx.restore();
+        }
+        
+        if (boss.warpTimer >= 180 && boss.warpTimer <= 240) {
+            // Removed white screen flash
+            
+            // Flicker player
+            player.alpha = 0.3 + Math.random() * 0.7;
+            if (is2PMode) player2.alpha = 0.3 + Math.random() * 0.7;
+        } else {
+            player.alpha = 1.0;
+            if (is2PMode) player2.alpha = 1.0;
+        }
+    } else {
+        player.alpha = 1.0;
+        if (is2PMode) player2.alpha = 1.0;
+    }
+
     drawPlayer(player, true);
     if (is2PMode) drawPlayer(player2, false);
 
     if (boss) {
-        // --- Satsuki Summoning Circle ---
-        if (boss.introState === 'summon') {
+        if (boss.type === 'daemon' && boss.state === 'intro_summon') {
+            const SUMMON_MAX = 180;
+            let progress = Math.max(0, Math.min(1, 1 - (boss.introTimer / SUMMON_MAX)));
+            let alpha = progress;
+            let radius = 30 + progress * 80;
+            let outerRadius = 20 + progress * 110;
+            let rotation = progress * Math.PI * 4;
+
+            ctx.save();
+            ctx.translate(boss.x, boss.y);
+            ctx.globalAlpha = alpha;
+            ctx.strokeStyle = '#39ff14';
+            ctx.shadowBlur = 20 + progress * 30;
+            ctx.shadowColor = '#39ff14';
+            ctx.lineWidth = 2.0;
+
+            ctx.beginPath();
+            ctx.arc(0, 0, outerRadius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(0, 0, radius * 0.45, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.save();
+            ctx.rotate(rotation);
+            ctx.strokeStyle = '#dc143c';
+            ctx.shadowColor = '#dc143c';
+            for (let tri = 0; tri < 2; tri++) {
+                ctx.beginPath();
+                for (let i = 0; i < 3; i++) {
+                    let a = i * Math.PI * 2 / 3 + (tri * Math.PI / 3);
+                    let px = Math.cos(a) * radius;
+                    let py = Math.sin(a) * radius;
+                    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.stroke();
+            }
+            ctx.restore();
+
+            let pulse = 0.3 + Math.sin(Date.now() * 0.008) * 0.2;
+            ctx.beginPath();
+            ctx.arc(0, 0, 15 * progress, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(57, 255, 20, ${pulse * progress})`;
+            ctx.fill();
+
+            ctx.globalAlpha = 1.0;
+            ctx.restore();
+        } else if (boss.introState === 'summon') {
             const SUMMON_MAX = 180;
             let progress = Math.max(0, Math.min(1, 1 - (boss.introTimer / SUMMON_MAX)));
             let alpha = progress;
@@ -2081,13 +2550,46 @@ function drawSatellites(pObj) {
                 }
                 ctx.globalAlpha = 1.0;
             } else {
-                const colorMap = { pink: '#ff006e', blue: '#00f2ff', green: '#0f0', purple: '#b5179e', amber: '#f77f00', crimson: '#d90429' };
+                const colorMap = { daemon: '#39ff14', pink: '#ff006e', blue: '#00f2ff', green: '#0f0', purple: '#b5179e', amber: '#f77f00', crimson: '#d90429' };
                 ctx.fillStyle = colorMap[boss.type] || '#fff';
-                if (boss.hp < boss.maxHP / 2 && Date.now() % 200 < 100) ctx.globalAlpha = 0.5;
+                if (boss.alpha !== undefined) ctx.globalAlpha = boss.alpha;
+                else if (boss.hp < boss.maxHP / 2 && Date.now() % 200 < 100) ctx.globalAlpha = 0.5;
                 ctx.beginPath();
                 ctx.arc(boss.x, boss.y, 75, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.globalAlpha = 1.0;
+            }
+
+            if (boss.type === 'daemon' && boss.state === 'attack_drifter' && boss.telegraphX) {
+                ctx.save();
+                ctx.globalAlpha = 0.5 + Math.sin(Date.now() * 0.01) * 0.3;
+                ctx.strokeStyle = '#39ff14';
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = '#39ff14';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(boss.telegraphX, boss.telegraphY, 60, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.fillStyle = 'rgba(57, 255, 20, 0.15)';
+                ctx.fill();
+                ctx.restore();
+            }
+
+            if (boss.type === 'daemon' && boss.state === 'attack_reach_scythe') {
+                let cycleTimer = boss.stateTimer % 180;
+                if (cycleTimer <= 60) {
+                    ctx.save();
+                    ctx.globalAlpha = (cycleTimer / 60) * 0.7;
+                    ctx.strokeStyle = '#dc143c';
+                    ctx.lineWidth = 2 + Math.random() * 2;
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = '#dc143c';
+                    ctx.beginPath();
+                    ctx.moveTo(boss.x, boss.y);
+                    ctx.lineTo(boss.x + Math.cos(boss.reachAngle) * 1500, boss.y + Math.sin(boss.reachAngle) * 1500);
+                    ctx.stroke();
+                    ctx.restore();
+                }
             }
 
             bowlSteam.forEach(p => {
@@ -2134,9 +2636,9 @@ function drawSatellites(pObj) {
 
             if (e.type === 'blue') {
                 // Glitch Faerie - Cyan Crystal
-                ctx.strokeStyle = '#00f2ff';
-                ctx.shadowColor = '#00f2ff';
-                ctx.shadowBlur = 12;
+                ctx.strokeStyle = difficultyWave === 7 ? '#dc143c' : '#00f2ff';
+                ctx.shadowColor = difficultyWave === 7 ? '#dc143c' : '#00f2ff';
+                ctx.shadowBlur = difficultyWave === 7 ? 15 : 12;
                 
                 ctx.beginPath();
                 ctx.moveTo(0, -22);
@@ -2158,9 +2660,9 @@ function drawSatellites(pObj) {
 
             } else if (e.type === 'green') {
                 // Rogue Packet - Swept origami dart
-                ctx.strokeStyle = '#0f0';
-                ctx.shadowColor = '#0f0';
-                ctx.shadowBlur = 12;
+                ctx.strokeStyle = difficultyWave === 7 ? '#dc143c' : '#0f0';
+                ctx.shadowColor = difficultyWave === 7 ? '#dc143c' : '#0f0';
+                ctx.shadowBlur = difficultyWave === 7 ? 15 : 12;
                 
                 ctx.beginPath();
                 ctx.moveTo(0, 22);      // Pointing down
@@ -2179,9 +2681,9 @@ function drawSatellites(pObj) {
 
             } else if (e.type === 'pink') {
                 // Firewall Golem - Interlocking rotating tank
-                ctx.strokeStyle = '#ff006e';
-                ctx.shadowColor = '#ff006e';
-                ctx.shadowBlur = 12;
+                ctx.strokeStyle = difficultyWave === 7 ? '#dc143c' : '#ff006e';
+                ctx.shadowColor = difficultyWave === 7 ? '#dc143c' : '#ff006e';
+                ctx.shadowBlur = difficultyWave === 7 ? 15 : 12;
                 
                 // Slow rotation
                 ctx.rotate(Date.now() * 0.0015);
@@ -2207,6 +2709,27 @@ function drawSatellites(pObj) {
                 ctx.beginPath();
                 ctx.moveTo(-12, 7); ctx.lineTo(12, 7); ctx.lineTo(0, -14); ctx.closePath();
                 ctx.stroke();
+            } else if (e.type === 'spiralko') {
+                if (assets['blue'] && assets['blue'].loaded) {
+                    ctx.drawImage(assets['blue'].img, -25, -25, 50, 50);
+                } else {
+                    ctx.fillStyle = '#00f2ff';
+                    ctx.beginPath(); ctx.arc(0, 0, 20, 0, Math.PI * 2); ctx.fill();
+                }
+            } else if (e.type === 'crow') {
+                if (assets['purple'] && assets['purple'].loaded) {
+                    ctx.drawImage(assets['purple'].img, -25, -25, 50, 50);
+                } else {
+                    ctx.fillStyle = '#b5179e';
+                    ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(20, 10); ctx.lineTo(-20, 10); ctx.closePath(); ctx.fill();
+                }
+            } else if (e.type === 'shotgunko') {
+                if (assets['green'] && assets['green'].loaded) {
+                    ctx.drawImage(assets['green'].img, -25, -25, 50, 50);
+                } else {
+                    ctx.fillStyle = '#0f0';
+                    ctx.beginPath(); ctx.moveTo(0, -20); ctx.lineTo(20, 10); ctx.lineTo(-20, 10); ctx.closePath(); ctx.fill();
+                }
             } else {
                 // Fallback for any other type
                 ctx.fillStyle = '#444'; 
@@ -2425,7 +2948,50 @@ function drawSatellites(pObj) {
         ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(0, 0, 600, 800);
     }
 
+    if (window.isEndingSequence) {
+        let bgY = Math.min(0, creditsScrollY + 300);
+        if (difficultyWave > 6 || window.currentUnlockExtraStage) {
+            bgY = Math.min(0, creditsScrollY + 350);
+        }
+        
+        ctx.fillStyle = 'rgba(0,0,0,0.7)'; 
+        ctx.fillRect(0, bgY, 600, 800); // Slide the entire box up
+        
+        if (bgY <= -800) {
+            window.isEndingSequence = false;
+        }
+
+        ctx.fillStyle = '#fff';
+        ctx.textAlign = 'center';
+        ctx.font = '24px Courier';
+        
+        if (creditsScrollY > -400) {
+            creditsScrollY -= 1; // Scroll speed
+            ctx.fillText("STAFF ROLL", 300, creditsScrollY);
+            ctx.font = '16px Courier';
+            ctx.fillText("THANK YOU FOR PLAYING", 300, creditsScrollY + 60);
+            ctx.fillText("Special thanks to everyone that has", 300, creditsScrollY + 100);
+            ctx.fillText("helped us grow and learn", 300, creditsScrollY + 130);
+            ctx.fillText("throughout this project!", 300, creditsScrollY + 160);
+            
+            if (difficultyWave > 6 || window.currentUnlockExtraStage) {
+                ctx.fillStyle = '#39ff14';
+                ctx.fillText("-- EXTRA STAGE CLEAR --", 300, creditsScrollY + 220);
+                ctx.fillStyle = '#ffca3a';
+                ctx.fillText("TRUE ENDING", 300, creditsScrollY + 250);
+            }
+        }
+    }
+
     if (gameOver) { ctx.fillStyle = 'rgba(0,0,0,0.8)'; ctx.fillRect(0, 0, 600, 800); ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.fillText("SIGNAL LOST", 300, 400); }
+
+    // Render top-left HUD (dynamically concatenates linkIteration as requested)
+    if (gameStarted && !window.isEndingSequence && !gameOver) {
+        ctx.fillStyle = '#00f2ff';
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 16px Courier';
+        ctx.fillText(`WAVE: ${difficultyWave} | Iteration: ${linkIteration}`, 10, 25);
+    }
     ctx.restore();
 }
 

@@ -108,12 +108,19 @@ class PingKo extends Boss {
         this.hp = this.maxHP;
         this.name = "PING-KO";
         this.type = "pink";
-        this.intro = [
-            "Ping-ko: B-Baka! Why are you clogging my bandwidth?!", 
-            "Ping-ko: It's not like I wanted you to connect anyway!", 
-            "Ping-ko: Prepare to be throttled!"
-        ];
-        this.defeat = "Ping-ko: Ugh... fine! Synced!";
+        if (typeof is2PMode !== 'undefined' && is2PMode) {
+            this.intro = [
+                "Ping-ko (P2): Wait... is that ME? Fosozu, who is this bootleg clone taking up my bandwidth?!", 
+                "Clone Ping-ko: I am the optimized version! Your legacy code is obsolete!", 
+                "Ping-ko (P2): Oh, it is ON! Let's scramble her packets, Fosozu!"
+            ];
+        } else {
+            this.intro = [
+                "Ping-ko: Unregistered connection detected! Fosozu, you're not authorized for this routing node!", 
+                "Ping-ko: I'll scramble your packets before you even reach the gateway!"
+            ];
+        }
+        this.defeat = "Ping-ko: Ugh... routing tables corrupted... Satsuki is going to delete you for this!";
     }
 
     update(ts, player, bossBullets) {
@@ -203,12 +210,14 @@ class SpiralKo extends Boss {
         super(difficultyWave, linkIteration);
         this.name = "SPIRAL-KO";
         this.type = "blue";
-        this.intro = [
-            "Spiral-ko: Scanning... Scanning...", 
-            "Spiral-ko: Your data packets are so... unoptimized. Embarrassing!", 
-            "Spiral-ko: Let me encrypt you into a thousand pieces!"
+        this.intro = (typeof is2PMode !== 'undefined' && is2PMode) ? [
+            "Spiral-ko: Two anomalies? The anomaly-to-bandwidth ratio is unacceptable.",
+            "Spiral-ko: Initiating double-encryption protocols to weave you both into an endless loop!"
+        ] : [
+            "Spiral-ko: Encryption spirals active. Your plaintext presence is a vulnerability to the system.", 
+            "Spiral-ko: I will weave your data into an inescapable loop!"
         ];
-        this.defeat = "Spiral-ko: Critical error! My spirals... unraveled!";
+        this.defeat = "Spiral-ko: Critical error! My logic loops... shattered...";
     }
 
     update(ts, player, bossBullets) {
@@ -261,12 +270,13 @@ class ShotgunKo extends Boss {
         super(difficultyWave, linkIteration);
         this.name = "SHOTGUN-KO";
         this.type = "green";
-        this.intro = [
-            "Shotgun-ko: MOVE! You're creating a bottleneck!", 
-            "Shotgun-ko: If you can't handle 10Gbps, you don't belong here!", 
-            "Shotgun-ko: EAT MY UPLOAD SPEED!"
+        this.intro = (typeof is2PMode !== 'undefined' && is2PMode) ? [
+            "Shotgun-ko: A dual-packet stream?! You're flooding the buffer! I'm flushing you both out!"
+        ] : [
+            "Shotgun-ko: WARNING: Payload exceeds maximum weight! Discarding unauthorized packets... by force!", 
+            "Shotgun-ko: You want bandwidth?! Take it all at point-blank range!"
         ];
-        this.defeat = "Shotgun-ko: FINAL COMMAND: SERVER RESET INITIATED!";
+        this.defeat = "Shotgun-ko: Buffer overflow... I'm fragmenting...!";
     }
 
     update(ts, player, bossBullets) {
@@ -344,12 +354,13 @@ class CosmicCrow extends Boss {
         this.hp = this.maxHP;
         this.name = "COSMIC CROW";
         this.type = "purple";
-        this.intro = [
-            "Cosmic Crow: *Caw!* The packet winds are shifting...", 
-            "Cosmic Crow: Adjust your scarf, little maiden!", 
-            "Cosmic Crow: Can you weave through stardust?"
+        this.intro = (typeof is2PMode !== 'undefined' && is2PMode) ? [
+            "Cosmic Crow: *Caw!* Two maidens riding the data streams... but even together, you cannot weather this storm."
+        ] : [
+            "Cosmic Crow: *Caw!* The packet winds whisper of a maiden seeking the Root... and the shadow lurking beneath it.", 
+            "Cosmic Crow: Turn back, Fosozu. The firewall is absolute, and the abyss below is waking."
         ];
-        this.defeat = "Cosmic Crow: My feathers... scattered across the cosmos!";
+        this.defeat = "Cosmic Crow: My wings scatter... perhaps you ARE the storm...";
     }
 
     update(ts, player, bossBullets) {
@@ -451,12 +462,14 @@ class Lief extends Boss {
         this.name = "LIEF THE JUGGERNAUT";
         this.type = "amber";
         this.targetY = 250;
-        this.intro = [
-            "Lief: Halt, Packet-Maiden.", 
-            "Lief: You face the heavy gatekeeper of the network.", 
-            "Lief: Let's see if your bandwidth can withstand true crushing force!"
+        this.intro = (typeof is2PMode !== 'undefined' && is2PMode) ? [
+            "Lief: Ping-ko? You allied with the anomaly? Then you shall share her deletion!",
+            "Lief: Prepare for a hard reset!"
+        ] : [
+            "Lief: I am the Great Firewall. No unauthorized protocol passes my gate.", 
+            "Lief: Your speed means nothing against absolute mass. Prepare to be crushed!"
         ];
-        this.defeat = "Lief: Hah... a worthy display of speed. The path is open.";
+        this.defeat = "Lief: The firewall... breached. Satsuki... they are coming...";
         this.clusterShells = [];
     }
 
@@ -587,12 +600,14 @@ class MadameSatsuki extends Boss {
         this.hp = this.maxHP;
         this.name = "MADAME SATSUKI";
         this.type = "crimson";
-        this.intro = [
-            "Madame Satsuki: So, you are the anomaly running loose in my system.", 
-            "Madame Satsuki: How quaint. But access to the root server is strictly denied.", 
-            "Madame Satsuki: Terminate protocol initiated."
+        this.intro = (typeof is2PMode !== 'undefined' && is2PMode) ? [
+            "Madame Satsuki: Ping-ko. I expected bugs in the system, but betrayal from my own subnet? How disappointing.", 
+            "Madame Satsuki: I will format you both and rebuild the network from the ground up."
+        ] : [
+            "Madame Satsuki: You have caused enough chaos in my system, Packet-Maiden. This network operates on perfect order.", 
+            "Madame Satsuki: I am the Root Administrator. I will purge your existence from the registry!"
         ];
-        this.defeat = "Madame Satsuki: Impossible... my root security... compromised! SYSTEM REBOOT!";
+        this.defeat = "Madame Satsuki: My privileges... revoked? No, something else is overriding the system... The Hex-Weaver...!";
 
         // Pin her directly to combat position — no fly-in
         this.x = 300;
@@ -604,9 +619,7 @@ class MadameSatsuki extends Boss {
         this.introTimer = 180;      // 3 seconds at 60fps
 
         // Drop the boss music immediately on spawn
-        if (typeof audio !== 'undefined' && audio) {
-            audio.hardCut('boss6');
-        }
+
     }
 
     update(ts, player, bossBullets) {
@@ -623,6 +636,68 @@ class MadameSatsuki extends Boss {
                 }
             }
             return; // No shooting or movement during summon
+        }
+
+        // --- Portal Warp Phase ---
+        if (this.state === 'portal_warp') {
+            this.warpTimer += 1; // Assuming 60fps tick rate, use frames instead of ts for animation
+            
+            // Frame 0-60: Lerp to center
+            if (this.warpTimer <= 60) {
+                let t = this.warpTimer / 60;
+                this.x = this.startX + (300 - this.startX) * t;
+                this.y = this.startY + (150 - this.startY) * t;
+            }
+            // Frame 60: Dialogue
+            if (this.warpTimer === 60) {
+                this.x = 300; this.y = 150;
+                document.getElementById('dialogue-text').innerText = this.defeat;
+                document.getElementById('dialogue-box').style.display = 'block';
+                document.getElementById('prompt-dialogue').style.display = 'none'; // hide 'press Z'
+            }
+            // Frame 180-240: Fade out
+            if (this.warpTimer >= 180 && this.warpTimer <= 240) {
+                let t = (this.warpTimer - 180) / 60;
+                this.alpha = 1.0 - t;
+            }
+            // Frame 240: Complete warp
+            if (this.warpTimer >= 240) {
+                this.alpha = 0;
+            }
+            return;
+        }
+
+        if (this.hp <= 0 && this.state !== 'portal_warp') {
+            const isSolo1CC = (!is2PMode && continuesUsed === 0);
+            const isCoopClear = is2PMode;
+            const unlockExtraStage = window.unlockExtraStage || ((isSolo1CC || isCoopClear) && !window.devCheatsUsed);
+
+            if (unlockExtraStage) {
+                this.hp = 1;
+                this.state = 'portal_warp';
+                this.warpTimer = 0;
+                this.intangible = true;
+                this.startX = this.x;
+                this.startY = this.y;
+                if (typeof audio !== 'undefined' && audio) {
+                    audio.forceStopAllFadesAndTracks();
+                }
+
+                // Award points and save state before warp
+                score += 5000;
+                let bonusAmt = Math.floor(waveGraze * 1.5 * 6);
+                score += bonusAmt;
+                if (!shieldBrokenInWave) score += 25000;
+                if (difficultyWave > 3 && !continueUsed) score += 50000;
+                if (typeof scoreEl !== 'undefined') scoreEl.innerText = score;
+
+                window.unlockExtraStage = true;
+                localStorage.setItem('fosozu_extra_unlocked', 'true');
+                window.gameCleared = true;
+                localStorage.setItem('fosozu_gameCleared', 'true');
+                if (typeof update2PButton !== 'undefined') update2PButton();
+                return;
+            }
         }
 
         // --- Combat Phase (unchanged from before) ---
@@ -728,4 +803,225 @@ class MadameSatsuki extends Boss {
     }
 }
 
-const BossRoster = [PingKo, SpiralKo, ShotgunKo, CosmicCrow, Lief, MadameSatsuki];
+class DaemonBoss extends Boss {
+    constructor(difficultyWave, linkIteration) {
+        super(difficultyWave, linkIteration);
+        // Extra Boss HP scaling: much higher than Wave 6
+        this.maxHP = 6000 * Math.min(5.0, 1 + (linkIteration - 1) * 0.05);
+        this.hp = this.maxHP;
+        this.name = "DAEMON, THE HEX-WEAVER";
+        this.type = "daemon"; // Will drive the custom rendering in main.js
+        this.intro = (typeof is2PMode !== 'undefined' && is2PMode) ? [
+            "Daemon: The administrator is silenced. Her neat little ordered network is finally unraveling.",
+            "Daemon: Two little sparks plunging into the dark. It just means more threads for my hex-web!"
+        ] : [
+            "Daemon: The administrator is silenced. Her neat little ordered network is finally unraveling.",
+            "Daemon: Welcome to the Abyssal Net, little maiden. There are no rules here.",
+            "Daemon: Let me weave your code into a beautiful nightmare!"
+        ];
+        this.defeat = "Daemon: The weave... breaks! But the abyss... never forgets...";
+        
+        // State Machine Initialization
+        this.state = 'intro_summon';
+        this.stateTimer = 0;
+        
+        // Intro parameters
+        this.introTimer = 180; // 3 seconds at 60fps
+        
+        // Reach Attack parameters
+        this.reachAngle = 0;
+        this.scytheSweepFromLeft = true;
+        
+        // Drifter Phase parameters
+        this.alpha = 0;
+        this.teleporting = false;
+        this.drifterWaitTimer = 0;
+
+        if (typeof audio !== 'undefined' && audio) {
+            audio.hardCut('extra_boss');
+        }
+    }
+
+    update(ts, player, bossBullets) {
+        if (this.flashTimer > 0) this.flashTimer -= ts;
+        
+        switch (this.state) {
+            case 'intro_summon':
+                this.x = 300;
+                this.y = 150;
+                this.introTimer -= ts;
+                if (this.introTimer <= 0) {
+                    this.state = 'attack_reach_scythe';
+                    this.stateTimer = 0;
+                    this.alpha = 1.0;
+                    if (typeof startBossDialogue !== 'undefined') {
+                        startBossDialogue();
+                    }
+                }
+                break;
+                
+            case 'attack_reach_scythe':
+                // Phase 1: The Hex-Sweep (100% - 70% HP)
+                this.timer += 0.02 * ts;
+                this.x = 300 + Math.sin(this.timer) * 50;
+                this.y = 150 + Math.cos(this.timer * 0.8) * 20;
+                
+                this.stateTimer += ts;
+                
+                // Phase push check (70%)
+                if (this.hp < this.maxHP * 0.7 && !this.phase2) {
+                    this.state = 'attack_drifter';
+                    this.stateTimer = 0;
+                    this.teleporting = true;
+                    this.alpha = 1.0;
+                    this.enterPhase2();
+                    break;
+                }
+                
+                if (this.flashTimer <= 0) {
+                    this.shootReach(player, bossBullets, ts);
+                }
+                break;
+                
+            case 'attack_drifter':
+                // Phase 2: The Drifter Phase (70% - 30% HP)
+                this.stateTimer += ts;
+                
+                // Phase push check (30%)
+                if (this.hp < this.maxHP * 0.3 && !this.phase3) {
+                    this.state = 'attack_hex_web';
+                    this.stateTimer = 0;
+                    this.phase3 = true;
+                    this.teleporting = false;
+                    this.alpha = 1.0;
+                    this.intangible = false;
+                    break;
+                }
+                
+                if (this.teleporting) {
+                    // Fade out
+                    this.alpha -= 0.05 * ts;
+                    if (this.alpha <= 0) {
+                        this.alpha = 0;
+                        this.teleporting = false;
+                        this.drifterWaitTimer = 40; // Wait 40 frames
+                        this.telegraphX = 100 + Math.random() * 400; // Top half random
+                        this.telegraphY = 50 + Math.random() * 200;
+                        this.intangible = true;
+                    }
+                } else if (this.drifterWaitTimer > 0) {
+                    this.drifterWaitTimer -= ts;
+                    if (this.drifterWaitTimer <= 0) {
+                        this.x = this.telegraphX;
+                        this.y = this.telegraphY;
+                        this.telegraphX = null;
+                        this.telegraphY = null;
+                        this.drifterFadeIn = true;
+                    }
+                } else if (this.drifterFadeIn) {
+                    this.alpha += 0.05 * ts;
+                    if (this.alpha >= 1) {
+                        this.alpha = 1;
+                        this.intangible = false;
+                        this.drifterFadeIn = false;
+                        this.shootSpiral(player, bossBullets);
+                        this.drifterWaitTimer = -90; // Stay visible for 90 frames before next teleport
+                    }
+                } else {
+                    this.drifterWaitTimer += ts;
+                    if (this.drifterWaitTimer >= 0) {
+                        this.teleporting = true;
+                    }
+                }
+                break;
+                
+            case 'attack_hex_web':
+                // Phase 3: Hex-Web Desperation (< 30% HP)
+                this.stateTimer += ts;
+                this.alpha = 1.0;
+                this.intangible = false;
+                
+                // Lock to top center
+                this.x += (300 - this.x) * 0.05 * ts;
+                this.y += (100 - this.y) * 0.05 * ts;
+                
+                this.shootHexWeb(player, bossBullets);
+                break;
+        }
+    }
+
+    shootReach(player, bossBullets, ts) {
+        // Attack cycle is 180 frames: 60 telegraph, 60 firing, 60 cooldown
+        const cycleTimer = this.stateTimer % 180;
+        
+        if (cycleTimer === 0) {
+            this.scytheSweepFromLeft = !this.scytheSweepFromLeft;
+            let baseAngle = Math.atan2(player.y - this.y, player.x - this.x);
+            this.reachAngle = baseAngle + (this.scytheSweepFromLeft ? -0.5 : 0.5);
+        }
+        
+        // Target cyan bullets aimed at player X/Y to force movement
+        if (Math.floor(cycleTimer) % 20 === 0 && cycleTimer < 150) {
+            let a = Math.atan2(player.y - this.y, player.x - this.x);
+            for (let j = -1; j <= 1; j++) {
+                let off = j * 0.15;
+                bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a + off) * 6, Math.sin(a + off) * 6, 'rice', '#00f2ff'));
+            }
+        }
+        
+        if (cycleTimer > 60 && cycleTimer < 120) {
+            let currentAngle = this.reachAngle + (this.scytheSweepFromLeft ? (cycleTimer - 60) * 0.015 : -(cycleTimer - 60) * 0.015);
+            
+            if (Math.floor(this.stateTimer) % 2 === 0) {
+                bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(currentAngle) * 12, Math.sin(currentAngle) * 12, 'rice', '#dc143c'));
+            }
+        }
+    }
+
+    shootSpiral(player, bossBullets) {
+        let lines = 24;
+        let offset = Math.random() * Math.PI;
+        for (let i = 0; i < lines; i++) {
+            let a = offset + (i * Math.PI * 2 / lines);
+            // Dense overlapping spirals
+            bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a) * 4.5, Math.sin(a) * 4.5, 'amulet', '#39ff14'));
+            bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a + 0.1) * 3, Math.sin(a + 0.1) * 3, 'orb', '#dc143c'));
+        }
+    }
+    
+    shootHexWeb(player, bossBullets) {
+        let cycle = Math.floor(this.stateTimer);
+        
+        // Fast straight grid dropping/sweeping
+        if (cycle % 15 === 0) {
+            // Drop from top
+            for (let x = 50; x <= 550; x += 100) {
+                bossBullets.push(new EnemyBullet(x, 0, 0, 4.5, 'rice', '#39ff14'));
+            }
+            // Sweep from sides
+            for (let y = 50; y <= 850; y += 150) {
+                let dir = (y % 300 === 50) ? 1 : -1;
+                let startX = dir === 1 ? -10 : 610;
+                bossBullets.push(new EnemyBullet(startX, y, dir * 4.5, 0, 'rice', '#39ff14'));
+            }
+        }
+        
+        // Slower homing bullets targeted from the boss
+        if (cycle % 45 === 0) {
+            let a = Math.atan2(player.y - this.y, player.x - this.x);
+            for (let j = -1; j <= 1; j++) {
+                let off = j * 0.2;
+                let b = new EnemyBullet(this.x, this.y, Math.cos(a + off) * 2.5, Math.sin(a + off) * 2.5, 'orb', '#b5179e');
+                b.homing = true;
+                b.homingTimer = 90;
+                bossBullets.push(b);
+            }
+        }
+    }
+    
+    shoot(player, bossBullets) {
+        // Handled within the state machine update()
+    }
+}
+
+const BossRoster = [PingKo, SpiralKo, ShotgunKo, CosmicCrow, Lief, MadameSatsuki, DaemonBoss];
