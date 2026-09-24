@@ -140,7 +140,8 @@ Object.values(assets).forEach(a => {
 let sessionHiScore = parseInt(localStorage.getItem('fosozu_hiScore')) || 0;
 
 let score = 0, graze = 0, lives = 3, bombs = 3, power = 0, gameOver = false, gameStarted = false, isPaused = false;
-let bossMode = false, boss = null, difficultyWave = 1, scoreAtLastBoss = 0, continueUsed = false, continuesUsed = 0;
+let bossMode = false, boss = null, difficultyWave = 1, scoreAtLastBoss = 0, continueUsed = false;
+window.continuesUsed = 0;
 let waveClearTimer = 0, p1BombTimer = 0, p2BombTimer = 0, invulnTimer = 0, shakeTimer = 0, stallingTimer = 0, continueCountdown = 0;
 let satsukiSummonTimer = 0; // 10-second tension delay before Satsuki spawns
 let slowMoTimer = 0, flashTimer = 0, grazeStreak = 0, streakTimer = 0, hasShield = false, waveGraze = 0, dialogueIndex = 0, resetAnimTimer = 0, linkIteration = 1, shieldBrokenInWave = false;
@@ -676,7 +677,9 @@ document.addEventListener('gamepadconnected', startTitleMusic, {once: true});
 
 // UI Menu Logic
 function startGameCommon() {
-    continuesUsed = 0;
+    window.continuesUsed = 0;
+    window.unlockExtraStage = false;
+    window.isTrueEnding = false;
     window.devCheatsUsed = false;
     if (audio) {
         audio.resume();
@@ -946,10 +949,6 @@ window.addEventListener('keydown', e => {
         if (k === '2') { window.devCheatsUsed = true; bombs = 9; bombsEl.innerText = bombs; power = 64; powerEl.innerText = power; }
         if (k === '3') {
             window.devCheatsUsed = true;
-            if (difficultyWave === 6) {
-                window.unlockExtraStage = true;
-                window.devCheatsUsed = false;
-            }
             if (window.isEndingSequence) {
                 clearTimeout(window.victoryTimeout);
                 window.isEndingSequence = false;
@@ -959,17 +958,17 @@ window.addEventListener('keydown', e => {
         }
         if (k === '8') {
             difficultyWave = 6;
-            bossMode = true;
-            boss = new MadameSatsuki(6, linkIteration);
+            bossMode = false;
+            boss = null;
             stageTimer = WAVE_DURATIONS[6] || 3600;
+            satsukiSummonTimer = 0;
             enemies.length = 0;
             enemyBullets.length = 0;
             bossBullets.length = 0;
             waveClearTimer = 0;
-            continuesUsed = 0;
+            window.continuesUsed = 0;
             window.devCheatsUsed = false;
-            document.getElementById('boss-ui').style.display = 'block';
-            bossNameEl.innerText = boss.name;
+            document.getElementById('boss-ui').style.display = 'none';
         }
         if (k === '9') {
             window.godMode = !window.godMode;
@@ -1038,7 +1037,7 @@ function updateArcadeNameEntry() {
 }
 
 function finalizeScoreSubmission(name) {
-    submitScore(name, score, difficultyWave, continuesUsed);
+    submitScore(name, score, difficultyWave, window.continuesUsed);
     document.getElementById('submit-score-ui').style.display = 'none';
     continueCountdown = 10;
     continueUI.style.display = 'flex';
@@ -1137,10 +1136,15 @@ function useBomb(sourcePlayer, isP1 = true) {
 function triggerVictorySequence(unlockExtraStage) {
     if (window.isEndingSequence) return;
     
-    if (audio) audio.fadeTransition('ending');
-    
     window.isEndingSequence = true;
+    creditsScrollY = 800; // Initialize scroll ONCE at the very beginning
     window.currentUnlockExtraStage = unlockExtraStage;
+    window.isTrueEnding = (difficultyWave >= 7);
+    
+    if (audio) {
+        if (window.isTrueEnding) audio.fadeTransition('extra_ending', 3.0);
+        else audio.fadeTransition('credits', 3.0);
+    }
     
     // Immediately increment iteration and update HUD for NG+ visually
     linkIteration++; 
@@ -1155,33 +1159,37 @@ function triggerVictorySequence(unlockExtraStage) {
     
     window.victoryTimeout = setTimeout(() => {
         triggerCreditsSequence(unlockExtraStage);
-        
-        // Initialize background gameplay underneath the credits (ALWAYS NG+)
-        difficultyWave = 1;
-        bossMode = false;
-        stageTimer = 0;
-        resetTimelines();
-        window.skipNextSummaryBox = true;
-        isPaused = false;
     }, 5000);
 }
 
 let creditsScrollY = 800;
 
 function triggerCreditsSequence(unlockExtraStage) {
+    if (window.creditsActive) return;
+    window.creditsActive = true;
+    window.isEndingSequence = true; // MUST be set to actually draw the credits if triggered manually
+
+    // Initialize background gameplay underneath the credits (ALWAYS NG+)
+    difficultyWave = 1;
+    bossMode = false;
+    boss = null;
+    enemies.length = 0;
+    enemyBullets.length = 0;
+    bossBullets.length = 0;
+    stageTimer = 0;
+    resetTimelines();
+    window.skipNextSummaryBox = true;
+    isPaused = false;
+
     let creditsSkipped = false;
     let creditsEnded = false;
     
-    creditsScrollY = 800; // Reset scroll position for staff roll
-    if (audio) {
-        if (difficultyWave > 6) audio.playBGM('extra_ending');
-        else audio.playBGM('credits');
-    }
+    // creditsScrollY initialization moved to triggerVictorySequence
     
     function skipCredits(e) {
         let k = e.key ? e.key.toLowerCase() : null;
-        let p1Shoot = (k === keyMap.shoot || k === keyMap.start);
-        if (p1Shoot && !creditsSkipped) {
+        let p1Start = (k === keyMap.start);
+        if (p1Start && !creditsSkipped) {
             creditsSkipped = true;
             endCredits();
         }
@@ -1189,7 +1197,7 @@ function triggerCreditsSequence(unlockExtraStage) {
     
     let skipInterval = setInterval(() => {
         let gp = navigator.getGamepads()[0];
-        if (gp && (gp.buttons[0].pressed || gp.buttons[9].pressed)) {
+        if (gp && gp.buttons[9].pressed) {
             if (!creditsSkipped) {
                 creditsSkipped = true;
                 endCredits();
@@ -1204,20 +1212,16 @@ function triggerCreditsSequence(unlockExtraStage) {
             creditsSkipped = true;
             endCredits();
         }
-    }, 10000);
+    }, 30000);
 
     function endCredits() {
         if (creditsEnded) return;
         creditsEnded = true;
-        window.isEndingSequence = false;
+        window.creditsActive = false;
+        if (typeof creditsScrollY !== 'undefined') creditsScrollY = -2000;
         clearInterval(skipInterval);
         clearTimeout(creditsTimeout);
         document.removeEventListener('keydown', skipCredits);
-        
-        if (audio) {
-            audio.forceStopAllFadesAndTracks();
-            audio.fadeTransition('stage1');
-        }
     }
 }
 
@@ -1231,7 +1235,7 @@ function closeSummary() {
     
     if (difficultyWave === 7 || difficultyWave === 8) {
         if (difficultyWave === 7 && linkIteration > 1) {
-            if (window.unlockExtraStage && !window.devCheatsUsed) {
+            if (window.unlockExtraStage) {
                 difficultyWave = 7;
                 bossMode = false;
                 stageTimer = 0;
@@ -1251,7 +1255,7 @@ function closeSummary() {
             resetAnimTimer = 120; shakeTimer = 120; flashTimer = 50;
             window.skipNextSummaryBox = true;
         } else {
-            triggerVictorySequence(window.unlockExtraStage && !window.devCheatsUsed);
+            triggerVictorySequence(window.unlockExtraStage);
         }
     } else if (audio && difficultyWave <= 6) {
         audio.hardCut('stage' + difficultyWave);
@@ -1261,7 +1265,8 @@ function processContinue() {
     updateHighScore();
     continueCountdown = 0;
     continueUsed = true;
-    continuesUsed++;
+    window.continuesUsed++;
+    console.log("Continues:", window.continuesUsed);
     document.getElementById('submit-score-ui').style.display = 'none';
     continueUI.style.display = 'none';
     lives = 3; livesEl.innerText = lives;
@@ -1669,6 +1674,7 @@ function updateBoss(ts) {
     if (boss) {
         let lastX = boss.x;
         boss.update(ts, player, bossBullets);
+        if (!boss) return; // Prevent crash if boss state machine triggers cleanup
         boss.vx = boss.x - lastX;
 
         hpFill.style.width = Math.max(0, (boss.hp / boss.maxHP * 100)) + "%";
@@ -1680,56 +1686,18 @@ function updateBoss(ts) {
             }
         }
 
-        if (boss.state === 'portal_warp' && boss.warpTimer >= 240) {
-            enemies.length = 0; 
-            enemyBullets.length = 0; 
-            bossBullets.length = 0;
-            boss = null;
-            document.getElementById('boss-ui').style.display = 'none';
-            document.getElementById('dialogue-box').style.display = 'none';
-            document.getElementById('prompt-dialogue').style.display = 'block';
-            if (player) player.alpha = 1.0;
-            if (typeof player2 !== "undefined" && player2) player2.alpha = 1.0;
-            if (audio) audio.fadeTransition('extra_stage');
-            return;
-        }
 
-        if (boss.hp <= 0 && boss.state !== 'portal_warp') {
-            if (boss.type === 'satsuki' || boss.constructor.name === 'MadameSatsuki') {
-                if (window.unlockExtraStage) {
-                    boss.hp = 1; // Keep her alive for the cinematic
-                    boss.intangible = true;
-                    boss.state = 'portal_warp';
-                    boss.warpTimer = 0;
-                    if (audio) audio.forceStopAllFadesAndTracks(); // Cut music immediately
-                    
-                    // Award points
-                    score += 5000;
-                    let bonusAmt = Math.floor(waveGraze * 1.5 * 6);
-                    score += bonusAmt;
-                    if (!shieldBrokenInWave) score += 25000;
-                    if (difficultyWave > 3 && !continueUsed) score += 50000;
-                    if (typeof scoreEl !== 'undefined') scoreEl.innerText = score;
 
-                    localStorage.setItem('fosozu_extra_unlocked', 'true');
-                    window.gameCleared = true;
-                    localStorage.setItem('fosozu_gameCleared', 'true');
-                    if (typeof update2PButton !== 'undefined') update2PButton();
-                    return; // CRITICAL: Exit the block so the normal ending doesn't fire!
-                } else {
-                    score += 5000;
-                    let bonusAmt = Math.floor(waveGraze * 1.5 * difficultyWave);
-                    score += bonusAmt;
-                    if (!shieldBrokenInWave) score += 25000;
-                    if (difficultyWave > 3 && !continueUsed) score += 50000;
-                    if (typeof scoreEl !== 'undefined') scoreEl.innerText = score;
+        if (boss && boss.hp <= 0 && boss.state !== 'portal_warp') {
 
-                    boss = null;
-                    document.getElementById('boss-ui').style.display = 'none';
 
-                    triggerVictorySequence(false);
-                    return;
-                }
+            // --- STRICT WAVE 6 ROADBLOCK FOR NON-1CC RUNS ---
+            if (difficultyWave === 6) {
+                boss = null;
+                document.getElementById('boss-ui').style.display = 'none';
+                if (audio) audio.playExplosion();
+                triggerVictorySequence(false);
+                return; // Trigger standard credits for non-1CC
             }
 
             let currentWave = difficultyWave;
@@ -1745,15 +1713,15 @@ function updateBoss(ts) {
             }
             let b_name = boss.name;
             let b_defeat = boss.defeat;
-            let isLastBoss = (boss.constructor === BossRoster[BossRoster.length - 1]);
+            let isLastBoss = (currentWave === 7);
 
             boss = null;
             document.getElementById('boss-ui').style.display = 'none';
 
             if (isLastBoss) {
                 // Daemon defeated! Trigger True Ending immediately.
+                window.isTrueEnding = true;
                 if (!window.isEndingSequence) {
-                    window.isEndingSequence = true;
                     triggerVictorySequence(false);
                 }
                 return;
@@ -1762,7 +1730,7 @@ function updateBoss(ts) {
             }
 
             if (difficultyWave === 7) { // Since we incremented difficultyWave on line 835
-                const isSolo1CC = (!is2PMode && continuesUsed === 0);
+                const isSolo1CC = (!is2PMode && window.continuesUsed === 0);
                 const isCoopClear = is2PMode;
                 const unlockExtraStage = isSolo1CC || isCoopClear;
                 if (unlockExtraStage) localStorage.setItem('fosozu_extra_unlocked', 'true');
@@ -1790,7 +1758,7 @@ function updateBoss(ts) {
             // 10-second eerie silence before Satsuki
             if (satsukiSummonTimer === 0) {
                 satsukiSummonTimer = 600;
-                if (typeof audio !== 'undefined' && audio) audio.hardCut('boss6');
+                if (typeof audio !== 'undefined' && audio) audio.fadeTransition('boss6', 2.0);
             }
             satsukiSummonTimer -= ts;
             if (satsukiSummonTimer > 0) return;
@@ -1803,9 +1771,8 @@ function updateBoss(ts) {
         let tIdx = (difficultyWave - 1) % BossRoster.length;
         let BossClass = BossRoster[tIdx];
         if (difficultyWave === 7) BossClass = DaemonBoss; // Override Wave 7
-        if (difficultyWave === 8) BossClass = TrueDaemonBoss; // Override Wave 8
 
-        if (typeof audio !== 'undefined' && audio) {
+        if (typeof audio !== 'undefined' && audio && difficultyWave !== 6) {
             audio.forceStopAllFadesAndTracks();
         }
 
@@ -2191,8 +2158,10 @@ function update() {
 
     stars.forEach(s => { s.y += s.speed * ts; if (s.y > 800) s.y = 0; });
 
-    updatePlayer(ts, player, (inputMode === 'gamepad') ? gamepadState : null, (inputMode === 'keyboard') ? keyMap : null);
-    if (is2PMode) updatePlayer(ts, player2, (inputModeP2 === 'gamepad') ? gamepadState2 : null, (inputModeP2 === 'keyboard') ? keyMapP2 : null);
+    if (!window.isPlayerLocked) {
+        updatePlayer(ts, player, (inputMode === 'gamepad') ? gamepadState : null, (inputMode === 'keyboard') ? keyMap : null);
+        if (is2PMode) updatePlayer(ts, player2, (inputModeP2 === 'gamepad') ? gamepadState2 : null, (inputModeP2 === 'keyboard') ? keyMapP2 : null);
+    }
     updateProjectiles(ts);
     handleCollisions(ts);
     updateBoss(ts);
@@ -2323,107 +2292,16 @@ function drawSatellites(pObj) {
 }
 
     stars.forEach(s => { ctx.fillStyle = '#fff'; ctx.fillRect(s.x, s.y, s.size, s.size); });
-    if (boss && boss.constructor.name === 'MadameSatsuki' && boss.state === 'portal_warp') {
-        if (boss.warpTimer >= 60 && boss.warpTimer <= 240) {
-            let t = boss.warpTimer;
-            ctx.save();
-            ctx.globalAlpha = Math.min(1.0, (t - 60) / 30);
-            function drawArcaneCircle(px, py, rotation) {
-                ctx.save();
-                ctx.translate(px, py);
-                ctx.rotate(rotation);
-                ctx.strokeStyle = '#39ff14';
-                ctx.lineWidth = 4;
-                ctx.beginPath();
-                ctx.arc(0, 0, 80 + Math.sin(t*0.05)*10, 0, Math.PI*2);
-                ctx.stroke();
-                ctx.strokeStyle = '#dc143c';
-                ctx.lineWidth = 2;
-                ctx.beginPath();
-                ctx.arc(0, 0, 60 - Math.sin(t*0.05)*10, 0, Math.PI*2);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.moveTo(0, -50);
-                ctx.lineTo(43, 25);
-                ctx.lineTo(-43, 25);
-                ctx.closePath();
-                ctx.stroke();
-                ctx.restore();
-            }
-            drawArcaneCircle(player.x, player.y, t * 0.02);
-            if (is2PMode) drawArcaneCircle(player2.x, player2.y, -t * 0.02);
-            ctx.restore();
-        }
-        
-        if (boss.warpTimer >= 180 && boss.warpTimer <= 240) {
-            // Removed white screen flash
-            
-            // Flicker player
-            player.alpha = 0.3 + Math.random() * 0.7;
-            if (is2PMode) player2.alpha = 0.3 + Math.random() * 0.7;
-        } else {
-            player.alpha = 1.0;
-            if (is2PMode) player2.alpha = 1.0;
-        }
-    } else {
-        player.alpha = 1.0;
-        if (is2PMode) player2.alpha = 1.0;
+
+    if (boss && (boss.hp > 0 || boss.state === 'portal_warp') && typeof boss.draw === 'function') {
+        boss.draw(ctx, typeof player !== 'undefined' ? player : null, typeof player2 !== 'undefined' ? player2 : null);
     }
 
     drawPlayer(player, true);
     if (is2PMode) drawPlayer(player2, false);
 
     if (boss) {
-        if (boss.type === 'daemon' && boss.state === 'intro_summon') {
-            const SUMMON_MAX = 180;
-            let progress = Math.max(0, Math.min(1, 1 - (boss.introTimer / SUMMON_MAX)));
-            let alpha = progress;
-            let radius = 30 + progress * 80;
-            let outerRadius = 20 + progress * 110;
-            let rotation = progress * Math.PI * 4;
-
-            ctx.save();
-            ctx.translate(boss.x, boss.y);
-            ctx.globalAlpha = alpha;
-            ctx.strokeStyle = '#39ff14';
-            ctx.shadowBlur = 20 + progress * 30;
-            ctx.shadowColor = '#39ff14';
-            ctx.lineWidth = 2.0;
-
-            ctx.beginPath();
-            ctx.arc(0, 0, outerRadius, 0, Math.PI * 2);
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.arc(0, 0, radius * 0.45, 0, Math.PI * 2);
-            ctx.stroke();
-
-            ctx.save();
-            ctx.rotate(rotation);
-            ctx.strokeStyle = '#dc143c';
-            ctx.shadowColor = '#dc143c';
-            for (let tri = 0; tri < 2; tri++) {
-                ctx.beginPath();
-                for (let i = 0; i < 3; i++) {
-                    let a = i * Math.PI * 2 / 3 + (tri * Math.PI / 3);
-                    let px = Math.cos(a) * radius;
-                    let py = Math.sin(a) * radius;
-                    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-                }
-                ctx.closePath();
-                ctx.stroke();
-            }
-            ctx.restore();
-
-            let pulse = 0.3 + Math.sin(Date.now() * 0.008) * 0.2;
-            ctx.beginPath();
-            ctx.arc(0, 0, 15 * progress, 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(57, 255, 20, ${pulse * progress})`;
-            ctx.fill();
-
-            ctx.globalAlpha = 1.0;
-            ctx.restore();
-        } else if (boss.introState === 'summon') {
+        if (boss.introState === 'summon') {
             const SUMMON_MAX = 180;
             let progress = Math.max(0, Math.min(1, 1 - (boss.introTimer / SUMMON_MAX)));
             let alpha = progress;
@@ -2949,24 +2827,29 @@ function drawSatellites(pObj) {
     }
 
     if (window.isEndingSequence) {
-        let bgY = Math.min(0, creditsScrollY + 300);
-        if (difficultyWave > 6 || window.currentUnlockExtraStage) {
-            bgY = Math.min(0, creditsScrollY + 350);
+        if (typeof creditsScrollY !== 'undefined') creditsScrollY -= 1; // Unconditional scroll
+
+        let bgY = 0;
+        if (typeof creditsScrollY !== 'undefined') {
+            let lastLineOffset = (window.isTrueEnding || window.currentUnlockExtraStage) ? 250 : 160;
+            bgY = Math.min(0, creditsScrollY + lastLineOffset);
         }
         
-        ctx.fillStyle = 'rgba(0,0,0,0.7)'; 
-        ctx.fillRect(0, bgY, 600, 800); // Slide the entire box up
+        ctx.fillStyle = 'rgba(0,0,0,0.6)'; 
+        ctx.fillRect(0, bgY, canvas.width, canvas.height); // Use fixed canvas.height so it rolls UP seamlessly
         
-        if (bgY <= -800) {
+        if (bgY <= -canvas.height) {
             window.isEndingSequence = false;
+            if (typeof audio !== 'undefined' && audio) {
+                audio.playBGM('stage1');
+            }
         }
 
         ctx.fillStyle = '#fff';
         ctx.textAlign = 'center';
         ctx.font = '24px Courier';
         
-        if (creditsScrollY > -400) {
-            creditsScrollY -= 1; // Scroll speed
+        if (typeof creditsScrollY !== 'undefined') {
             ctx.fillText("STAFF ROLL", 300, creditsScrollY);
             ctx.font = '16px Courier';
             ctx.fillText("THANK YOU FOR PLAYING", 300, creditsScrollY + 60);
@@ -2974,7 +2857,7 @@ function drawSatellites(pObj) {
             ctx.fillText("helped us grow and learn", 300, creditsScrollY + 130);
             ctx.fillText("throughout this project!", 300, creditsScrollY + 160);
             
-            if (difficultyWave > 6 || window.currentUnlockExtraStage) {
+            if (window.isTrueEnding || window.currentUnlockExtraStage) {
                 ctx.fillStyle = '#39ff14';
                 ctx.fillText("-- EXTRA STAGE CLEAR --", 300, creditsScrollY + 220);
                 ctx.fillStyle = '#ffca3a';

@@ -625,6 +625,40 @@ class MadameSatsuki extends Boss {
     update(ts, player, bossBullets) {
         if (this.flashTimer > 0) this.flashTimer -= ts;
 
+        if (this.hp <= 0 && this.state !== 'portal_warp') {
+            console.log("Satsuki Death - Continues:", window.continuesUsed, "| ExtraStage Flag:", window.unlockExtraStage);
+            if (window.unlockExtraStage || window.continuesUsed === 0) {
+                this.hp = 1;
+                this.state = 'portal_warp';
+                this.warpTimer = 0;
+                this.warpParticles = [];
+                this.intangible = true;
+                this.startX = this.x;
+                this.startY = this.y;
+                if (typeof audio !== 'undefined' && audio) {
+                    audio.forceStopAllFadesAndTracks();
+                }
+
+                // Award points and save state before warp
+                score += 5000;
+                let bonusAmt = Math.floor(waveGraze * 1.5 * 6);
+                score += bonusAmt;
+                if (typeof shieldBrokenInWave !== 'undefined' && !shieldBrokenInWave) score += 25000;
+                if (difficultyWave > 3 && typeof continueUsed !== 'undefined' && !continueUsed) score += 50000;
+                if (typeof scoreEl !== 'undefined') scoreEl.innerText = score;
+
+                window.unlockExtraStage = true;
+                localStorage.setItem('fosozu_extra_unlocked', 'true');
+                window.gameCleared = true;
+                localStorage.setItem('fosozu_gameCleared', 'true');
+                if (typeof update2PButton !== 'undefined') update2PButton();
+                return;
+            } else {
+                this.state = 'dead';
+                return;
+            }
+        }
+
         // --- Summoning Intro Phase ---
         if (this.introState === 'summon') {
             this.introTimer -= ts;
@@ -640,6 +674,7 @@ class MadameSatsuki extends Boss {
 
         // --- Portal Warp Phase ---
         if (this.state === 'portal_warp') {
+            window.isPlayerLocked = true;
             this.warpTimer += 1; // Assuming 60fps tick rate, use frames instead of ts for animation
             
             // Frame 0-60: Lerp to center
@@ -653,51 +688,81 @@ class MadameSatsuki extends Boss {
                 this.x = 300; this.y = 150;
                 document.getElementById('dialogue-text').innerText = this.defeat;
                 document.getElementById('dialogue-box').style.display = 'block';
-                document.getElementById('prompt-dialogue').style.display = 'none'; // hide 'press Z'
+                let promptDiag = document.getElementById('prompt-dialogue');
+                if (promptDiag) promptDiag.style.display = 'none'; // hide 'press Z'
             }
             // Frame 180-240: Fade out
             if (this.warpTimer >= 180 && this.warpTimer <= 240) {
                 let t = (this.warpTimer - 180) / 60;
                 this.alpha = 1.0 - t;
+                
+                // Flicker player
+                if (typeof player !== 'undefined') player.alpha = 0.3 + Math.random() * 0.7;
+                if (typeof is2PMode !== 'undefined' && is2PMode && typeof player2 !== 'undefined') player2.alpha = 0.3 + Math.random() * 0.7;
+            } else {
+                if (typeof player !== 'undefined') player.alpha = 1.0;
+                if (typeof is2PMode !== 'undefined' && is2PMode && typeof player2 !== 'undefined') player2.alpha = 1.0;
             }
+
+            // Frame 60-240: Warp particles
+            if (this.warpTimer >= 60 && this.warpTimer <= 240) {
+                let progress = (this.warpTimer - 60) / 180;
+                let numParticles = 2 + Math.floor(progress * 3);
+                for (let i = 0; i < numParticles; i++) {
+                    let angle = Math.random() * Math.PI * 2;
+                    let r = Math.random() * 110;
+                    let targetPlayer = (typeof is2PMode !== 'undefined' && is2PMode && Math.random() > 0.5 && typeof player2 !== 'undefined' && player2) ? player2 : (typeof player !== 'undefined' ? player : null);
+                    let px = targetPlayer ? targetPlayer.x + Math.cos(angle) * r : 300;
+                    let py = targetPlayer ? targetPlayer.y + Math.sin(angle) * r : 700;
+                    
+                    this.warpParticles.push({
+                        x: px,
+                        y: py,
+                        vx: (Math.random() - 0.5) * 2.5,
+                        vy: -Math.random() * 3 - (progress * 7),
+                        life: 1.0,
+                        color: Math.random() > 0.5 ? '#b5179e' : '#39ff14'
+                    });
+                }
+                
+                for (let i = this.warpParticles.length - 1; i >= 0; i--) {
+                    let p = this.warpParticles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.life -= 0.02;
+                    if (p.life <= 0) this.warpParticles.splice(i, 1);
+                }
+            }
+            
             // Frame 240: Complete warp
             if (this.warpTimer >= 240) {
                 this.alpha = 0;
+                window.isPlayerLocked = false;
+                if (typeof player !== 'undefined') player.alpha = 1.0;
+                if (typeof is2PMode !== 'undefined' && is2PMode && typeof player2 !== 'undefined') player2.alpha = 1.0;
+                
+                // --- EXTRA STAGE HANDOFF ---
+                difficultyWave = 7;
+                stageTimer = 0;
+                bossMode = false;
+                boss = null; // Cleanly remove entity from main game loop
+                enemies.length = 0; 
+                enemyBullets.length = 0; 
+                bossBullets.length = 0;
+                if (typeof resetTimelines !== 'undefined') resetTimelines();
+                
+                let bossUI = document.getElementById('boss-ui');
+                if (bossUI) bossUI.style.display = 'none';
+                let diagBox = document.getElementById('dialogue-box');
+                if (diagBox) diagBox.style.display = 'none';
+                let promptDiag = document.getElementById('prompt-dialogue');
+                if (promptDiag) promptDiag.style.display = 'block';
+                
+                if (typeof player !== 'undefined' && player) player.alpha = 1.0;
+                if (typeof player2 !== 'undefined' && player2) player2.alpha = 1.0;
+                if (typeof audio !== 'undefined' && audio) audio.playBGM('extra_stage');
             }
             return;
-        }
-
-        if (this.hp <= 0 && this.state !== 'portal_warp') {
-            const isSolo1CC = (!is2PMode && continuesUsed === 0);
-            const isCoopClear = is2PMode;
-            const unlockExtraStage = window.unlockExtraStage || ((isSolo1CC || isCoopClear) && !window.devCheatsUsed);
-
-            if (unlockExtraStage) {
-                this.hp = 1;
-                this.state = 'portal_warp';
-                this.warpTimer = 0;
-                this.intangible = true;
-                this.startX = this.x;
-                this.startY = this.y;
-                if (typeof audio !== 'undefined' && audio) {
-                    audio.forceStopAllFadesAndTracks();
-                }
-
-                // Award points and save state before warp
-                score += 5000;
-                let bonusAmt = Math.floor(waveGraze * 1.5 * 6);
-                score += bonusAmt;
-                if (!shieldBrokenInWave) score += 25000;
-                if (difficultyWave > 3 && !continueUsed) score += 50000;
-                if (typeof scoreEl !== 'undefined') scoreEl.innerText = score;
-
-                window.unlockExtraStage = true;
-                localStorage.setItem('fosozu_extra_unlocked', 'true');
-                window.gameCleared = true;
-                localStorage.setItem('fosozu_gameCleared', 'true');
-                if (typeof update2PButton !== 'undefined') update2PButton();
-                return;
-            }
         }
 
         // --- Combat Phase (unchanged from before) ---
@@ -799,6 +864,113 @@ class MadameSatsuki extends Boss {
                     bossBullets.push(new EnemyBullet(this.x, this.y, Math.cos(a)*Math.min(4.5, 7*p2Spd), Math.sin(a)*Math.min(4.5, 7*p2Spd), 'rice', '#ffd700'));
                 }
             }
+        }
+    }
+
+    draw(ctx, p1, p2) {
+        if (this.state === 'portal_warp' && this.warpTimer >= 60 && this.warpTimer <= 240) {
+            let t = this.warpTimer;
+            ctx.save();
+            ctx.globalAlpha = Math.min(1.0, (t - 60) / 30);
+            function drawArcaneCircle(px, py, baseRotation) {
+                let progress = Math.min(1.0, (t - 60) / 180);
+                // Accelerate rotation exponentially as warp completes
+                let accelRotation = baseRotation * (1 + Math.pow(progress, 2) * 8);
+
+                let radius = 30 + progress * 80;
+                let outerRadius = 20 + progress * 110;
+
+                ctx.save();
+                ctx.translate(px, py);
+                ctx.strokeStyle = '#b5179e'; // Corrupted Purple
+                ctx.shadowBlur = 20 + progress * 30;
+                ctx.shadowColor = '#39ff14'; // Toxic Green
+                ctx.lineWidth = 2.0;
+
+                // Counter-rotating concentric dashed rings
+                ctx.save();
+                ctx.rotate(-accelRotation * 0.5);
+                ctx.setLineDash([15, 10]);
+                ctx.beginPath();
+                ctx.arc(0, 0, outerRadius, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+
+                ctx.save();
+                ctx.rotate(accelRotation * 0.8);
+                ctx.setLineDash([10, 20, 5, 20]);
+                ctx.beginPath();
+                ctx.arc(0, 0, radius * 0.45, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+
+                ctx.setLineDash([]); // Reset dash
+
+                // Rotating hexagons
+                ctx.save();
+                ctx.rotate(accelRotation);
+                ctx.strokeStyle = '#39ff14'; // Toxic Green
+                ctx.shadowColor = '#b5179e'; // Corrupted Purple
+                for (let hex = 0; hex < 2; hex++) { // Two rotating hexagons offset
+                    ctx.save();
+                    ctx.rotate(hex * Math.PI / 6);
+                    ctx.beginPath();
+                    for (let i = 0; i < 6; i++) {
+                        let a = i * Math.PI / 3;
+                        let hpx = Math.cos(a) * radius;
+                        let hpy = Math.sin(a) * radius;
+                        if (i === 0) ctx.moveTo(hpx, hpy); else ctx.lineTo(hpx, hpy);
+                    }
+                    ctx.closePath();
+                    ctx.stroke();
+                    
+                    // Intersecting geometric lines inside the hexagon
+                    ctx.beginPath();
+                    ctx.moveTo(Math.cos(0) * radius, Math.sin(0) * radius);
+                    ctx.lineTo(Math.cos(Math.PI) * radius, Math.sin(Math.PI) * radius);
+                    ctx.moveTo(Math.cos(Math.PI/3) * radius, Math.sin(Math.PI/3) * radius);
+                    ctx.lineTo(Math.cos(4*Math.PI/3) * radius, Math.sin(4*Math.PI/3) * radius);
+                    ctx.moveTo(Math.cos(2*Math.PI/3) * radius, Math.sin(2*Math.PI/3) * radius);
+                    ctx.lineTo(Math.cos(5*Math.PI/3) * radius, Math.sin(5*Math.PI/3) * radius);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+                ctx.restore();
+
+                // Runes/points on the outer ring
+                for (let i = 0; i < 8; i++) {
+                    let a = (i / 8) * Math.PI * 2 - accelRotation * 0.5;
+                    let rx = Math.cos(a) * outerRadius;
+                    let ry = Math.sin(a) * outerRadius;
+                    ctx.beginPath();
+                    ctx.arc(rx, ry, 3, 0, Math.PI * 2);
+                    ctx.fillStyle = '#b5179e';
+                    ctx.fill();
+                }
+
+                let pulse = 0.3 + Math.sin(Date.now() * 0.008) * 0.2;
+                ctx.beginPath();
+                ctx.arc(0, 0, 15 * progress, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(57, 255, 20, ${pulse * progress})`;
+                ctx.fill();
+
+                ctx.restore();
+            }
+            
+            if (p1) drawArcaneCircle(p1.x, p1.y, t * 0.02);
+            if (typeof is2PMode !== 'undefined' && is2PMode && p2) drawArcaneCircle(p2.x, p2.y, -t * 0.02);
+            
+            // Draw digital embers
+            if (this.warpParticles && this.warpParticles.length > 0) {
+                for (let p of this.warpParticles) {
+                    ctx.globalAlpha = p.life;
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(p.x - 2, p.y - 2, 4, 4);
+                }
+                ctx.globalAlpha = 1.0;
+            }
+            
+            ctx.restore();
         }
     }
 }
@@ -1021,6 +1193,95 @@ class DaemonBoss extends Boss {
     
     shoot(player, bossBullets) {
         // Handled within the state machine update()
+    }
+
+    draw(ctx, p1, p2) {
+        if (this.state === 'intro_summon') {
+            const SUMMON_MAX = 180;
+            let progress = Math.max(0, Math.min(1, 1 - (this.introTimer / SUMMON_MAX)));
+            let alpha = progress;
+            let radius = 30 + progress * 80;
+            let outerRadius = 20 + progress * 110;
+            let rotation = progress * Math.PI * 4;
+
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.globalAlpha = alpha;
+            ctx.strokeStyle = '#b5179e'; // Corrupted Purple
+            ctx.shadowBlur = 20 + progress * 30;
+            ctx.shadowColor = '#39ff14'; // Toxic Green
+            ctx.lineWidth = 2.0;
+
+            // Counter-rotating concentric dashed rings
+            ctx.save();
+            ctx.rotate(-rotation * 0.5);
+            ctx.setLineDash([15, 10]);
+            ctx.beginPath();
+            ctx.arc(0, 0, outerRadius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+
+            ctx.save();
+            ctx.rotate(rotation * 0.8);
+            ctx.setLineDash([10, 20, 5, 20]);
+            ctx.beginPath();
+            ctx.arc(0, 0, radius * 0.45, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+
+            ctx.setLineDash([]); // Reset dash
+
+            // Rotating hexagons
+            ctx.save();
+            ctx.rotate(rotation);
+            ctx.strokeStyle = '#39ff14'; // Toxic Green
+            ctx.shadowColor = '#b5179e'; // Corrupted Purple
+            for (let hex = 0; hex < 2; hex++) { // Two rotating hexagons offset
+                ctx.save();
+                ctx.rotate(hex * Math.PI / 6);
+                ctx.beginPath();
+                for (let i = 0; i < 6; i++) {
+                    let a = i * Math.PI / 3;
+                    let px = Math.cos(a) * radius;
+                    let py = Math.sin(a) * radius;
+                    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+                }
+                ctx.closePath();
+                ctx.stroke();
+                
+                // Intersecting geometric lines inside the hexagon
+                ctx.beginPath();
+                ctx.moveTo(Math.cos(0) * radius, Math.sin(0) * radius);
+                ctx.lineTo(Math.cos(Math.PI) * radius, Math.sin(Math.PI) * radius);
+                ctx.moveTo(Math.cos(Math.PI/3) * radius, Math.sin(Math.PI/3) * radius);
+                ctx.lineTo(Math.cos(4*Math.PI/3) * radius, Math.sin(4*Math.PI/3) * radius);
+                ctx.moveTo(Math.cos(2*Math.PI/3) * radius, Math.sin(2*Math.PI/3) * radius);
+                ctx.lineTo(Math.cos(5*Math.PI/3) * radius, Math.sin(5*Math.PI/3) * radius);
+                ctx.stroke();
+                ctx.restore();
+            }
+            ctx.restore();
+
+            // Runes/points on the outer ring
+            for (let i = 0; i < 8; i++) {
+                let a = (i / 8) * Math.PI * 2 - rotation * 0.5;
+                let rx = Math.cos(a) * outerRadius;
+                let ry = Math.sin(a) * outerRadius;
+                ctx.beginPath();
+                ctx.arc(rx, ry, 3, 0, Math.PI * 2);
+                ctx.fillStyle = '#b5179e';
+                ctx.fill();
+            }
+
+            let pulse = 0.3 + Math.sin(Date.now() * 0.008) * 0.2;
+            ctx.beginPath();
+            ctx.arc(0, 0, 15 * progress, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(57, 255, 20, ${pulse * progress})`;
+            ctx.fill();
+
+            ctx.globalAlpha = 1.0;
+            ctx.restore();
+        }
     }
 }
 
