@@ -471,7 +471,7 @@ const waveTimelines = {
         { time: 720, type: 'V_SHAPE',         spawned: false },
         { time: 810, type: 'DIVER_SWOOP',     spawned: false },
         { time: 810, type: 'DIVER_SWOOP',     spawned: false },
-        { time: 900, type: 'MID_BOSS_PINGKO', spawned: false },
+        // { time: 900, type: 'MID_BOSS_PINGKO', spawned: false },
         { time: 990, type: 'DIVER_SWOOP',     spawned: false },
         { time: 1080, type: 'WALL',            spawned: false },
         { time: 1170, type: 'FLANK_LEFT',      y: 300, spawned: false },
@@ -502,7 +502,7 @@ const waveTimelines = {
         { time: 2678, type: 'V_SHAPE',         spawned: false },
         { time: 2759, type: 'DIVER_SWOOP',     spawned: false },
         { time: 2759, type: 'DIVER_SWOOP',     spawned: false },
-        { time: 2840, type: 'MID_BOSS_PINGKO', spawned: false },
+        // { time: 2840, type: 'MID_BOSS_PINGKO', spawned: false },
         { time: 2921, type: 'DIVER_SWOOP',     spawned: false },
         { time: 3002, type: 'WALL',            spawned: false },
         { time: 3083, type: 'FLANK_LEFT',      y: 300, spawned: false },
@@ -564,7 +564,7 @@ const waveTimelines = {
         { time: 6012, type: 'V_SHAPE',         spawned: false },
         { time: 6075, type: 'DIVER_SWOOP',     spawned: false },
         { time: 6075, type: 'DIVER_SWOOP',     spawned: false },
-        { time: 6138, type: 'MID_BOSS_PINGKO', spawned: false },
+        // { time: 6138, type: 'MID_BOSS_PINGKO', spawned: false },
         { time: 6201, type: 'DIVER_SWOOP',     spawned: false },
         { time: 6264, type: 'WALL',            spawned: false },
         { time: 6327, type: 'FLANK_LEFT',      y: 300, spawned: false },
@@ -595,7 +595,7 @@ const waveTimelines = {
         { time: 7424, type: 'V_SHAPE',         spawned: false },
         { time: 7482, type: 'DIVER_SWOOP',     spawned: false },
         { time: 7482, type: 'DIVER_SWOOP',     spawned: false },
-        { time: 7541, type: 'MID_BOSS_PINGKO', spawned: false },
+        // { time: 7541, type: 'MID_BOSS_PINGKO', spawned: false },
         { time: 7599, type: 'DIVER_SWOOP',     spawned: false },
         { time: 7658, type: 'WALL',            spawned: false },
         { time: 7716, type: 'FLANK_LEFT',      y: 300, spawned: false },
@@ -626,7 +626,7 @@ const waveTimelines = {
         { time: 8775, type: 'V_SHAPE',         spawned: false },
         { time: 8833, type: 'DIVER_SWOOP',     spawned: false },
         { time: 8833, type: 'DIVER_SWOOP',     spawned: false },
-        { time: 8892, type: 'MID_BOSS_PINGKO', spawned: false },
+        // { time: 8892, type: 'MID_BOSS_PINGKO', spawned: false },
         { time: 8950, type: 'DIVER_SWOOP',     spawned: false },
         { time: 9009, type: 'WALL',            spawned: false },
         { time: 9067, type: 'FLANK_LEFT',      y: 300, spawned: false },
@@ -3859,6 +3859,38 @@ function drawSatellites(pObj) {
                 ctx.strokeStyle = `rgba(200, 120, 255, ${coreOpacity})`;
                 ctx.stroke();
             }
+
+            // Layer 5: Rotating Triforce Geometry
+            ctx.save();
+            ctx.translate(emp.x, emp.y);
+            ctx.rotate(emp.radius * 0.05);
+            ctx.globalAlpha = emp.opacity;
+            ctx.fillStyle = '#FFD700';
+            
+            let s = emp.radius * 0.4;
+            let h = s * Math.sqrt(3) / 2;
+            
+            ctx.beginPath();
+            // Top triangle
+            ctx.moveTo(0, -4 * h / 3);
+            ctx.lineTo(-s / 2, -h / 3);
+            ctx.lineTo(s / 2, -h / 3);
+            ctx.closePath();
+            
+            // Bottom-left triangle
+            ctx.moveTo(-s / 2, -h / 3);
+            ctx.lineTo(-s, 2 * h / 3);
+            ctx.lineTo(0, 2 * h / 3);
+            ctx.closePath();
+            
+            // Bottom-right triangle
+            ctx.moveTo(s / 2, -h / 3);
+            ctx.lineTo(0, 2 * h / 3);
+            ctx.lineTo(s, 2 * h / 3);
+            ctx.closePath();
+            
+            ctx.fill();
+            ctx.restore();
 
         } else {
             // ── P2 PingKo: Pink arcane summoning circle shockwave ────────────
