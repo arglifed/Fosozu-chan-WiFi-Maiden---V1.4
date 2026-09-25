@@ -2281,8 +2281,9 @@ function triggerVictorySequence(unlockExtraStage) {
     window.isTrueEnding = (difficultyWave >= 7);
     
     if (audio) {
-        if (window.isTrueEnding) audio.fadeTransition('extra_ending', 3.0);
-        else audio.fadeTransition('credits', 3.0);
+        audio.forceStopAllFadesAndTracks();
+        if (window.isTrueEnding) audio.hardCut('extra_ending');
+        else audio.hardCut('credits');
     }
     
     // Immediately increment iteration and update HUD for NG+ visually
@@ -2892,7 +2893,7 @@ function updateBoss(ts) {
         }
     }
     // Spawn Boss when wave timer concludes
-    if (!bossMode && waveClearTimer <= 0 && stageTimer >= (WAVE_DURATIONS[difficultyWave] || 3600)) {
+    if (!window.isEndingSequence && !bossMode && waveClearTimer <= 0 && stageTimer >= (WAVE_DURATIONS[difficultyWave] || 3600)) {
         if (difficultyWave === 6) {
             // 10-second eerie silence before Satsuki
             if (satsukiSummonTimer === 0) {
