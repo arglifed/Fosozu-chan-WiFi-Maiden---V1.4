@@ -4321,6 +4321,7 @@ let accumulator = 0;
 let lastTime = performance.now();
 let lastContinueTime = performance.now();
 let frameCount = 0;
+let logicCount = 0;
 let lastFPSCheck = performance.now();
 
 function loop(timestamp) {
@@ -4368,6 +4369,7 @@ function loop(timestamp) {
         accumulator += dt;
         while (accumulator >= TICK_RATE) {
             update();
+            logicCount++;
             accumulator -= TICK_RATE;
         }
     }
@@ -4376,10 +4378,15 @@ function loop(timestamp) {
 
     frameCount++;
     if (timestamp > lastFPSCheck + 1000) {
-        fpsCounterEl.innerText = Math.round((frameCount * 1000) / (timestamp - lastFPSCheck));
+        let renderFps = Math.round((frameCount * 1000) / (timestamp - lastFPSCheck));
+        let logicUps = Math.round((logicCount * 1000) / (timestamp - lastFPSCheck));
+        fpsCounterEl.innerText = renderFps + " FPS | " + logicUps + " UPS";
         frameCount = 0;
+        logicCount = 0;
         lastFPSCheck = timestamp;
     }
+
+    document.getElementById('fps-ui').style.display = isDevMode ? 'block' : 'none';
 
     if (document.getElementById('settings-ui').style.display === 'block') {
         drawJukebox();
