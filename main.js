@@ -1910,22 +1910,54 @@ function drawJukebox() {
     jbCtx.scale(scale, scale);
     let empRadius = 100;
     
-    jbCtx.beginPath();
-    jbCtx.arc(0, 0, empRadius, 0, Math.PI * 2);
-    jbCtx.lineWidth = 14;
+    // Sleek concentric counter-rotating data rings
+    jbCtx.lineWidth = 2;
     jbCtx.strokeStyle = `rgba(170, 0, 255, 0.85)`;
-    jbCtx.stroke();
+    jbCtx.beginPath(); jbCtx.arc(0, 0, empRadius, 0, Math.PI * 2); jbCtx.stroke();
     
     jbCtx.save();
-    jbCtx.rotate(rot * 1.8);
-    jbCtx.setLineDash([18, 22]);
-    jbCtx.beginPath();
-    jbCtx.arc(0, 0, empRadius + 10, 0, Math.PI * 2);
-    jbCtx.lineWidth = 5;
+    jbCtx.rotate(-rot * 1.5);
+    jbCtx.setLineDash([15, 10]);
+    jbCtx.beginPath(); jbCtx.arc(0, 0, Math.max(0.1, empRadius - 10), 0, Math.PI * 2);
+    jbCtx.lineWidth = 3;
     jbCtx.strokeStyle = `rgba(170, 0, 255, 0.6)`;
     jbCtx.stroke();
+    jbCtx.setLineDash([]);
     jbCtx.restore();
-    
+
+    jbCtx.save();
+    jbCtx.rotate(rot * 2);
+    jbCtx.setLineDash([5, 15]);
+    jbCtx.beginPath(); jbCtx.arc(0, 0, empRadius + 15, 0, Math.PI * 2);
+    jbCtx.lineWidth = 4;
+    jbCtx.strokeStyle = `rgba(170, 0, 255, 0.8)`;
+    jbCtx.stroke();
+    jbCtx.setLineDash([]);
+    jbCtx.restore();
+
+    // 4 Orbiting satellite nodes on the outermost ring
+    for (let i = 0; i < 4; i++) {
+        let angle = (i * Math.PI / 2) + rot * 2.5;
+        let px = Math.cos(angle) * (empRadius + 15);
+        let py = Math.sin(angle) * (empRadius + 15);
+        jbCtx.beginPath();
+        jbCtx.arc(px, py, 6, 0, Math.PI * 2);
+        jbCtx.fillStyle = '#00f2ff';
+        jbCtx.fill();
+    }
+
+    // Rotating wireframe double-square (8-point star)
+    jbCtx.save();
+    jbCtx.rotate(rot * 1.2);
+    jbCtx.strokeStyle = `rgba(0, 242, 255, 0.7)`;
+    jbCtx.lineWidth = 2;
+    for (let i = 0; i < 2; i++) {
+        jbCtx.strokeRect(-empRadius * 0.5, -empRadius * 0.5, empRadius, empRadius);
+        jbCtx.rotate(Math.PI / 4);
+    }
+    jbCtx.restore();
+
+    // Central Triforce
     jbCtx.save();
     jbCtx.rotate(rot);
     jbCtx.fillStyle = '#FFD700';
@@ -4084,77 +4116,67 @@ function drawSatellites(pObj) {
         ctx.shadowBlur = 35;
 
         if (emp.isP1) {
-            // ── P1 Fosozu: Purple Y2K radial shockwave ───────────────────────
-
-            // Layer 1: Base energy ring (solid, semi-transparent)
-            ctx.beginPath();
-            ctx.arc(emp.x, emp.y, emp.radius, 0, Math.PI * 2);
-            ctx.lineWidth = 14;
-            ctx.strokeStyle = `rgba(${emp.rgbBase}, ${emp.opacity * 0.85})`;
-            ctx.stroke();
-
-            // Layer 2: Digital data ring — spinning dashed segments outside the main ring
-            ctx.save();
+            // P1 Fosozu: Digital Arcane / Cyber-Sigil Aesthetic
             ctx.translate(emp.x, emp.y);
-            ctx.rotate(emp.arcaneAngle * 1.8);
-            ctx.setLineDash([18, 22]);
-            ctx.lineDashOffset = -(emp.dashOffset || 0);
-            ctx.beginPath();
-            ctx.arc(0, 0, emp.radius + 10, 0, Math.PI * 2);
-            ctx.lineWidth = 5;
+            ctx.rotate(emp.arcaneAngle);
+
+            // Sleek concentric counter-rotating data rings
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = `rgba(${emp.rgbBase}, ${emp.opacity * 0.85})`;
+            ctx.beginPath(); ctx.arc(0, 0, emp.radius, 0, Math.PI * 2); ctx.stroke();
+            
+            ctx.save();
+            ctx.rotate(-emp.arcaneAngle * 1.5);
+            ctx.setLineDash([15, 10]);
+            ctx.beginPath(); ctx.arc(0, 0, Math.max(0.1, emp.radius - 10), 0, Math.PI * 2);
+            ctx.lineWidth = 3;
             ctx.strokeStyle = `rgba(${emp.rgbBase}, ${emp.opacity * 0.6})`;
             ctx.stroke();
             ctx.setLineDash([]);
             ctx.restore();
 
-            // Layer 3: Inner soft halo trail
-            if (emp.radius > 25) {
-                ctx.beginPath();
-                ctx.arc(emp.x, emp.y, emp.radius - 20, 0, Math.PI * 2);
-                ctx.lineWidth = 7;
-                ctx.strokeStyle = `rgba(${emp.rgbBase}, ${emp.opacity * 0.35})`;
-                ctx.stroke();
-            }
-
-            // Layer 4: Core flash — bright tight ring that fades out faster
-            const coreOpacity = Math.max(0, emp.opacity * 1.4 - 0.4);
-            if (emp.radius < 180 && coreOpacity > 0) {
-                ctx.beginPath();
-                ctx.arc(emp.x, emp.y, emp.radius * 0.3, 0, Math.PI * 2);
-                ctx.lineWidth = 10;
-                ctx.strokeStyle = `rgba(200, 120, 255, ${coreOpacity})`;
-                ctx.stroke();
-            }
-
-            // Layer 5: Rotating Triforce Geometry
             ctx.save();
-            ctx.translate(emp.x, emp.y);
-            ctx.rotate(emp.radius * 0.05);
-            ctx.globalAlpha = emp.opacity;
-            ctx.fillStyle = '#FFD700';
-            
+            ctx.rotate(emp.arcaneAngle * 2);
+            ctx.setLineDash([5, 15]);
+            ctx.beginPath(); ctx.arc(0, 0, emp.radius + 15, 0, Math.PI * 2);
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = `rgba(${emp.rgbBase}, ${emp.opacity * 0.8})`;
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.restore();
+
+            // 4 Orbiting satellite nodes on the outermost ring
+            for (let i = 0; i < 4; i++) {
+                let angle = (i * Math.PI / 2) + emp.arcaneAngle * 2.5;
+                let px = Math.cos(angle) * (emp.radius + 15);
+                let py = Math.sin(angle) * (emp.radius + 15);
+                ctx.beginPath();
+                ctx.arc(px, py, Math.max(1, 6 * emp.opacity), 0, Math.PI * 2);
+                ctx.fillStyle = '#00f2ff';
+                ctx.fill();
+            }
+
+            // Rotating wireframe double-square (8-point star)
+            ctx.save();
+            ctx.rotate(emp.arcaneAngle * 1.2);
+            ctx.strokeStyle = `rgba(0, 242, 255, ${emp.opacity * 0.7})`;
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 2; i++) {
+                ctx.strokeRect(-emp.radius * 0.5, -emp.radius * 0.5, emp.radius, emp.radius);
+                ctx.rotate(Math.PI / 4);
+            }
+            ctx.restore();
+
+            // Central Triforce
+            ctx.save();
+            ctx.rotate(emp.arcaneAngle);
+            ctx.fillStyle = `rgba(255, 215, 0, ${emp.opacity})`;
             let s = emp.radius * 0.4;
             let h = s * Math.sqrt(3) / 2;
-            
             ctx.beginPath();
-            // Top triangle
-            ctx.moveTo(0, -4 * h / 3);
-            ctx.lineTo(-s / 2, -h / 3);
-            ctx.lineTo(s / 2, -h / 3);
-            ctx.closePath();
-            
-            // Bottom-left triangle
-            ctx.moveTo(-s / 2, -h / 3);
-            ctx.lineTo(-s, 2 * h / 3);
-            ctx.lineTo(0, 2 * h / 3);
-            ctx.closePath();
-            
-            // Bottom-right triangle
-            ctx.moveTo(s / 2, -h / 3);
-            ctx.lineTo(0, 2 * h / 3);
-            ctx.lineTo(s, 2 * h / 3);
-            ctx.closePath();
-            
+            ctx.moveTo(0, -4 * h / 3); ctx.lineTo(-s / 2, -h / 3); ctx.lineTo(s / 2, -h / 3); ctx.closePath();
+            ctx.moveTo(-s / 2, -h / 3); ctx.lineTo(-s, 2 * h / 3); ctx.lineTo(0, 2 * h / 3); ctx.closePath();
+            ctx.moveTo(s / 2, -h / 3); ctx.lineTo(0, 2 * h / 3); ctx.lineTo(s, 2 * h / 3); ctx.closePath();
             ctx.fill();
             ctx.restore();
 
