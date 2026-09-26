@@ -4289,9 +4289,18 @@ function drawSatellites(pObj) {
     if (window.isEndingSequence) {
         if (typeof creditsScrollY !== 'undefined') creditsScrollY -= 1; // Unconditional scroll
 
+        let dynamicHeight = 0;
+        staffRollText.forEach(item => {
+            if (item.type === 'title') dynamicHeight += 50;
+            else if (item.type === 'header') dynamicHeight += 40;
+            else if (item.type === 'name') dynamicHeight += 30;
+            else if (item.type === 'small_text') dynamicHeight += 20;
+            else if (item.type === 'spacer') dynamicHeight += 40;
+        });
+
         let bgY = 0;
         if (typeof creditsScrollY !== 'undefined') {
-            let lastLineOffset = (window.isTrueEnding || window.currentUnlockExtraStage) ? 250 : 160;
+            let lastLineOffset = dynamicHeight + ((window.isTrueEnding || window.currentUnlockExtraStage) ? 90 : 0);
             bgY = Math.min(0, creditsScrollY + lastLineOffset);
         }
         
@@ -4305,23 +4314,42 @@ function drawSatellites(pObj) {
             }
         }
 
-        ctx.fillStyle = '#fff';
         ctx.textAlign = 'center';
-        ctx.font = '24px Courier';
         
         if (typeof creditsScrollY !== 'undefined') {
-            ctx.fillText("STAFF ROLL", 300, creditsScrollY);
-            ctx.font = '16px Courier';
-            ctx.fillText("THANK YOU FOR PLAYING", 300, creditsScrollY + 60);
-            ctx.fillText("Special thanks to everyone that has", 300, creditsScrollY + 100);
-            ctx.fillText("helped us grow and learn", 300, creditsScrollY + 130);
-            ctx.fillText("throughout this project!", 300, creditsScrollY + 160);
+            let currentY = creditsScrollY;
+            staffRollText.forEach(item => {
+                if (item.type === 'title') {
+                    ctx.font = 'bold 24px Courier';
+                    ctx.fillStyle = '#00f2ff';
+                } else if (item.type === 'header') {
+                    ctx.font = 'bold 16px Courier';
+                    ctx.fillStyle = '#00f2ff';
+                } else if (item.type === 'name') {
+                    ctx.font = '20px Courier';
+                    ctx.fillStyle = '#fff';
+                } else if (item.type === 'small_text') {
+                    ctx.font = '14px Courier';
+                    ctx.fillStyle = '#ccc';
+                }
+                
+                if (item.type !== 'spacer') {
+                    ctx.fillText(item.text, 300, currentY);
+                }
+
+                if (item.type === 'title') currentY += 50;
+                else if (item.type === 'header') currentY += 40;
+                else if (item.type === 'name') currentY += 30;
+                else if (item.type === 'small_text') currentY += 20;
+                else if (item.type === 'spacer') currentY += 40;
+            });
             
             if (window.isTrueEnding || window.currentUnlockExtraStage) {
+                ctx.font = 'bold 16px Courier';
                 ctx.fillStyle = '#39ff14';
-                ctx.fillText("-- EXTRA STAGE CLEAR --", 300, creditsScrollY + 220);
+                ctx.fillText("-- EXTRA STAGE CLEAR --", 300, currentY + 40);
                 ctx.fillStyle = '#ffca3a';
-                ctx.fillText("TRUE ENDING", 300, creditsScrollY + 250);
+                ctx.fillText("TRUE ENDING", 300, currentY + 70);
             }
         }
     }
@@ -4337,6 +4365,24 @@ function drawSatellites(pObj) {
     }
     ctx.restore();
 }
+
+const staffRollText = [
+    { text: "FOSOZU-CHAN: WIFI MAIDEN", type: "title" },
+    { text: "", type: "spacer" },
+    { text: "DIRECTOR & LEAD PROGRAMMER", type: "header" },
+    { text: "Anthony Lewis", type: "name" },
+    { text: "", type: "spacer" },
+    { text: "CHARACTER DESIGN", type: "header" },
+    { text: "Anthony Lewis", type: "name" },
+    { text: "skaterkat48", type: "name" },
+    { text: "", type: "spacer" },
+    { text: "ORIGINAL SOUNDTRACK", type: "header" },
+    { text: "Lunar", type: "name" },
+    { text: "Artificial Star in Forgotten Orbit", type: "small_text" },
+    { text: "lunar13.bandcamp.com", type: "small_text" },
+    { text: "", type: "spacer" },
+    { text: "THANK YOU FOR PLAYING!", type: "title" }
+];
 
 const TICK_RATE = 1000 / 60;
 let accumulator = 0;
