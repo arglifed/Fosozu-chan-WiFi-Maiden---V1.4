@@ -3529,11 +3529,11 @@ function updateEnemies(ts) {
         }
         if ((!p.spawnTime || Date.now() - p.spawnTime > 500) && Math.hypot(player.x - p.x, player.y - p.y) < 30) { 
             lives++; livesEl.innerText = lives; lifeItems.splice(i, 1); 
-            if (audio) audio.playPowerup();
+            if (audio) audio.playBossPhaseChange();
         }
         else if (is2PMode && (!p.spawnTime || Date.now() - p.spawnTime > 500) && Math.hypot(player2.x - p.x, player2.y - p.y) < 30) {
             lives++; livesEl.innerText = lives; lifeItems.splice(i, 1);
-            if (audio) audio.playPowerup();
+            if (audio) audio.playBossPhaseChange();
         }
         else if (p.y > 850 || p.x < -100 || p.x > 700) lifeItems.splice(i, 1);
     });
