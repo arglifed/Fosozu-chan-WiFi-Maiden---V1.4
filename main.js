@@ -1847,10 +1847,280 @@ document.getElementById('btn-start-2p').addEventListener('click', () => {
 document.getElementById('btn-settings').addEventListener('click', () => {
     updateSettingsUI();
     document.getElementById('settings-ui').style.display = 'block';
+    if (!window.jbAnimId) drawJukebox();
 });
 
 document.getElementById('btn-close-settings').addEventListener('click', () => {
     document.getElementById('settings-ui').style.display = 'none';
+    if (!gameStarted && audio && window.jukeboxPlaying) {
+        audio.hardCut('title');
+        window.jukeboxPlaying = false;
+    }
+    if (window.jbAnimId) {
+        cancelAnimationFrame(window.jbAnimId);
+        window.jbAnimId = null;
+    }
+});
+
+// SOUND TEST / JUKEBOX LOGIC
+const jukeboxTracks = [
+    { id: 'title', title: "bgm_title.ogg" },
+    { id: 'alt_title', title: "bgm_alt_title.ogg" },
+    { id: 'stage1', title: "bgm_stage1.ogg" },
+    { id: 'boss1', title: "bgm_boss1.ogg" },
+    { id: 'stage2', title: "bgm_stage2.ogg" },
+    { id: 'boss2', title: "bgm_boss2.ogg" },
+    { id: 'stage3', title: "bgm_stage3.ogg" },
+    { id: 'boss3', title: "bgm_boss3.ogg" },
+    { id: 'stage4', title: "bgm_stage4.ogg" },
+    { id: 'boss4', title: "bgm_boss4.ogg" },
+    { id: 'stage5', title: "bgm_stage5.ogg" },
+    { id: 'boss5', title: "bgm_boss5.ogg" },
+    { id: 'stage6', title: "bgm_stage6.ogg" },
+    { id: 'boss6', title: "bgm_boss6.ogg" },
+    { id: 'boss6_phase2', title: "bgm_boss6_phase2.ogg" },
+    { id: 'extra_stage', title: "bgm_extra_stage.ogg" },
+    { id: 'extra_boss', title: "bgm_extra_boss.ogg" },
+    { id: 'ending', title: "bgm_ending.ogg" },
+    { id: 'extra_ending', title: "bgm_extra_ending.ogg" },
+    { id: 'credits', title: "bgm_credits.ogg" },
+    { id: 'gameover', title: "bgm_gameover.ogg" }
+];
+let soundTestIndex = 0;
+window.jukeboxPlaying = false;
+const jbCanvas = document.getElementById('jukebox-canvas');
+const jbCtx = jbCanvas.getContext('2d');
+window.jbAnimId = null;
+
+function drawJukebox() {
+    jbCtx.clearRect(0, 0, 450, 80);
+    let rot = Date.now() * 0.002;
+    const scale = 0.15; // Scaled so buttons are compact (~15-20px radius)
+    
+    // Draw Text Background for clarity
+    jbCtx.fillStyle = '#fff';
+    jbCtx.font = 'bold 16px "Courier New"';
+    jbCtx.textAlign = 'center';
+    jbCtx.textBaseline = 'middle';
+    
+    // Track Name and Status
+    jbCtx.fillText(jukeboxTracks[soundTestIndex].title, 190, 30);
+    jbCtx.fillStyle = window.jukeboxPlaying ? '#00f2ff' : '#666';
+    jbCtx.font = '12px "Courier New"';
+    jbCtx.fillText(window.jukeboxPlaying ? "▶  PLAYING" : "STOPPED", 190, 50);
+
+    // Button 1: PREV (Fosozu Bomb Ring + Triforce)
+    jbCtx.save();
+    jbCtx.translate(35, 40);
+    jbCtx.scale(scale, scale);
+    let empRadius = 100;
+    
+    jbCtx.beginPath();
+    jbCtx.arc(0, 0, empRadius, 0, Math.PI * 2);
+    jbCtx.lineWidth = 14;
+    jbCtx.strokeStyle = `rgba(170, 0, 255, 0.85)`;
+    jbCtx.stroke();
+    
+    jbCtx.save();
+    jbCtx.rotate(rot * 1.8);
+    jbCtx.setLineDash([18, 22]);
+    jbCtx.beginPath();
+    jbCtx.arc(0, 0, empRadius + 10, 0, Math.PI * 2);
+    jbCtx.lineWidth = 5;
+    jbCtx.strokeStyle = `rgba(170, 0, 255, 0.6)`;
+    jbCtx.stroke();
+    jbCtx.restore();
+    
+    jbCtx.save();
+    jbCtx.rotate(rot);
+    jbCtx.fillStyle = '#FFD700';
+    let s = empRadius * 0.4;
+    let h = s * Math.sqrt(3) / 2;
+    jbCtx.beginPath();
+    jbCtx.moveTo(0, -4 * h / 3); jbCtx.lineTo(-s / 2, -h / 3); jbCtx.lineTo(s / 2, -h / 3); jbCtx.closePath();
+    jbCtx.moveTo(-s / 2, -h / 3); jbCtx.lineTo(-s, 2 * h / 3); jbCtx.lineTo(0, 2 * h / 3); jbCtx.closePath();
+    jbCtx.moveTo(s / 2, -h / 3); jbCtx.lineTo(0, 2 * h / 3); jbCtx.lineTo(s, 2 * h / 3); jbCtx.closePath();
+    jbCtx.fill();
+    jbCtx.restore();
+    jbCtx.restore();
+
+    // Button 2: PLAY (Madame Satsuki Cinematic Summon)
+    jbCtx.save();
+    jbCtx.translate(345, 40);
+    jbCtx.scale(scale, scale);
+    let satRadius = 100; // equivalent to progress=1, 30+80=110, let's just use 110
+    let satOuterRadius = 130; // 20+110=130
+    jbCtx.strokeStyle = '#d90429';
+    jbCtx.shadowBlur = 50;
+    jbCtx.shadowColor = '#d90429';
+    jbCtx.lineWidth = 2.0; // scale line width slightly up since we scale down the whole canvas
+
+    // Outer ring
+    jbCtx.beginPath();
+    jbCtx.arc(0, 0, satOuterRadius, 0, Math.PI * 2);
+    jbCtx.stroke();
+
+    // Inner ring
+    jbCtx.beginPath();
+    jbCtx.arc(0, 0, satRadius * 0.45, 0, Math.PI * 2);
+    jbCtx.stroke();
+
+    // Rotating hexagram
+    jbCtx.save();
+    jbCtx.rotate(rot);
+    for (let tri = 0; tri < 2; tri++) {
+        jbCtx.beginPath();
+        for (let i = 0; i < 3; i++) {
+            let a = i * Math.PI * 2 / 3 + (tri * Math.PI / 3);
+            let px = Math.cos(a) * satRadius;
+            let py = Math.sin(a) * satRadius;
+            if (i === 0) jbCtx.moveTo(px, py); else jbCtx.lineTo(px, py);
+        }
+        jbCtx.closePath();
+        jbCtx.stroke();
+    }
+    jbCtx.restore();
+
+    // 6 rune points on outer ring
+    for (let i = 0; i < 6; i++) {
+        let a = (i / 6) * Math.PI * 2 + rot * 0.5;
+        let rx = Math.cos(a) * satOuterRadius;
+        let ry = Math.sin(a) * satOuterRadius;
+        jbCtx.beginPath();
+        jbCtx.arc(rx, ry, 5, 0, Math.PI * 2); // 5 radius so it's visible when scaled
+        jbCtx.fillStyle = '#ffb3c1';
+        jbCtx.fill();
+    }
+
+    // Glow pulse in centre
+    let pulse = 0.3 + Math.sin(Date.now() * 0.008) * 0.2;
+    jbCtx.beginPath();
+    jbCtx.arc(0, 0, 15, 0, Math.PI * 2);
+    jbCtx.fillStyle = `rgba(217, 4, 41, ${pulse})`;
+    jbCtx.fill();
+    jbCtx.restore();
+
+    // Button 3: STOP (DaemonBoss.draw abyssal hex-weaver logic)
+    jbCtx.save();
+    jbCtx.translate(380, 40);
+    jbCtx.scale(scale, scale);
+    let dRadius = 100;
+    let dOuterRadius = 120;
+    jbCtx.strokeStyle = '#b5179e'; // Corrupted Purple
+    jbCtx.shadowBlur = 50;
+    jbCtx.shadowColor = '#39ff14'; // Toxic Green
+    jbCtx.lineWidth = 2.0;
+    jbCtx.save();
+    jbCtx.rotate(-rot * 0.5);
+    jbCtx.setLineDash([15, 10]);
+    jbCtx.beginPath(); jbCtx.arc(0, 0, dOuterRadius, 0, Math.PI * 2); jbCtx.stroke();
+    jbCtx.restore();
+    jbCtx.save();
+    jbCtx.rotate(rot * 0.8);
+    jbCtx.setLineDash([10, 20, 5, 20]);
+    jbCtx.beginPath(); jbCtx.arc(0, 0, dRadius * 0.45, 0, Math.PI * 2); jbCtx.stroke();
+    jbCtx.restore();
+    jbCtx.setLineDash([]);
+    jbCtx.save();
+    jbCtx.rotate(rot);
+    jbCtx.strokeStyle = '#39ff14'; // Toxic Green
+    jbCtx.shadowColor = '#b5179e'; // Corrupted Purple
+    for (let hex = 0; hex < 2; hex++) {
+        jbCtx.save();
+        jbCtx.rotate(hex * Math.PI / 6);
+        jbCtx.beginPath();
+        for (let i = 0; i < 6; i++) {
+            let a = i * Math.PI / 3;
+            if (i === 0) jbCtx.moveTo(Math.cos(a) * dRadius, Math.sin(a) * dRadius);
+            else jbCtx.lineTo(Math.cos(a) * dRadius, Math.sin(a) * dRadius);
+        }
+        jbCtx.closePath(); jbCtx.stroke();
+        jbCtx.beginPath();
+        jbCtx.moveTo(Math.cos(0) * dRadius, Math.sin(0) * dRadius); jbCtx.lineTo(Math.cos(Math.PI) * dRadius, Math.sin(Math.PI) * dRadius);
+        jbCtx.moveTo(Math.cos(Math.PI/3) * dRadius, Math.sin(Math.PI/3) * dRadius); jbCtx.lineTo(Math.cos(4*Math.PI/3) * dRadius, Math.sin(4*Math.PI/3) * dRadius);
+        jbCtx.moveTo(Math.cos(2*Math.PI/3) * dRadius, Math.sin(2*Math.PI/3) * dRadius); jbCtx.lineTo(Math.cos(5*Math.PI/3) * dRadius, Math.sin(5*Math.PI/3) * dRadius);
+        jbCtx.stroke();
+        jbCtx.restore();
+    }
+    jbCtx.restore();
+    for (let i = 0; i < 8; i++) {
+        let a = (i / 8) * Math.PI * 2 - rot * 0.5;
+        jbCtx.beginPath(); jbCtx.arc(Math.cos(a) * dOuterRadius, Math.sin(a) * dOuterRadius, 3, 0, Math.PI * 2);
+        jbCtx.fillStyle = '#b5179e'; jbCtx.fill();
+    }
+    jbCtx.restore();
+
+    // Button 4: NEXT (Pingko's Triangles from emp logic)
+    jbCtx.save();
+    jbCtx.translate(415, 40);
+    jbCtx.scale(scale, scale);
+    let pkRadius = 100;
+    
+    jbCtx.beginPath();
+    jbCtx.arc(0, 0, pkRadius, 0, Math.PI * 2);
+    jbCtx.lineWidth = 12;
+    jbCtx.strokeStyle = `rgba(255, 105, 180, 0.85)`;
+    jbCtx.stroke();
+    
+    jbCtx.save();
+    jbCtx.rotate(-rot * 2.5);
+    jbCtx.setLineDash([14, 18]);
+    jbCtx.beginPath();
+    jbCtx.arc(0, 0, pkRadius + 9, 0, Math.PI * 2);
+    jbCtx.lineWidth = 4;
+    jbCtx.strokeStyle = `rgba(255, 105, 180, 0.55)`;
+    jbCtx.stroke();
+    jbCtx.setLineDash([]);
+    jbCtx.restore();
+    
+    const ptriR = pkRadius * 0.55;
+    jbCtx.save();
+    jbCtx.rotate(rot);
+    for (let tri = 0; tri < 2; tri++) {
+        jbCtx.beginPath();
+        for (let v = 0; v < 3; v++) {
+            const a = (v * Math.PI * 2 / 3) + (tri * Math.PI / 3);
+            v === 0 ? jbCtx.moveTo(Math.cos(a) * ptriR, Math.sin(a) * ptriR) : jbCtx.lineTo(Math.cos(a) * ptriR, Math.sin(a) * ptriR);
+        }
+        jbCtx.closePath();
+        jbCtx.lineWidth = 6;
+        jbCtx.strokeStyle = `rgba(255, 105, 180, 0.65)`;
+        jbCtx.stroke();
+    }
+    jbCtx.restore();
+    jbCtx.restore();
+
+    window.jbAnimId = requestAnimationFrame(drawJukebox);
+}
+
+jbCanvas.addEventListener('click', (e) => {
+    const rect = jbCanvas.getBoundingClientRect();
+    
+    // Scale coordinates accurately if the canvas is visually resized by CSS
+    const scaleX = jbCanvas.width / rect.width;
+    const scaleY = jbCanvas.height / rect.height;
+    
+    const x = (e.clientX - rect.left) * scaleX;
+    const y = (e.clientY - rect.top) * scaleY;
+
+    if (Math.hypot(x - 35, y - 40) < 30) {
+        soundTestIndex = (soundTestIndex - 1 + jukeboxTracks.length) % jukeboxTracks.length;
+    } else if (Math.hypot(x - 415, y - 40) < 30) {
+        soundTestIndex = (soundTestIndex + 1) % jukeboxTracks.length;
+    } else if (Math.hypot(x - 345, y - 40) < 30) {
+        if (audio) {
+            audio.forceStopAllFadesAndTracks();
+            let trackId = jukeboxTracks[soundTestIndex].id;
+            if (audio.bgm[trackId]) {
+                audio.bgm[trackId].currentTime = 0;
+                audio.bgm[trackId].play().catch(err => console.warn('Sound Test Play Error:', err));
+            }
+        }
+        window.jukeboxPlaying = true;
+    } else if (Math.hypot(x - 380, y - 40) < 30) {
+        if (audio) audio.forceStopAllFadesAndTracks();
+        window.jukeboxPlaying = false;
+    }
 });
 
 function togglePauseMenu() {
