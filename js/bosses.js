@@ -106,21 +106,33 @@ class PingKo extends Boss {
         super(difficultyWave, linkIteration);
         this.maxHP *= 0.8;
         this.hp = this.maxHP;
-        this.name = "PING-KO";
-        this.type = "pink";
-        if (typeof is2PMode !== 'undefined' && is2PMode) {
+        
+        if (linkIteration > 1 && typeof is2PMode !== 'undefined' && is2PMode) {
+            this.name = "RAMEN-SAN!";
+            this.type = "bowl";
             this.intro = [
-                "Ping-ko (P2): Wait... is that ME? Fosozu, who is this bootleg clone taking up my bandwidth?!", 
-                "Clone Ping-ko: I am the optimized version! Your legacy code is obsolete!", 
-                "Ping-ko (P2): Oh, it is ON! Let's scramble her packets, Fosozu!"
+                "Ping-ko (P2): Gahh... nani?!",
+                "Fosozu: Is that... a giant bowl of tonkotsu?!",
+                "Ramen-san: *Ominous bubbling noises...*"
             ];
+            this.defeat = "Ramen-san: *Spills aggressively...*";
         } else {
-            this.intro = [
-                "Ping-ko: Unregistered connection detected! Fosozu, you're not authorized for this routing node!", 
-                "Ping-ko: I'll scramble your packets before you even reach the gateway!"
-            ];
+            this.name = "PING-KO";
+            this.type = "pink";
+            if (typeof is2PMode !== 'undefined' && is2PMode) {
+                this.intro = [
+                    "Ping-ko (P2): Wait... is that ME? Fosozu, who is this bootleg clone taking up my bandwidth?!", 
+                    "Clone Ping-ko: I am the optimized version! Your legacy code is obsolete!", 
+                    "Ping-ko (P2): Oh, it is ON! Let's scramble her packets, Fosozu!"
+                ];
+            } else {
+                this.intro = [
+                    "Ping-ko: Unregistered connection detected! Fosozu, you're not authorized for this routing node!", 
+                    "Ping-ko: I'll scramble your packets before you even reach the gateway!"
+                ];
+            }
+            this.defeat = "Ping-ko: Ugh... routing tables corrupted... Satsuki is going to delete you for this!";
         }
-        this.defeat = "Ping-ko: Ugh... routing tables corrupted... Satsuki is going to delete you for this!";
     }
 
     update(ts, player, bossBullets) {

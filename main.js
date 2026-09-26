@@ -2820,7 +2820,7 @@ function updateBoss(ts) {
         hpFill.style.width = Math.max(0, (boss.hp / boss.maxHP * 100)) + "%";
         hpFill.style.background = (boss.hp < boss.maxHP / 2) ? "#ffca3a" : "#ff006e";
 
-        if (is2PMode && boss.type === 'pink') {
+        if (boss.type === 'bowl') {
             if (Math.random() < 0.25 * ts) {
                 bowlSteam.push({ x: boss.x + (Math.random() * 16 - 8), y: boss.y - 15, size: 2 + Math.random() * 5, life: 1.0 });
             }
@@ -3553,7 +3553,7 @@ function drawSatellites(pObj) {
             
             ctx.restore(); // Restore translation, shadow, line width
         } else {
-            let renderType = (is2PMode && boss.type === 'pink') ? 'bowl' : boss.type;
+            let renderType = boss.type;
             if (assets[renderType] && assets[renderType].loaded) {
                 if (boss.hp < boss.maxHP / 2 && Date.now() % 200 < 100) ctx.globalAlpha = 0.5;
                 if (renderType === 'bowl') {
@@ -3634,7 +3634,7 @@ function drawSatellites(pObj) {
     
     enemies.forEach(e => { 
         if (e.isMidBoss) {
-            let renderType = is2PMode ? 'bowl' : 'pink';
+            let renderType = (linkIteration > 1 && is2PMode && e.type !== 'spiralko') ? 'bowl' : (e.type === 'spiralko' ? 'purple' : 'pink');
             if (assets[renderType] && assets[renderType].loaded) {
                 if (e.hp < 75 && Date.now() % 200 < 100) ctx.globalAlpha = 0.5;
                 ctx.drawImage(assets[renderType].img, e.x - 40, e.y - 40, 80, 80);
