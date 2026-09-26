@@ -1847,7 +1847,6 @@ document.getElementById('btn-start-2p').addEventListener('click', () => {
 document.getElementById('btn-settings').addEventListener('click', () => {
     updateSettingsUI();
     document.getElementById('settings-ui').style.display = 'block';
-    if (!window.jbAnimId) drawJukebox();
 });
 
 document.getElementById('btn-close-settings').addEventListener('click', () => {
@@ -1855,10 +1854,6 @@ document.getElementById('btn-close-settings').addEventListener('click', () => {
     if (!gameStarted && audio && window.jukeboxPlaying) {
         audio.hardCut('title');
         window.jukeboxPlaying = false;
-    }
-    if (window.jbAnimId) {
-        cancelAnimationFrame(window.jbAnimId);
-        window.jbAnimId = null;
     }
 });
 
@@ -1890,11 +1885,10 @@ let soundTestIndex = 0;
 window.jukeboxPlaying = false;
 const jbCanvas = document.getElementById('jukebox-canvas');
 const jbCtx = jbCanvas.getContext('2d');
-window.jbAnimId = null;
 
 function drawJukebox() {
     jbCtx.clearRect(0, 0, 450, 80);
-    let rot = Date.now() * 0.002;
+    let rot = (Date.now() % 100000) * 0.002;
     const scale = 0.15; // Scaled so buttons are compact (~15-20px radius)
     
     // Draw Text Background for clarity
@@ -1912,6 +1906,7 @@ function drawJukebox() {
     // Button 1: PREV (Fosozu Bomb Ring + Triforce)
     jbCtx.save();
     jbCtx.translate(35, 40);
+    jbCtx.rotate(rot);
     jbCtx.scale(scale, scale);
     let empRadius = 100;
     
@@ -1948,6 +1943,7 @@ function drawJukebox() {
     jbCtx.save();
     jbCtx.translate(345, 40);
     jbCtx.scale(scale, scale);
+    jbCtx.rotate(rot);
     let satRadius = 100; // equivalent to progress=1, 30+80=110, let's just use 110
     let satOuterRadius = 130; // 20+110=130
     jbCtx.strokeStyle = '#d90429';
@@ -2004,6 +2000,7 @@ function drawJukebox() {
     jbCtx.save();
     jbCtx.translate(380, 40);
     jbCtx.scale(scale, scale);
+    jbCtx.rotate(rot);
     let dRadius = 100;
     let dOuterRadius = 120;
     jbCtx.strokeStyle = '#b5179e'; // Corrupted Purple
@@ -2053,6 +2050,7 @@ function drawJukebox() {
     // Button 4: NEXT (Pingko's Triangles from emp logic)
     jbCtx.save();
     jbCtx.translate(415, 40);
+    jbCtx.rotate(rot);
     jbCtx.scale(scale, scale);
     let pkRadius = 100;
     
@@ -2089,8 +2087,6 @@ function drawJukebox() {
     }
     jbCtx.restore();
     jbCtx.restore();
-
-    window.jbAnimId = requestAnimationFrame(drawJukebox);
 }
 
 jbCanvas.addEventListener('click', (e) => {
@@ -4383,6 +4379,10 @@ function loop(timestamp) {
         fpsCounterEl.innerText = Math.round((frameCount * 1000) / (timestamp - lastFPSCheck));
         frameCount = 0;
         lastFPSCheck = timestamp;
+    }
+
+    if (document.getElementById('settings-ui').style.display === 'block') {
+        drawJukebox();
     }
 
     requestAnimationFrame(loop);
