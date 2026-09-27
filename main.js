@@ -1973,7 +1973,7 @@ function drawJukebox() {
 
     // Button 2: PLAY (Madame Satsuki Cinematic Summon)
     jbCtx.save();
-    jbCtx.translate(345, 40);
+    jbCtx.translate(325, 40);
     jbCtx.scale(scale, scale);
     jbCtx.rotate(rot);
     let satRadius = 100; // equivalent to progress=1, 30+80=110, let's just use 110
@@ -2030,7 +2030,7 @@ function drawJukebox() {
 
     // Button 3: STOP (DaemonBoss.draw abyssal hex-weaver logic)
     jbCtx.save();
-    jbCtx.translate(380, 40);
+    jbCtx.translate(370, 40);
     jbCtx.scale(scale, scale);
     jbCtx.rotate(rot);
     let dRadius = 100;
@@ -2135,7 +2135,7 @@ jbCanvas.addEventListener('click', (e) => {
         soundTestIndex = (soundTestIndex - 1 + jukeboxTracks.length) % jukeboxTracks.length;
     } else if (Math.hypot(x - 415, y - 40) < 30) {
         soundTestIndex = (soundTestIndex + 1) % jukeboxTracks.length;
-    } else if (Math.hypot(x - 345, y - 40) < 30) {
+    } else if (Math.hypot(x - 325, y - 40) < 30) {
         if (audio) {
             audio.forceStopAllFadesAndTracks();
             let trackId = jukeboxTracks[soundTestIndex].id;
@@ -2145,7 +2145,7 @@ jbCanvas.addEventListener('click', (e) => {
             }
         }
         window.jukeboxPlaying = true;
-    } else if (Math.hypot(x - 380, y - 40) < 30) {
+    } else if (Math.hypot(x - 370, y - 40) < 30) {
         if (audio) audio.forceStopAllFadesAndTracks();
         window.jukeboxPlaying = false;
     }

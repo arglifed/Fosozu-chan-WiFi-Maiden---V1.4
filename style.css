@@ -9,9 +9,9 @@ canvas { border: 4px solid #9d4edd; box-shadow: 0 0 30px #9d4edd; background: #0
 .menu-btn { background: #00f2ff; color: #000; border: none; font-size: 20px; padding: 10px 20px; cursor: pointer; font-weight: bold; font-family: 'DotGothic16', sans-serif; min-width: 200px; box-shadow: 0 0 15px #00f2ff; transition: 0.1s; }
 .menu-btn:hover { background: #fff; box-shadow: 0 0 25px #fff; }
 .keybind-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 16px; font-weight: bold; }
-.rebind-btn { background: #000; color: #ffca3a; border: 2px solid #ffca3a; padding: 5px 10px; font-family: 'DotGothic16', sans-serif; cursor: pointer; width: 150px; text-align: center; transition: 0.1s; }
-.rebind-btn:hover { background: #ffca3a; color: #000; }
-.rebind-btn.listening { background: #ff006e; border-color: #ff006e; color: #fff; }
+.rebind-btn, .rebind-gp-btn, .rebind-btn-p2, .rebind-gp-btn-p2 { background: #000; color: #ffca3a; border: 2px solid #ffca3a; padding: 5px 10px; font-family: 'DotGothic16', sans-serif; cursor: pointer; width: 150px; text-align: center; transition: 0.1s; }
+.rebind-btn:hover, .rebind-gp-btn:hover, .rebind-btn-p2:hover, .rebind-gp-btn-p2:hover { background: #ffca3a; color: #000; }
+.rebind-btn.listening, .rebind-gp-btn.listening, .rebind-btn-p2.listening, .rebind-gp-btn-p2.listening { background: #ff006e; border-color: #ff006e; color: #fff; }
 #fps-ui { position: absolute; bottom: 10px; right: 10px; font-size: 12px; color: #0f0; opacity: 0.7; }
 #boss-ui { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 400px; display: none; text-align: center; }
 #hp-bar-bg { width: 100%; height: 10px; background: #333; border: 1px solid #fff; margin-top: 5px; }
@@ -35,9 +35,9 @@ canvas { border: 4px solid #9d4edd; box-sizing: border-box; box-shadow: 0 0 30px
 .menu-btn { background: #00f2ff; color: #000; border: none; font-size: 20px; padding: 10px 20px; cursor: pointer; font-weight: bold; font-family: 'DotGothic16', sans-serif; min-width: 200px; box-shadow: 0 0 15px #00f2ff; transition: 0.1s; }
 .menu-btn:hover { background: #fff; box-shadow: 0 0 25px #fff; }
 .keybind-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 16px; font-weight: bold; }
-.rebind-btn { background: #000; color: #ffca3a; border: 2px solid #ffca3a; padding: 5px 10px; font-family: 'DotGothic16', sans-serif; cursor: pointer; width: 150px; text-align: center; transition: 0.1s; }
-.rebind-btn:hover { background: #ffca3a; color: #000; }
-.rebind-btn.listening { background: #ff006e; border-color: #ff006e; color: #fff; }
+.rebind-btn, .rebind-gp-btn, .rebind-btn-p2, .rebind-gp-btn-p2 { background: #000; color: #ffca3a; border: 2px solid #ffca3a; padding: 5px 10px; font-family: 'DotGothic16', sans-serif; cursor: pointer; width: 150px; text-align: center; transition: 0.1s; }
+.rebind-btn:hover, .rebind-gp-btn:hover, .rebind-btn-p2:hover, .rebind-gp-btn-p2:hover { background: #ffca3a; color: #000; }
+.rebind-btn.listening, .rebind-gp-btn.listening, .rebind-btn-p2.listening, .rebind-gp-btn-p2.listening { background: #ff006e; border-color: #ff006e; color: #fff; }
 #fps-ui { position: absolute; bottom: 10px; right: 10px; font-size: 12px; color: #0f0; opacity: 0.7; }
 #boss-ui { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 400px; display: none; text-align: center; }
 #hp-bar-bg { width: 100%; height: 10px; background: #333; border: 1px solid #fff; margin-top: 5px; }
