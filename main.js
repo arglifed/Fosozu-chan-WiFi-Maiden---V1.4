@@ -4072,6 +4072,7 @@ function drawSatellites(pObj) {
         let shape = isHoming ? 'amulet' : 'rice';
 
         ctx.save();
+        ctx.globalAlpha = 0.45;
         ctx.translate(b.x, b.y);
 
         if (isHoming) {
